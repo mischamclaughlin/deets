@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { devices, type Scene, type WatchMapping } from "../../shared/scene.ts";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { devices, type Scene, type SceneElement, type WatchMapping } from "../../shared/scene.ts";
 import { mapWatch } from "./api.ts";
 import { gridPaths, gridRadii, type GridSettings } from "./grid.ts";
+import { moveElement } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
 
@@ -11,7 +12,24 @@ interface Props {
     showCircumference?: boolean;
     showGuideLines?: boolean;
     grid?: GridSettings;
+    snapEnabled?: boolean;
+    onMoveElement?: (id: string, position: { x: number; y: number }) => void;
 }
+interface Drag {
+    pointerId: number;
+    element: SceneElement;
+    start: { x: number; y: number };
+    position: { x: number; y: number };
+}
+
+/** Project pointer input into the SVG's native coordinate system. */
+function nativePointer(event: ReactPointerEvent<SVGSVGElement>) {
+    const transform = event.currentTarget.getScreenCTM();
+    if (!transform) return;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(transform.inverse());
+    return { x: point.x, y: point.y };
+}
+
 interface Result {
     scene: Scene;
     night: boolean;
@@ -20,11 +38,15 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, onMoveElement }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
+    const areas = useRef<SVGSVGElement>(null);
+    const restoreFocus = useRef<string | undefined>(undefined);
     const [result, setResult] = useState<Result>();
     const [painted, setPainted] = useState<string>();
+    const drag = useRef<Drag | undefined>(undefined);
+    const [preview, setPreview] = useState<Drag>();
     const [active, setActive] = useState<string>("time");
     const current =
         result?.scene === scene && result.night === night ? result : undefined;
@@ -73,6 +95,44 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             });
         return () => controller.abort();
     }, [mapping, signature, scene, night]);
+
+    useEffect(() => {
+        if (!ready || !restoreFocus.current || !areas.current) return;
+        const target = Array.from(areas.current.querySelectorAll<SVGGElement>("[data-element-id]"))
+            .find((element) => element.dataset.elementId === restoreFocus.current);
+        target?.focus();
+        restoreFocus.current = undefined;
+    }, [ready, mapping]);
+
+    function movePointer(event: ReactPointerEvent<SVGSVGElement>) {
+        const currentDrag = drag.current;
+        if (!currentDrag || currentDrag.pointerId !== event.pointerId) return;
+        const point = nativePointer(event);
+        if (!point) return;
+        const position = moveElement(scene, currentDrag.element, {
+            x: currentDrag.element.x + point.x - currentDrag.start.x,
+            y: currentDrag.element.y + point.y - currentDrag.start.y,
+        }, {
+            enabled: snapEnabled && !event.altKey,
+            showGuideLines,
+            showCircumference,
+            grid,
+        });
+        drag.current = { ...currentDrag, position };
+        setPreview(drag.current);
+    }
+
+    function finishPointer(event: ReactPointerEvent<SVGSVGElement>, commit: boolean) {
+        if (drag.current?.pointerId !== event.pointerId) return;
+        if (commit) movePointer(event);
+        const finished = drag.current;
+        drag.current = undefined;
+        setPreview(undefined);
+        if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        if (commit && finished && (finished.position.x !== finished.element.x || finished.position.y !== finished.element.y))
+            onMoveElement?.(finished.element.id, finished.position);
+    }
 
     return (
         <div className="watch" aria-label={`${scene.device} watch canvas`}>
@@ -124,29 +184,68 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             )}
             {mapping && ready && (
                 <svg
-                    className="watch-areas"
+                    ref={areas}
+                    className={onMoveElement ? "watch-areas editable" : "watch-areas"}
+                    onPointerDown={(event) => {
+                        if (!onMoveElement || event.button !== 0 || drag.current) return;
+                        const target = event.target instanceof Element ? event.target.closest("[data-element-id]") : null;
+                        const element = scene.elements.find((item) => item.id === target?.getAttribute("data-element-id"));
+                        const start = nativePointer(event);
+                        if (!element || !start) return;
+                        event.preventDefault();
+                        setActive(element.id);
+                        target?.closest("g")?.focus();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        drag.current = { pointerId: event.pointerId, element, start, position: { x: element.x, y: element.y } };
+                        setPreview(drag.current);
+                    }}
+                    onPointerMove={movePointer}
+                    onPointerUp={(event) => finishPointer(event, true)}
+                    onPointerCancel={(event) => finishPointer(event, false)}
+                    onLostPointerCapture={() => {
+                        drag.current = undefined;
+                        setPreview(undefined);
+                    }}
                     viewBox={`0 0 ${mapping.size} ${mapping.size}`}
                     aria-label="Translated watch areas"
                 >
                     {mapping.areas.map((area) => {
+                        const position = preview?.element.id === area.id ? preview.position : area;
                         const selected = area.id === active;
-                        const label = `${area.label} · ${area.x},${area.y} · ${area.width}×${area.height} px`;
+                        const label = `${area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
                         const labelX = Math.max(
                             8,
-                            Math.min(area.x, mapping.size - 235),
+                            Math.min(position.x, mapping.size - 235),
                         );
-                        const labelY = Math.max(16, area.y - 8);
+                        const labelY = Math.max(16, position.y - 8);
                         return (
                             <g
                                 key={area.id}
+                                data-element-id={area.id}
                                 tabIndex={0}
                                 role="button"
                                 aria-label={label}
+                                aria-keyshortcuts={onMoveElement ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
                                 className={selected ? "area selected" : "area"}
-                                onPointerEnter={() => setActive(area.id)}
+                                onPointerEnter={() => { if (!drag.current) setActive(area.id); }}
                                 onFocus={() => setActive(area.id)}
                                 onClick={() => setActive(area.id)}
                                 onKeyDown={(event) => {
+                                    const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+                                    const element = scene.elements.find((item) => item.id === area.id);
+                                    if (onMoveElement && element && direction) {
+                                        event.preventDefault();
+                                        restoreFocus.current = element.id;
+                                        const step = event.shiftKey ? 10 : 1;
+                                        onMoveElement(element.id, moveElement(scene, element, {
+                                            x: element.x + direction[0] * step,
+                                            y: element.y + direction[1] * step,
+                                        }, { enabled: snapEnabled && !event.altKey, showGuideLines, showCircumference, grid }));
+                                    }
+                                    if (event.key === "Escape" && drag.current) {
+                                        drag.current = undefined;
+                                        setPreview(undefined);
+                                    }
                                     if (
                                         event.key === "Enter" ||
                                         event.key === " "
@@ -157,8 +256,8 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                 }}
                             >
                                 <rect
-                                    x={area.x}
-                                    y={area.y}
+                                    x={position.x}
+                                    y={position.y}
                                     width={area.width}
                                     height={area.height}
                                 />

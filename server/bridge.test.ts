@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { callBridge, GarminError } from "./bridge.ts";
 import { populatedScene as scene } from "./scene.fixture.ts";
 import { scene as blankScene } from "../src/watch/scene.ts";
+import { moveElement } from "../src/watch/snapping.ts";
+import { devices } from "../shared/scene.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 
 test("native mapping round-trips the typed scene and exposes exact element bounds", async () => {
@@ -55,4 +57,28 @@ test("blank canvas preserves its circumference without adding exported ink", asy
     });
     assert.notEqual(updated.mapping, layout.mapping);
     assert.deepEqual(updated.ops, []);
+});
+
+
+test("snapped positions round-trip the native validator on every device", async () => {
+    for (const device of Object.keys(devices) as Array<keyof typeof devices>) {
+        const original = {
+            ...blankScene,
+            device,
+            elements: [{
+                ...scene.elements[1], id: "activity", source: "stepsWeek", font: "widget" as const,
+                x: 150, y: 150, width: 100, height: 18,
+            }],
+        };
+        const element = original.elements[0];
+        const position = moveElement(original, element, { x: 157, y: 205 }, {
+            enabled: true, showGuideLines: true, showCircumference: true,
+        });
+        const moved = { ...original, elements: [{ ...element, ...position }] };
+        const mapped = await callBridge<WatchMapping>("layout", { scene: moved });
+        assert.deepEqual(mapped.scene, moved);
+        assert.equal(mapped.areas[0].x, position.x);
+        assert.equal(mapped.areas[0].y, position.y);
+        assert.ok(mapped.ops.length > 0);
+    }
 });

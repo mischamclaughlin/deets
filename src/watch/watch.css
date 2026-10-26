@@ -248,3 +248,38 @@ body,
     stroke-width: 0.75;
     stroke-dasharray: 3 5;
 }
+
+.snap-button {
+    width: 100%;
+    margin-top: 18px;
+    padding: 9px 12px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #c3d8ab;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.snap-button[aria-pressed="true"] {
+    background: #c3d8ab;
+    color: #111410;
+    border-color: #c3d8ab;
+}
+.snap-button:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}
+.watch-sidebar .snap-note {
+    margin: 8px 0 0;
+    font-size: 10px;
+}
+.watch-areas.editable {
+    touch-action: none;
+}
+.watch-areas.editable .area > rect {
+    cursor: grab;
+}
+.watch-areas.editable .area:active > rect {
+    cursor: grabbing;
+}

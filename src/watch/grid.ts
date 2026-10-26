@@ -1,4 +1,4 @@
-/** Browser-only guides; these paths never supply exported element coordinates. */
+/** Native-coordinate guide geometry; SVG paths themselves are browser-only annotations. */
 export interface GridSettings {
     visible: boolean;
     rows: number;

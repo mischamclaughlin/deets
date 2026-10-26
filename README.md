@@ -21,10 +21,19 @@ to fit the requested count. Each axis can
 stay straight or follow the radius: curved dividers form elliptical arcs that
 meet the content circle, with equal spacing along the central axes. Grid settings
 are browser-only, survive hiding the grid and reset on refresh. They do not alter
-the scene, constrain placement, snap content or enter Garmin exports.
+the scene or enter Garmin exports. Enable Snap to use visible guides for placement.
 A separate Show guide lines toggle adds faint horizontal and vertical centre
 lines across the watch, independently of grid visibility and edge clearance.
 These are browser-only annotations and are excluded from Garmin exports.
+
+The Snap button enables alignment of element edges and centre axes to visible
+centre guides, grid dividers, rings and the circumference. Drag a mapped element
+to preview its bounding box; release to commit its integer native-pixel position
+and remap its ink. Arrow keys move by one pixel, Shift by ten; Alt temporarily
+bypasses snapping. Escape or pointer cancellation discards a drag. The full box
+remains inside the content boundary even with snapping off. The initial canvas
+is still empty; these interactions apply to elements supplied in the scene.
+
 On narrow screens the sidebar stacks above the canvas.
 
 `src/watch/scene.ts` is the initial typed scene definition. The editor keeps its

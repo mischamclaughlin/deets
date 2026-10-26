@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { devices, type Scene } from "../../shared/scene.ts";
 import { defaultGrid } from "./grid.ts";
+import { moveElement } from "./snapping.ts";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
 /** Keep scene constraints separate from browser-only guide visibility. */
@@ -8,6 +9,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
+    const [snapEnabled, setSnapEnabled] = useState(false);
     const [grid, setGrid] = useState(defaultGrid);
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
@@ -63,6 +65,18 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         />
                         Show guide lines
                     </label>
+                    <button
+                        type="button"
+                        className="snap-button"
+                        aria-pressed={snapEnabled}
+                        onClick={() => setSnapEnabled((enabled) => !enabled)}
+                        aria-describedby="snap-description"
+                    >
+                        Snap {snapEnabled ? "on" : "off"}
+                    </button>
+                    <p id="snap-description" className="snap-note">
+                        Align edges and centres to visible guides. Drag an element or use arrow keys (Shift for 10 px). Hold Alt to bypass snapping.
+                    </p>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
@@ -126,7 +140,19 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </section>
             </aside>
             <main className="watch-workspace" aria-label="Watch face canvas">
-                <WatchCanvas scene={scene} showCircumference={showCircumference} showGuideLines={showGuideLines} grid={grid} />
+                <WatchCanvas
+                    scene={scene}
+                    showCircumference={showCircumference}
+                    showGuideLines={showGuideLines}
+                    grid={grid}
+                    snapEnabled={snapEnabled}
+                    onMoveElement={(id, desired) => setScene((current) => ({
+                        ...current,
+                        elements: current.elements.map((element) => element.id === id
+                            ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, showCircumference, grid }) }
+                            : element),
+                    }))}
+                />
             </main>
         </div>
     );
