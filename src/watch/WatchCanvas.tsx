@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { devices, type Scene, type WatchMapping } from "../../shared/scene.ts";
 import { mapWatch } from "./api.ts";
+import { gridPaths, type GridSettings } from "./grid.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
 
@@ -8,6 +9,7 @@ interface Props {
     scene: Scene;
     night?: boolean;
     showCircumference?: boolean;
+    grid?: GridSettings;
 }
 interface Result {
     scene: Scene;
@@ -17,7 +19,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, grid }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const [result, setResult] = useState<Result>();
@@ -82,6 +84,14 @@ export function WatchCanvas({ scene, night = false, showCircumference = false }:
                 <span className="watch-status" role="status">
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>
+            )}
+            {grid?.visible && (
+                <svg className="watch-grid" viewBox={`0 0 ${size} ${size}`}
+                    role="img" aria-label={`${grid.rows} rows and ${grid.columns} columns; ${grid.curvedRows ? "curved" : "straight"} rows, ${grid.curvedColumns ? "curved" : "straight"} columns`}>
+                    {gridPaths(size, scene.edgeInset ?? 0, grid).map((path, index) => (
+                        <path key={index} d={path} />
+                    ))}
+                </svg>
             )}
             {showCircumference && (
                 <svg

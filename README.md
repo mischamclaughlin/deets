@@ -13,6 +13,11 @@ npm run export:garmin
 an empty watch face and a sidebar containing the circumference control. Edge
 clearance is an integer inset in native watch pixels, initially 16 px. The dashed
 guide can be hidden independently; it never enters the canvas raster or export.
+The optional grid supports 1–24 rows and columns independently. Each axis can
+stay straight or follow the radius: curved dividers form elliptical arcs that
+meet the content circle, with equal spacing along the central axes. Grid settings
+are browser-only, survive hiding the grid and reset on refresh. They do not alter
+the scene, constrain placement, snap content or enter Garmin exports.
 On narrow screens the sidebar stacks above the canvas.
 
 `src/watch/scene.ts` is the initial typed scene definition. The editor keeps its

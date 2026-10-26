@@ -186,3 +186,53 @@ body,
         padding: 32px;
     }
 }
+
+.watch-sidebar section + section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #30392a;
+}
+.grid-counts {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+}
+.grid-counts label {
+    flex: 1;
+    font-size: 12px;
+}
+.grid-counts select {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+}
+.grid-counts select:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}
+.guide-toggle + .guide-toggle {
+    margin-top: 12px;
+}
+.watch-sidebar .grid-note {
+    margin: 16px 0 0;
+    font-size: 10px;
+}
+.watch-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.watch-grid path {
+    fill: none;
+    stroke: #a6b39c;
+    stroke-opacity: 0.4;
+    stroke-width: 0.75;
+}

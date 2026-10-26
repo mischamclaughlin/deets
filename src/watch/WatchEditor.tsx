@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { devices, type Scene } from "../../shared/scene.ts";
+import { defaultGrid } from "./grid.ts";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
 /** Keep scene constraints separate from browser-only guide visibility. */
 export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
     const [showCircumference, setShowCircumference] = useState(true);
+    const [grid, setGrid] = useState(defaultGrid);
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
 
@@ -45,9 +47,41 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         Show circumference guide
                     </label>
                 </section>
+                <section aria-labelledby="grid-heading">
+                    <h2 id="grid-heading">Grid</h2>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={grid.visible}
+                            onChange={(event) => setGrid((current) => ({ ...current, visible: event.target.checked }))} />
+                        Show grid
+                    </label>
+                    <div className="grid-counts">
+                        {(["rows", "columns"] as const).map((axis) => (
+                            <label key={axis}>
+                                {axis === "rows" ? "Rows" : "Columns"}
+                                <select value={grid[axis]}
+                                    onChange={(event) => setGrid((current) => ({ ...current, [axis]: Number(event.target.value) }))}>
+                                    {Array.from({ length: 24 }, (_, index) => (
+                                        <option key={index + 1} value={index + 1}>{index + 1}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        ))}
+                    </div>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={grid.curvedRows}
+                            onChange={(event) => setGrid((current) => ({ ...current, curvedRows: event.target.checked }))} />
+                        Rows follow radius
+                    </label>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={grid.curvedColumns}
+                            onChange={(event) => setGrid((current) => ({ ...current, curvedColumns: event.target.checked }))} />
+                        Columns follow radius
+                    </label>
+                    <p className="grid-note">Curve rows and columns towards the circumference, or keep them straight. Guides only.</p>
+                </section>
             </aside>
             <main className="watch-workspace" aria-label="Watch face canvas">
-                <WatchCanvas scene={scene} showCircumference={showCircumference} />
+                <WatchCanvas scene={scene} showCircumference={showCircumference} grid={grid} />
             </main>
         </div>
     );
