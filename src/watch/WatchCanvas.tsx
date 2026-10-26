@@ -87,7 +87,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, g
             )}
             {grid?.visible && (
                 <svg className="watch-grid" viewBox={`0 0 ${size} ${size}`}
-                    role="img" aria-label={`${grid.rows} rows and ${grid.columns} columns, ${grid.circumferences} extra circumferences; ${grid.curvedRows ? "curved" : "straight"} rows, ${grid.curvedColumns ? "curved" : "straight"} columns`}>
+                    role="img" aria-label={`${grid.rows} rows and ${grid.columns} columns, ${grid.circumferences} extra circumferences starting ${grid.circumferenceStart}; ${grid.curvedRows ? "curved" : "straight"} rows, ${grid.curvedColumns ? "curved" : "straight"} columns`}>
                     {gridRadii(size, scene.edgeInset ?? 0, grid).map((radius, index) => (
                         <circle key={`ring-${index}`} cx={size / 2} cy={size / 2} r={radius} />
                     ))}

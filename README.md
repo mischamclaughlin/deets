@@ -14,7 +14,10 @@ an empty watch face and a sidebar containing the circumference control. Edge
 clearance is an integer inset in native watch pixels, initially 16 px. The dashed
 guide can be hidden independently; it never enters the canvas raster or export.
 The optional grid supports 1–24 rows and columns independently, plus 0–24 extra
-concentric circumferences evenly spaced inside the content boundary. Each axis can
+concentric circumferences inside the content boundary. Rings can start from the
+centre (inside, growing outwards) or the boundary (outside, growing inwards).
+Choose 1–100 native pixels of spacing; spacing reduces automatically when needed
+to fit the requested count. Each axis can
 stay straight or follow the radius: curved dividers form elliptical arcs that
 meet the content circle, with equal spacing along the central axes. Grid settings
 are browser-only, survive hiding the grid and reset on refresh. They do not alter

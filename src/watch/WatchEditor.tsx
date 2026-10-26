@@ -79,7 +79,30 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             </select>
                         </label>
                     </div>
-                    <p id="grid-circumferences-note" className="control-note">Evenly spaced inside the content boundary.</p>
+                    <div className="grid-counts">
+                        <label>
+                            Start from
+                            <select value={grid.circumferenceStart}
+                                onChange={(event) => setGrid((current) => ({
+                                    ...current,
+                                    circumferenceStart: event.target.value === "inside" ? "inside" : "outside",
+                                }))}>
+                                <option value="inside">Inside · centre</option>
+                                <option value="outside">Outside · boundary</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div className="control-heading">
+                        <label htmlFor="circumference-spacing">Ring spacing</label>
+                        <output htmlFor="circumference-spacing">{grid.circumferenceSpacing} px</output>
+                    </div>
+                    <input id="circumference-spacing" type="range" min={1} max={100} step={1}
+                        value={grid.circumferenceSpacing}
+                        onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value) }))}
+                        aria-describedby="grid-circumferences-note" />
+                    <p id="grid-circumferences-note" className="control-note">
+                        {grid.circumferenceStart === "inside" ? "From the centre outwards." : "From the boundary inwards."} Spacing reduces automatically if needed to fit every ring.
+                    </p>
                     <label className="guide-toggle">
                         <input type="checkbox" checked={grid.curvedRows}
                             onChange={(event) => setGrid((current) => ({ ...current, curvedRows: event.target.checked }))} />

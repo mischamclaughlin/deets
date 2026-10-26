@@ -56,28 +56,42 @@ test("invalid grid counts cannot create unbounded geometry", () => {
 });
 
 
-test("extra circumferences divide the usable radius without duplicating the boundary", () => {
+test("extra circumferences remain evenly spaced within the boundary from either end", () => {
     for (const size of [390, 416, 454]) {
         for (const inset of [0, 16, size / 2 - 1]) {
             for (let count = 0; count <= 24; count++) {
-                const grid = { ...defaultGrid, visible: true, circumferences: count };
+                const grid = { ...defaultGrid, visible: true, circumferences: count, circumferenceStart: "inside" as const };
                 const radii = gridRadii(size, inset, grid);
                 assert.equal(radii.length, count);
                 const boundary = size / 2 - inset;
-                const spacing = boundary / (count + 1);
+                const spacing = Math.min(grid.circumferenceSpacing, boundary / (count + 1));
                 radii.forEach((radius, index) => {
                     assert.ok(radius > 0 && radius < boundary);
                     assert.ok(Math.abs(radius - (radii[index - 1] ?? 0) - spacing) < 1e-9);
                 });
+                assert.deepEqual(gridRadii(size, inset, { ...grid, circumferenceStart: "outside" }),
+                    radii.map((radius) => boundary - radius));
                 assert.deepEqual(gridRadii(size, inset, { ...grid, visible: false }), []);
             }
         }
     }
-    assert.deepEqual(gridRadii(416, 16, { ...defaultGrid, visible: true, circumferences: 3 }), [48, 96, 144]);
+    assert.deepEqual(gridRadii(416, 16, { ...defaultGrid, visible: true, circumferences: 3 }), [168, 144, 120]);
 });
 
 test("invalid circumference counts cannot create unbounded geometry", () => {
     for (const count of [-1, 25, 2.5, NaN, Infinity]) {
         assert.throws(() => gridRadii(416, 16, { ...defaultGrid, visible: true, circumferences: count }), RangeError);
+    }
+});
+
+
+test("ring direction and spacing position rings relative to the chosen starting point", () => {
+    const grid = { ...defaultGrid, visible: true, circumferences: 2, circumferenceSpacing: 30 };
+    assert.deepEqual(gridRadii(416, 16, { ...grid, circumferenceStart: "inside" }), [30, 60]);
+    assert.deepEqual(gridRadii(416, 16, { ...grid, circumferenceStart: "outside" }), [162, 132]);
+    assert.deepEqual(gridRadii(416, 32, { ...grid, circumferenceStart: "inside" }), [30, 60]);
+    assert.deepEqual(gridRadii(416, 32, { ...grid, circumferenceStart: "outside" }), [146, 116]);
+    for (const spacing of [0, -1, 101, 2.5, NaN, Infinity]) {
+        assert.throws(() => gridRadii(416, 16, { ...grid, circumferenceSpacing: spacing }), RangeError);
     }
 });

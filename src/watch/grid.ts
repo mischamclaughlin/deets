@@ -4,6 +4,8 @@ export interface GridSettings {
     rows: number;
     columns: number;
     circumferences: number;
+    circumferenceStart: "inside" | "outside";
+    circumferenceSpacing: number;
     curvedRows: boolean;
     curvedColumns: boolean;
 }
@@ -13,6 +15,8 @@ export const defaultGrid: GridSettings = {
     rows: 4,
     columns: 4,
     circumferences: 0,
+    circumferenceStart: "outside",
+    circumferenceSpacing: 24,
     curvedRows: false,
     curvedColumns: false,
 };
@@ -47,12 +51,19 @@ export function gridPaths(size: number, inset: number, grid: GridSettings): stri
     return paths;
 }
 
-/** Extra rings divide the usable radius into equal intervals, excluding its boundary. */
+/** Build rings from the chosen end; reduce spacing only when needed to fit them all. */
 export function gridRadii(size: number, inset: number, grid: GridSettings): number[] {
     const radius = size / 2 - inset;
     if (!grid.visible || radius <= 0) return [];
     if (!Number.isInteger(grid.circumferences) || grid.circumferences < 0 || grid.circumferences > 24)
         throw new RangeError("Extra circumferences must be an integer from 0 to 24.");
-    return Array.from({ length: grid.circumferences }, (_, index) =>
-        radius * (index + 1) / (grid.circumferences + 1));
+    if (!Number.isInteger(grid.circumferenceSpacing) || grid.circumferenceSpacing < 1 || grid.circumferenceSpacing > 100)
+        throw new RangeError("Circumference spacing must be an integer from 1 to 100.");
+    if (grid.circumferenceStart !== "inside" && grid.circumferenceStart !== "outside")
+        throw new RangeError("Choose an inside or outside circumference start.");
+    const spacing = Math.min(grid.circumferenceSpacing, radius / (grid.circumferences + 1));
+    return Array.from({ length: grid.circumferences }, (_, index) => {
+        const distance = spacing * (index + 1);
+        return grid.circumferenceStart === "inside" ? distance : radius - distance;
+    });
 }
