@@ -83,11 +83,18 @@ body,
 }
 
 .watch-editor {
-    min-height: 100dvh;
+    height: 100dvh;
+    min-height: 0;
     display: grid;
     grid-template-columns: 272px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
 }
 .watch-sidebar {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
     padding: 28px 24px;
     background: #191e17;
     border-right: 1px solid #30392a;
@@ -103,12 +110,6 @@ body,
     margin: 0 0 12px;
     font-size: 14px;
     font-weight: 500;
-}
-.watch-sidebar p {
-    color: #a6b39c;
-    font-size: 12px;
-    line-height: 1.7;
-    margin: 0 0 24px;
 }
 .control-heading {
     display: flex;
@@ -127,10 +128,6 @@ body,
     margin: 0 0 12px;
     accent-color: #c3d8ab;
 }
-.watch-sidebar .control-note {
-    font-size: 10px;
-    margin-bottom: 28px;
-}
 .guide-toggle {
     display: flex;
     align-items: center;
@@ -148,11 +145,36 @@ body,
     outline-offset: 5px;
 }
 .watch-workspace {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 24px;
     padding: 40px;
     min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+.watch-stage {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    container-type: size;
+}
+.watch-stage .watch {
+    width: min(100cqw, 100cqh, 640px);
+}
+.canvas-info {
+    margin: 0;
+    color: #a6b39c;
+    font-size: 11px;
+    line-height: 1.7;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.watch-sidebar:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: -2px;
 }
 .watch-circumference {
     position: absolute;
@@ -168,7 +190,7 @@ body,
 @media (max-width: 680px) {
     .watch-editor {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: minmax(0, 40dvh) minmax(0, 1fr);
     }
     .watch-sidebar {
         padding: 20px 24px;
@@ -214,10 +236,6 @@ body,
 }
 .guide-toggle + .guide-toggle {
     margin-top: 12px;
-}
-.watch-sidebar .grid-note {
-    margin: 16px 0 0;
-    font-size: 10px;
 }
 .watch-grid {
     position: absolute;
@@ -269,10 +287,6 @@ body,
 .snap-button:focus-visible {
     outline: 2px solid #c3d8ab;
     outline-offset: 3px;
-}
-.watch-sidebar .snap-note {
-    margin: 8px 0 0;
-    font-size: 10px;
 }
 .watch-areas.editable {
     touch-action: none;

@@ -34,7 +34,9 @@ bypasses snapping. Escape or pointer cancellation discards a drag. The full box
 remains inside the content boundary even with snapping off. The initial canvas
 is still empty; these interactions apply to elements supplied in the scene.
 
-On narrow screens the sidebar stacks above the canvas.
+The sidebar contains controls only and scrolls independently of the canvas.
+Native-pixel and usable-diameter information sits beneath the watch. On narrow
+screens the sidebar stacks above the canvas with its own scrollable region.
 
 `src/watch/scene.ts` is the initial typed scene definition. The editor keeps its
 current scene in memory. The CLI exports the scene definition on disk. Integer

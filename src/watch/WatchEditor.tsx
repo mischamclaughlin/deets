@@ -16,11 +16,10 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
 
     return (
         <div className="watch-editor">
-            <aside className="watch-sidebar" aria-label="Watch face settings">
+            <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
-                    <p>Keep content this far from the edge of the watch.</p>
                     <div className="control-heading">
                         <label htmlFor="edge-inset">Edge clearance</label>
                         <output htmlFor="edge-inset">{inset} px</output>
@@ -36,11 +35,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             ...current,
                             edgeInset: Number(event.target.value),
                         }))}
-                        aria-describedby="circumference-description"
+                        aria-describedby="canvas-dimensions"
                     />
-                    <p id="circumference-description" className="control-note">
-                        Native watch pixels · {size - inset * 2} px usable diameter
-                    </p>
                     <label className="guide-toggle">
                         <input
                             type="checkbox"
@@ -70,13 +66,10 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         className="snap-button"
                         aria-pressed={snapEnabled}
                         onClick={() => setSnapEnabled((enabled) => !enabled)}
-                        aria-describedby="snap-description"
+                        title="Drag or use arrow keys. Shift: 10 px. Alt: bypass snapping."
                     >
                         Snap {snapEnabled ? "on" : "off"}
                     </button>
-                    <p id="snap-description" className="snap-note">
-                        Align edges and centres to visible guides. Drag an element or use arrow keys (Shift for 10 px). Hold Alt to bypass snapping.
-                    </p>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
@@ -95,7 +88,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             Extra circumferences
                             <select value={grid.circumferences}
                                 onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value) }))}
-                                aria-describedby="grid-circumferences-note">
+                                title="Spacing reduces automatically to fit all rings.">
                                 {Array.from({ length: 25 }, (_, count) => (
                                     <option key={count} value={count}>{count}</option>
                                 ))}
@@ -122,10 +115,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     <input id="circumference-spacing" type="range" min={1} max={100} step={1}
                         value={grid.circumferenceSpacing}
                         onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value) }))}
-                        aria-describedby="grid-circumferences-note" />
-                    <p id="grid-circumferences-note" className="control-note">
-                        {grid.circumferenceStart === "inside" ? "From the centre outwards." : "From the boundary inwards."} Spacing reduces automatically if needed to fit every ring.
-                    </p>
+                        title="Spacing reduces automatically to fit all rings." />
                     <label className="guide-toggle">
                         <input type="checkbox" checked={grid.curvedRows}
                             onChange={(event) => setGrid((current) => ({ ...current, curvedRows: event.target.checked }))} />
@@ -136,23 +126,27 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             onChange={(event) => setGrid((current) => ({ ...current, curvedColumns: event.target.checked }))} />
                         Columns follow radius
                     </label>
-                    <p className="grid-note">Curve rows and columns towards the circumference, or keep them straight. Guides only.</p>
                 </section>
             </aside>
             <main className="watch-workspace" aria-label="Watch face canvas">
-                <WatchCanvas
-                    scene={scene}
-                    showCircumference={showCircumference}
-                    showGuideLines={showGuideLines}
-                    grid={grid}
-                    snapEnabled={snapEnabled}
-                    onMoveElement={(id, desired) => setScene((current) => ({
-                        ...current,
-                        elements: current.elements.map((element) => element.id === id
-                            ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, showCircumference, grid }) }
-                            : element),
-                    }))}
-                />
+                <div className="watch-stage">
+                    <WatchCanvas
+                        scene={scene}
+                        showCircumference={showCircumference}
+                        showGuideLines={showGuideLines}
+                        grid={grid}
+                        snapEnabled={snapEnabled}
+                        onMoveElement={(id, desired) => setScene((current) => ({
+                            ...current,
+                            elements: current.elements.map((element) => element.id === id
+                                ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, showCircumference, grid }) }
+                                : element),
+                        }))}
+                    />
+                </div>
+                <p className="canvas-info" id="canvas-dimensions">
+                    Native watch pixels · {size - inset * 2} px usable diameter
+                </p>
             </main>
         </div>
     );
