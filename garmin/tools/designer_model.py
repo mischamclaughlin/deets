@@ -225,7 +225,7 @@ def validate_scene(payload):
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
-                (generated and (source != "time" or font not in pack["fonts"])) or
+                (generated and (source not in {"time", "hours", "minutes"} or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
         if "typography" in original:

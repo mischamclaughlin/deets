@@ -1,4 +1,4 @@
-import type { Scene, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ClockSource, Scene, Typography, WatchMapping } from "../../shared/scene.ts";
 
 async function post<T>(
     path: string,
@@ -61,3 +61,7 @@ export async function uploadFont(file: File): Promise<{ id: string; name: string
     }
     return response.json() as Promise<{ id: string; name: string }>;
 }
+
+
+export const setClockSource = (scene: Scene, elementId: string, source: ClockSource, signal?: AbortSignal) =>
+    post<WatchMapping>("clock", { scene, elementId, source }, signal);

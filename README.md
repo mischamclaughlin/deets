@@ -48,6 +48,16 @@ to the inner circle in the canonical native validator. Legacy scenes without it
 retain their existing bounds. Dedicated edge content such as outer seconds
 markers can gain an explicit exception later; no exception is enabled yet.
 
+## Elements
+
+The left sidebar lists scene elements. Select Time in the list or on the canvas
+to reveal its controls on the right, including HH:MM, hours only (HH) or minutes
+only (MM). Changes preserve the
+same element, its typography and its centre to the nearest native pixel. Native
+metrics determine the new width and snapping bounds. The preview shows 10:08,
+10 or 08; Garmin exports use live hours/minutes and the watch's clock settings.
+Typography remains in the right sidebar for all three display modes.
+
 ## Typography
 
 Select the time element to edit its font, visible height (12–160 native pixels),
@@ -60,7 +70,7 @@ axes. Uploaded fonts use their default face.
 The local Python pipeline uses the existing ImageMagick runtime to rasterise
 clock characters and produces one binary atlas and exact glyph metrics. Edits
 preserve the element's centre to the nearest native pixel and reserve enough
-width for every HH:MM value. A change that cannot fit inside the current boundary
+width for every live value in the selected display mode. A change that cannot fit inside the current boundary
 shows an error and leaves the last accepted scene intact. No browser text
 measurement supplies layout or export coordinates.
 

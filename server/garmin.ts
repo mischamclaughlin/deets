@@ -144,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock"].includes(
                         request.url ?? "",
                     )
                 )
@@ -181,15 +181,18 @@ export function garmin(): Plugin {
                 const payload = await body(request);
                 const exporting = request.url === "/api/garmin/export";
                 const typography = request.url === "/api/garmin/typography";
+                const clock = request.url === "/api/garmin/clock";
                 const allowed = exporting
                     ? ["scene", "mapping"]
-                    : typography ? ["scene", "elementId", "typography"] : ["scene", "night"];
+                    : typography ? ["scene", "elementId", "typography"]
+                        : clock ? ["scene", "elementId", "source"] : ["scene", "night"];
                 if (
                     Object.keys(payload).some(
                         (key) => !allowed.includes(key),
                     ) ||
                     !("scene" in payload) ||
-                    (typography && (!("elementId" in payload) || !("typography" in payload)))
+                    (typography && (!("elementId" in payload) || !("typography" in payload))) ||
+                    (clock && (!("elementId" in payload) || !("source" in payload)))
                 )
                     return sendError(
                         response,
@@ -198,7 +201,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        typography ? "typography" : "layout",
+                        typography ? "typography" : clock ? "clock" : "layout",
                         payload,
                     );
                     response.writeHead(200, {

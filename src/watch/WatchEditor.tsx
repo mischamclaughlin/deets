@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { devices, type Scene } from "../../shared/scene.ts";
+import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { defaultGrid } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
+import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
+import { ElementsPanel } from "./ElementsPanel.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
@@ -20,6 +22,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
+                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -157,8 +160,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </p>
             </main>
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
-                {scene.elements.some((element) => element.id === selectedId && element.source === "time") && (
-                    <TypographyPanel key={selectedId} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                {scene.elements.some((element) => element.id === selectedId && isClockSource(element.source)) && (
+                    <>
+                        <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                        <TypographyPanel key={`typography-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                    </>
                 )}
             </aside>
         </div>

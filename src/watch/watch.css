@@ -394,3 +394,61 @@ body,
 .typography-status[role="alert"] {
     color: #edac99;
 }
+
+.element-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.element-list li + li {
+    margin-top: 8px;
+}
+.element-choice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.element-choice[aria-pressed="true"] {
+    border-color: #c3d8ab;
+    background: #26311e;
+}
+.element-format {
+    font-size: 10px;
+    color: #a6b39c;
+}
+.clock-modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 12px;
+}
+.clock-modes button {
+    padding: 8px 4px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+.clock-modes button[aria-pressed="true"] {
+    background: #c3d8ab;
+    border-color: #c3d8ab;
+    color: #111410;
+}
+.element-choice:focus-visible,
+.clock-modes button:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}

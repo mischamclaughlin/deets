@@ -167,28 +167,64 @@ def load(key, device):
     return record
 
 
-def apply(scene, element_id, value):
-    from designer_model import validate_scene
-    scene = validate_scene(scene)
-    target = next((element for element in scene["elements"] if element["id"] == element_id), None)
-    if not target or target["source"] != "time":
-        raise ValueError("Select a time element to edit its typography.")
-    key, record = generate(scene["device"], value)
-    glyphs = record["font"]["glyphs"]
+def _clock_values(source):
+    if source == "hours":
+        return (f"{hour:02d}" for hour in range(24))
+    if source == "minutes":
+        return (f"{minute:02d}" for minute in range(60))
+    return (f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60))
+
+
+def _clock_width(font, source):
+    """Reserve the widest live value using the renderer's exact measurement rule."""
     def text_width(text):
+        glyphs = [font["glyphs"][str(ord(char))] for char in text]
+        if not font.get("inkBounds", False):
+            return max(0, sum(glyph["xadvance"] for glyph in glyphs) - 1)
         pen, right = 0, 0
-        for char in text:
-            glyph = glyphs[str(ord(char))]
+        for glyph in glyphs:
             right = max(right, pen + glyph["width"])
             pen += glyph["xadvance"]
         return right
-    width = max(text_width(f"{hour:02d}:{minute:02d}") for hour in range(24) for minute in range(60))
-    height = record["font"]["height"]
+    return max(text_width(text) for text in _clock_values(source))
+
+
+def _clock_target(scene, element_id):
+    target = next((element for element in scene["elements"] if element["id"] == element_id), None)
+    if not target or target["source"] not in {"time", "hours", "minutes"}:
+        raise ValueError("Select a time element to edit its clock settings.")
+    return target
+
+
+def _fit_clock(scene, element_id, metrics, **changes):
+    from designer_model import validate_scene
     edited = copy.deepcopy(scene)
-    element = next(e for e in edited["elements"] if e["id"] == element_id)
-    element.update(font=key, typography=settings(value), x=(2*element["x"] + element["width"] - width)//2,
-                   y=(2*element["y"] + element["height"] - height)//2, width=width, height=height)
+    element = _clock_target(edited, element_id)
+    source = changes.get("source", element["source"])
+    width, height = _clock_width(metrics, source), metrics["height"]
+    element.update(x=(2*element["x"] + element["width"] - width)//2,
+                   y=(2*element["y"] + element["height"] - height)//2,
+                   width=width, height=height, **changes)
     try:
         return validate_scene(edited)
     except ValueError as error:
-        raise ValueError("This typography does not fit at the element's position inside the watch boundary. Reduce size or width, or move it towards the centre.") from error
+        raise ValueError("This clock setting does not fit at the element's position inside the watch boundary. Reduce size or width, or move it towards the centre.") from error
+
+
+def set_clock_source(scene, element_id, source):
+    """Change the shown clock component while preserving its font and centre."""
+    from designer_model import validate_scene, scene_font_pack
+    if not isinstance(source, str) or source not in {"time", "hours", "minutes"}:
+        raise ValueError("Choose HH:MM, hours only or minutes only.")
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    font = scene_font_pack(scene)["fonts"][target["font"]]
+    return _fit_clock(scene, element_id, font, source=source)
+
+
+def apply(scene, element_id, value):
+    from designer_model import validate_scene
+    scene = validate_scene(scene)
+    _clock_target(scene, element_id)
+    key, record = generate(scene["device"], value)
+    return _fit_clock(scene, element_id, record["font"], font=key, typography=settings(value))

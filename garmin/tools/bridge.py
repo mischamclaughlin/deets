@@ -108,6 +108,11 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "typography"}:
             raise ValueError("Choose a scene, element and typography settings.")
         return layout({"scene": apply(payload["scene"], payload["elementId"], payload["typography"])})
+    if operation == "clock":
+        from designer_typography import set_clock_source
+        if set(payload) != {"scene", "elementId", "source"}:
+            raise ValueError("Choose a scene, element and clock display.")
+        return layout({"scene": set_clock_source(payload["scene"], payload["elementId"], payload["source"])})
     if operation == "export":
         return compile_scene(payload)
     if operation == "health":
