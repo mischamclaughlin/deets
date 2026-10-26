@@ -4,7 +4,14 @@ export const devices = {
     epix2pro51mm: 454,
 } as const;
 export type Device = keyof typeof devices;
-export type FontKey = "widget" | "date" | "time" | "numeric" | "tall";
+export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;
+export interface Typography {
+    family: string;
+    size: number;
+    thickness: number;
+    width: number;
+    letterSpacing: number;
+}
 export interface SceneElement {
     id: string;
     source: string;
@@ -18,6 +25,7 @@ export interface SceneElement {
     nightColour: number;
     visible: "both" | "day" | "night";
     text?: string;
+    typography?: Typography;
 }
 export interface Scene {
     version: 2;

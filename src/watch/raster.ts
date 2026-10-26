@@ -11,6 +11,7 @@ export async function paintWatch(
     const masks = new Map<FontKey, HTMLImageElement>();
     await Promise.all(
         Object.entries(mapping.assets).map(async ([font, url]) => {
+            if (!url) throw new Error("A mapped Garmin font asset is missing.");
             const image = new Image();
             image.src = url;
             await image.decode();

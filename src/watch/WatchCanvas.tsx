@@ -13,6 +13,7 @@ interface Props {
     showGuideLines?: boolean;
     grid?: GridSettings;
     snapEnabled?: boolean;
+    onSelectElement?: (id: string) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
 }
 interface Drag {
@@ -38,7 +39,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, onMoveElement }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, onMoveElement, onSelectElement }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -194,6 +195,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                         if (!element || !start) return;
                         event.preventDefault();
                         setActive(element.id);
+                        onSelectElement?.(element.id);
                         target?.closest("g")?.focus();
                         event.currentTarget.setPointerCapture(event.pointerId);
                         drag.current = { pointerId: event.pointerId, element, start, position: { x: element.x, y: element.y } };
@@ -228,8 +230,8 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                 aria-keyshortcuts={onMoveElement ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
                                 className={selected ? "area selected" : "area"}
                                 onPointerEnter={() => { if (!drag.current) setActive(area.id); }}
-                                onFocus={() => setActive(area.id)}
-                                onClick={() => setActive(area.id)}
+                                onFocus={() => { setActive(area.id); onSelectElement?.(area.id); }}
+                                onClick={() => { setActive(area.id); onSelectElement?.(area.id); }}
                                 onKeyDown={(event) => {
                                     const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
                                     const element = scene.elements.find((item) => item.id === area.id);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { devices, type Scene } from "../../shared/scene.ts";
 import { defaultGrid } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
+import { TypographyPanel } from "./TypographyPanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
 /** Keep scene constraints separate from browser-only guide visibility. */
@@ -9,6 +10,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
+    const [selectedId, setSelectedId] = useState(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [grid, setGrid] = useState(defaultGrid);
     const size = devices[scene.device];
@@ -18,6 +20,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
+                {scene.elements.some((element) => element.id === selectedId && element.source === "time") && (
+                    <TypographyPanel key={selectedId} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                )}
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -141,6 +146,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         showGuideLines={showGuideLines}
                         grid={grid}
                         snapEnabled={snapEnabled}
+                        onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({
                             ...current,
                             elements: current.elements.map((element) => element.id === id

@@ -12,7 +12,7 @@ import zlib
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from designer_model import CATALOG, font_pack, validate_scene
+from designer_model import CATALOG, scene_font_pack, validate_scene
 from designer_charts import chart_ops, ring_positions
 
 
@@ -27,11 +27,11 @@ TYPE_SOURCES = {
 
 def _renderer_fingerprint(scene):
     """Invalidate Garmin's per-app resource cache when rendering inputs change."""
-    pack = font_pack(scene["device"])
+    pack = scene_font_pack(scene)
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     for key in used_fonts:
         digest.update(key.encode())
@@ -118,7 +118,8 @@ def _font_code(pack, used_fonts, needed_codes):
             glyphs.append(f"{int(code)} => {_mc(row)}")
         blocks.append(
             f"        _fonts.add({{{', '.join(glyphs)}}});\n"
-            f"        _fontHeights.add({font['height']});"
+            f"        _fontHeights.add({font['height']});\n"
+            f"        _fontInkBounds.add({_mc(font.get('inkBounds', False))});"
         )
     return "\n".join(blocks)
 
@@ -231,7 +232,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     project = Path(project)
     if project.resolve() == Path(__file__).resolve().parent.parent:
         raise ValueError("Scene exports must be prepared in an isolated project copy.")
-    pack = font_pack(scene["device"])
+    pack = scene_font_pack(scene)
     catalogue = _catalogue()
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if catalogue[element["source"]]["kind"] == "text"})
@@ -308,7 +309,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         for code, glyph in pack["fonts"][key]["glyphs"].items():
             if int(code) not in pair_codes[(key, colour)] or glyph["width"] <= 0 or glyph["height"] <= 0:
                 continue
-            filename = f"glyph-{key}-{colour:06x}-{code}.png"
+            filename = f"glyph-{key.replace(chr(58), chr(45))}-{colour:06x}-{code}.png"
             crop = tuple(glyph[field] for field in ("x", "y", "width", "height"))
             (assets / filename).write_bytes(_coloured_atlas(pack["images"][key], colour, crop))
             resource_id = f"DesignerGlyph{index}_{code}"
@@ -372,6 +373,7 @@ class DesignerView extends WatchUi.WatchFace {
     private var _elements as Array<Array> = @ELEMENTS@;
     private var _fonts as Array<Dictionary> = [];
     private var _fontHeights as Array<Number> = [];
+    private var _fontInkBounds as Array<Boolean> = [];
     private var _bitmaps as Dictionary<ResourceId, WatchUi.BitmapResource> = {};
     private var _glyphResources as Dictionary<Number, Dictionary<Number, ResourceId>> = @GLYPH_RESOURCES@;
     private var _atlasNight = null;
@@ -468,12 +470,19 @@ class DesignerView extends WatchUi.WatchFace {
         var font = _fonts[element[1]];
         var characters = text.toCharArray();
         var total = 0;
-        var glyphCount = 0;
+        var advance = 0;
         for (var i = 0; i < characters.size(); i += 1) {
             var glyph = glyphFor(font, characters[i].toNumber());
-            if (glyph != null) { total += glyph[5]; glyphCount += 1; }
+            if (glyph != null) {
+                if (_fontInkBounds[element[1]]) {
+                    total = Math.max(total, advance + glyph[2]);
+                } else {
+                    total += glyph[5];
+                }
+                advance += glyph[5];
+            }
         }
-        if (glyphCount > 0) { total -= 1; }
+        if (!_fontInkBounds[element[1]] && advance > 0) { total -= 1; }
         var pen = element[2];
         if (element[5] == 1) { pen += Math.floor((element[4] - total) / 2.0).toNumber(); }
         if (element[5] == 2) { pen += element[4] - total; }

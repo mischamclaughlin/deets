@@ -1,9 +1,69 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, lstat, rename, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, extname, join } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import type { WatchMapping } from "../shared/scene.ts";
 import { callBridge, GarminError } from "./bridge.ts";
 
 const MAX_BODY = 65_536;
+const MAX_FONT = 5 * 1024 * 1024;
+
+class RequestError extends GarminError {
+    status: number;
+    constructor(status: number, message: string) {
+        super(message);
+        this.status = status;
+    }
+}
+
+/** Uploaded font names are metadata only; content hashes own every cache path. */
+async function uploadFont(request: IncomingMessage) {
+    if (request.headers["content-type"] !== "application/octet-stream")
+        throw new RequestError(415, "Upload a TTF or OTF font as application/octet-stream.");
+    const header = request.headers["x-font-name"];
+    let name: string;
+    try {
+        if (typeof header !== "string" || header.length > 1024) throw new Error();
+        name = decodeURIComponent(header);
+        if (!name || name.length > 255 || name !== basename(name) || name.includes("\\") ||
+            Array.from(name).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127))
+            throw new Error();
+    } catch {
+        throw new RequestError(400, "Provide a valid font filename.");
+    }
+    if (![".ttf", ".otf"].includes(extname(name).toLowerCase()))
+        throw new RequestError(415, "Choose a TTF or OTF font.");
+    const length = request.headers["content-length"];
+    if (length !== undefined && (!/^\d+$/.test(length) || Number(length) > MAX_FONT))
+        throw new RequestError(413, "Fonts must be no larger than 5 MB.");
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    for await (const chunk of request) {
+        const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        bytes += part.length;
+        if (bytes > MAX_FONT) throw new RequestError(413, "Fonts must be no larger than 5 MB.");
+        chunks.push(part);
+    }
+    const font = Buffer.concat(chunks, bytes);
+    if (font.length < 12 || !["00010000", "4f54544f"].includes(font.subarray(0, 4).toString("hex")))
+        throw new RequestError(400, "This file is not a supported TTF or OTF font.");
+    const digest = createHash("sha256").update(font).digest("hex");
+    const directory = join(tmpdir(), "deets-fonts-v1");
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const info = await lstat(directory);
+    if (!info.isDirectory() || info.isSymbolicLink())
+        throw new RequestError(400, "The local font cache is unavailable.");
+    const temporary = join(directory, `.${digest}.${randomUUID()}.tmp`);
+    try {
+        await writeFile(temporary, font, { flag: "wx", mode: 0o600 });
+        await rename(temporary, join(directory, `${digest}.font`));
+    } finally {
+        await unlink(temporary).catch(() => undefined);
+    }
+    return { id: `upload:${digest}`, name };
+}
 const sendError = (
     response: ServerResponse,
     status: number,
@@ -35,7 +95,7 @@ async function body(
     }
 }
 
-/** Same-origin local API used by Vite dev and preview; it has no account or storage layer. */
+/** Same-origin local API with temporary local font assets, shared by Vite dev and preview. */
 export function garmin(): Plugin {
     let compiling = false;
     const install = (
@@ -84,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font"].includes(
                         request.url ?? "",
                     )
                 )
@@ -99,6 +159,15 @@ export function garmin(): Plugin {
                         405,
                         "This operation requires POST.",
                     );
+                if (request.url === "/api/garmin/font") {
+                    const font = await uploadFont(request);
+                    response.writeHead(200, {
+                        "Content-Type": "application/json",
+                        "Cache-Control": "no-store",
+                    });
+                    response.end(JSON.stringify(font));
+                    return;
+                }
                 if (
                     !request.headers["content-type"]?.startsWith(
                         "application/json",
@@ -111,14 +180,16 @@ export function garmin(): Plugin {
                     );
                 const payload = await body(request);
                 const exporting = request.url === "/api/garmin/export";
+                const typography = request.url === "/api/garmin/typography";
                 const allowed = exporting
                     ? ["scene", "mapping"]
-                    : ["scene", "night"];
+                    : typography ? ["scene", "elementId", "typography"] : ["scene", "night"];
                 if (
                     Object.keys(payload).some(
                         (key) => !allowed.includes(key),
                     ) ||
-                    !("scene" in payload)
+                    !("scene" in payload) ||
+                    (typography && (!("elementId" in payload) || !("typography" in payload)))
                 )
                     return sendError(
                         response,
@@ -127,7 +198,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        "layout",
+                        typography ? "typography" : "layout",
                         payload,
                     );
                     response.writeHead(200, {
@@ -168,7 +239,7 @@ export function garmin(): Plugin {
                 if (!response.headersSent)
                     sendError(
                         response,
-                        error instanceof GarminError ? 400 : 500,
+                        error instanceof RequestError ? error.status : error instanceof GarminError ? 400 : 500,
                         error instanceof GarminError
                             ? error.message
                             : "The Garmin operation could not complete.",

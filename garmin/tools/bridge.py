@@ -22,9 +22,9 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
-    pack = model.font_pack(scene["device"])
+    pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
         digest.update(pack["images"][font])
         digest.update(json.dumps(pack["fonts"][font], sort_keys=True).encode())
@@ -49,7 +49,7 @@ def layout(payload):
             fonts.add(element["font"])
         else:
             operations.extend(chart_ops(element, night=night))
-    pack = model.font_pack(scene["device"])
+    pack = model.scene_font_pack(scene)
     return {"scene": scene, "size": model.DEVICES[scene["device"]], "mapping": mapping(scene),
             "background": device_colour(0 if night else scene["background"]), "areas": areas,
             "ops": [{**operation, "colour": device_colour(operation["colour"])} for operation in operations],
@@ -103,6 +103,11 @@ def dispatch(request):
     operation, payload = request["operation"], request["payload"]
     if operation == "layout":
         return layout(payload)
+    if operation == "typography":
+        from designer_typography import apply
+        if set(payload) != {"scene", "elementId", "typography"}:
+            raise ValueError("Choose a scene, element and typography settings.")
+        return layout({"scene": apply(payload["scene"], payload["elementId"], payload["typography"])})
     if operation == "export":
         return compile_scene(payload)
     if operation == "health":

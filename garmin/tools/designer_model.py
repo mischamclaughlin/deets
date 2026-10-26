@@ -157,6 +157,22 @@ def _font_pack_cached(device, signature):
     return {"fonts": fonts, "images": images}
 
 
+def scene_font_pack(scene):
+    """Resolve exactly the built-in and generated native assets referenced by a scene."""
+    from designer_typography import load
+    pack = font_pack(scene["device"])
+    generated = {element.get("font") for element in scene.get("elements", [])
+                 if isinstance(element, dict) and isinstance(element.get("font"), str) and element["font"].startswith("generated:")}
+    if not generated:
+        return pack
+    result = {"fonts": dict(pack["fonts"]), "images": dict(pack["images"])}
+    for key in generated:
+        record = load(key, scene["device"])
+        result["fonts"][key] = record["font"]
+        result["images"][key] = record["image"]
+    return result
+
+
 def catalogue(device):
     pack = font_pack(device)
     fonts = copy.deepcopy(pack["fonts"])
@@ -192,11 +208,11 @@ def validate_scene(payload):
     background = _integer(payload["background"], "Background colour", 0, 0xFFFFFF)
     if not isinstance(payload["elements"], list) or len(payload["elements"]) > 40:
         raise ValueError("A design can contain at most 40 elements.")
-    pack = font_pack(device)
+    pack = scene_font_pack(payload)
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -207,8 +223,16 @@ def validate_scene(payload):
             raise ValueError("Choose a supported data source.")
         info = SOURCES[source]
         font = original["font"]
-        if font not in info["allowedFonts"]:
+        generated = isinstance(font, str) and font.startswith("generated:")
+        if (not isinstance(font, str) or
+                (generated and (source != "time" or font not in pack["fonts"])) or
+                (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
+        if "typography" in original:
+            from designer_typography import settings, load
+            typography = settings(original["typography"])
+            if not generated or load(font, device)["typography"] != typography:
+                raise ValueError("The typography settings do not match the generated font.")
         x = _integer(original["x"], "Element X", 0, size - 1)
         y = _integer(original["y"], "Element Y", 0, size - 1)
         width = _integer(original["width"], "Element width", 1, size - x)
@@ -241,6 +265,8 @@ def validate_scene(payload):
         result = {"id": identity, "source": source, "font": font, "x": x, "y": y,
                   "width": width, "height": height, "align": original["align"], "colour": colour,
                   "nightColour": night_colour, "visible": original["visible"]}
+        if "typography" in original:
+            result["typography"] = typography
         if "text" in original or source == "label":
             text = original.get("text", "EPIX CANVAS")
             if not isinstance(text, str) or len(text) > 80 or any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in text):
@@ -261,7 +287,13 @@ def layout_text(text, element, font):
         glyph = font["glyphs"].get(str(ord(character)), font["glyphs"].get("63"))
         if glyph is not None:
             glyphs.append(glyph)
-    total = max(0, sum(glyph["xadvance"] for glyph in glyphs) - (1 if glyphs else 0))
+    if font.get("inkBounds", False):
+        advance, total = 0, 0
+        for glyph in glyphs:
+            total = max(total, advance + glyph["width"])
+            advance += glyph["xadvance"]
+    else:
+        total = max(0, sum(glyph["xadvance"] for glyph in glyphs) - (1 if glyphs else 0))
     alignment = element.get("align", "left")
     offset = ((element["width"] - total) // 2 if alignment == "centre" else
               element["width"] - total if alignment == "right" else 0)
@@ -285,7 +317,7 @@ def layout_text(text, element, font):
 def render_text_ops(scene, values=None, night=False):
     if values is None:
         values = {source["id"]: source["sample"] for source in CATALOG}
-    pack = font_pack(scene["device"])
+    pack = scene_font_pack(scene)
     operations = []
     for element in scene["elements"]:
         if SOURCES[element["source"]]["kind"] != "text":

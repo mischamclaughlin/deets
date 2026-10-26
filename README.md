@@ -47,6 +47,29 @@ to the inner circle in the canonical native validator. Legacy scenes without it
 retain their existing bounds. Dedicated edge content such as outer seconds
 markers can gain an explicit exception later; no exception is enabled yet.
 
+## Typography
+
+Select the time element to edit its font, visible height (12–160 native pixels),
+thickness (−2 to +6 pixels), width (50–200%) and letter spacing (−4 to +24 pixels).
+Choose the included JetBrains Mono Regular or NL Thin glyphs, or upload a TTF/OTF
+font up to 5 MB. Thickness applies synthetic pixel erosion/dilation; width scales
+glyphs horizontally. These controls do not select variable-font weight or width
+axes. Uploaded fonts use their default face.
+
+The local Python pipeline uses the existing ImageMagick runtime to rasterise
+clock characters and produces one binary atlas and exact glyph metrics. Edits
+preserve the element's centre to the nearest native pixel and reserve enough
+width for every HH:MM value. A change that cannot fit inside the current boundary
+shows an error and leaves the last accepted scene intact. No browser text
+measurement supplies layout or export coordinates.
+
+Uploads and generated atlases are stored in the local temporary directory,
+`deets-fonts-v1`, under content hashes. Scene records reference those hashes and
+settings; they do not contain arbitrary font paths. Clearing that temporary
+cache requires uploading or generating those fonts again. UI edits remain in
+memory; the CLI still exports the scene definition on disk. Preview and Garmin
+export consume the same generated pixels. No new runtime dependencies are added.
+
 ## Core
 
 - `shared/scene.ts`: typed scenes, draw operations and mapped areas.

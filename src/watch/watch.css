@@ -332,3 +332,53 @@ body,
     outline: 2px solid #c3d8ab;
     outline-offset: 3px;
 }
+
+.font-choice {
+    display: block;
+    font-size: 12px;
+}
+.font-choice select {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+}
+.font-upload {
+    width: 100%;
+    margin: 12px 0 20px;
+    padding: 8px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.font-upload:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+.font-choice select:focus-visible,
+.font-upload:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}
+.typography-control + .typography-control {
+    margin-top: 16px;
+}
+.typography-status {
+    margin: 12px 0 0;
+    color: #c3d8ab;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.typography-status[role="alert"] {
+    color: #edac99;
+}

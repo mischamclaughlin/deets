@@ -98,11 +98,11 @@ class DesignerExportTests(unittest.TestCase):
             self.assertNotEqual(identity, exporter.scene_application_id(scene))
         pack = copy.deepcopy(font_pack(scene["device"]))
         pack["images"]["time"] += b"changed-mask"
-        with patch.object(exporter, "font_pack", return_value=pack):
+        with patch.object(exporter, "scene_font_pack", return_value=pack):
             self.assertNotEqual(identity, exporter.scene_application_id(scene))
         pack = copy.deepcopy(font_pack(scene["device"]))
         pack["fonts"]["time"]["glyphs"]["48"]["xadvance"] += 1
-        with patch.object(exporter, "font_pack", return_value=pack):
+        with patch.object(exporter, "scene_font_pack", return_value=pack):
             self.assertNotEqual(identity, exporter.scene_application_id(scene))
 
     def test_proof_uses_canonical_text_samples_and_chart_rectangles(self):
