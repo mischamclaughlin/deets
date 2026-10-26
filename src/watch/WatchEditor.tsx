@@ -46,13 +46,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         Show circumference guide
                     </label>
                 </section>
-                <section aria-labelledby="grid-heading">
-                    <h2 id="grid-heading">Grid</h2>
-                    <label className="guide-toggle">
-                        <input type="checkbox" checked={grid.visible}
-                            onChange={(event) => setGrid((current) => ({ ...current, visible: event.target.checked }))} />
-                        Show grid
-                    </label>
+                <section aria-labelledby="guides-heading">
+                    <h2 id="guides-heading">Guides</h2>
                     <label className="guide-toggle">
                         <input
                             type="checkbox"
@@ -60,6 +55,14 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             onChange={(event) => setShowGuideLines(event.target.checked)}
                         />
                         Show guide lines
+                    </label>
+                </section>
+                <section aria-labelledby="grid-heading">
+                    <h2 id="grid-heading">Grid</h2>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={grid.visible}
+                            onChange={(event) => setGrid((current) => ({ ...current, visible: event.target.checked }))} />
+                        Show grid
                     </label>
                     <button
                         type="button"
