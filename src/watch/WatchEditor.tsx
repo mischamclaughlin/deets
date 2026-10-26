@@ -7,6 +7,7 @@ import { WatchCanvas } from "./WatchCanvas.tsx";
 export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
     const [showCircumference, setShowCircumference] = useState(true);
+    const [showGuideLines, setShowGuideLines] = useState(false);
     const [grid, setGrid] = useState(defaultGrid);
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
@@ -53,6 +54,14 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <input type="checkbox" checked={grid.visible}
                             onChange={(event) => setGrid((current) => ({ ...current, visible: event.target.checked }))} />
                         Show grid
+                    </label>
+                    <label className="guide-toggle">
+                        <input
+                            type="checkbox"
+                            checked={showGuideLines}
+                            onChange={(event) => setShowGuideLines(event.target.checked)}
+                        />
+                        Show guide lines
                     </label>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
@@ -117,7 +126,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </section>
             </aside>
             <main className="watch-workspace" aria-label="Watch face canvas">
-                <WatchCanvas scene={scene} showCircumference={showCircumference} grid={grid} />
+                <WatchCanvas scene={scene} showCircumference={showCircumference} showGuideLines={showGuideLines} grid={grid} />
             </main>
         </div>
     );

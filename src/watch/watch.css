@@ -237,3 +237,17 @@ body,
     stroke-opacity: 0.4;
     stroke-width: 0.75;
 }
+
+.watch-guide-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.watch-guide-lines line {
+    stroke: #c3d8ab;
+    stroke-opacity: 0.25;
+    stroke-width: 0.75;
+    stroke-dasharray: 3 5;
+}

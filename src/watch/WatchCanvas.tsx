@@ -9,6 +9,7 @@ interface Props {
     scene: Scene;
     night?: boolean;
     showCircumference?: boolean;
+    showGuideLines?: boolean;
     grid?: GridSettings;
 }
 interface Result {
@@ -19,7 +20,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, grid }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const [result, setResult] = useState<Result>();
@@ -94,6 +95,17 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, g
                     {gridPaths(size, scene.edgeInset ?? 0, grid).map((path, index) => (
                         <path key={index} d={path} />
                     ))}
+                </svg>
+            )}
+            {showGuideLines && (
+                <svg
+                    className="watch-guide-lines"
+                    viewBox={`0 0 ${size} ${size}`}
+                    role="img"
+                    aria-label="Horizontal and vertical centre guides"
+                >
+                    <line x1={0} y1={size / 2} x2={size} y2={size / 2} />
+                    <line x1={size / 2} y1={0} x2={size / 2} y2={size} />
                 </svg>
             )}
             {showCircumference && (
