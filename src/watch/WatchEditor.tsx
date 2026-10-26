@@ -3,6 +3,7 @@ import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { defaultGrid } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
+import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
@@ -22,7 +23,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
-                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} onSceneChange={setScene} />
+                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
+                <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">

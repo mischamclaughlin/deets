@@ -50,8 +50,9 @@ markers can gain an explicit exception later; no exception is enabled yet.
 
 ## Elements
 
-The left sidebar has a + Time button that creates and selects a fresh, centred
-HH:MM element. Existing clocks remain listed as Time 1, Time 2 and so on, with
+The left sidebar lists existing elements at the top. The Library section below
+has a + Time button that creates and selects a fresh, centred HH:MM element.
+Existing clocks remain listed as Time 1, Time 2 and so on, with
 independent display modes and typography. Select a clock in the list or on the canvas
 to reveal its controls on the right, including HH:MM, hours only (HH) or minutes
 only (MM). Changes preserve the
