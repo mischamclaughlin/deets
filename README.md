@@ -35,9 +35,10 @@ remains inside the content boundary even with snapping off. The initial time ele
 uses the native bitmap font, with a fixed 10:08 design preview and live time in
 the Garmin export (following the watch’s 12/24-hour setting).
 
-The sidebar contains controls only and scrolls independently of the canvas.
-Native-pixel and usable-diameter information sits beneath the watch. On narrow
-screens the sidebar stacks above the canvas with its own scrollable region.
+Layout and guide controls stay in the left sidebar; selected-element controls
+(such as Typography) live in the right sidebar. Each sidebar scrolls independently
+of the canvas. Native-pixel and usable-diameter information sits beneath the watch.
+On narrow screens both sidebar regions sit above the canvas and scroll separately.
 
 `src/watch/scene.ts` is the initial typed scene definition. The editor keeps its
 current scene in memory. The CLI exports the scene definition on disk. Integer

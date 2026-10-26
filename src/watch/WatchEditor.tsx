@@ -20,9 +20,6 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
-                {scene.elements.some((element) => element.id === selectedId && element.source === "time") && (
-                    <TypographyPanel key={selectedId} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                )}
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -159,6 +156,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     Native watch pixels · {size - inset * 2} px usable diameter
                 </p>
             </main>
+            <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
+                {scene.elements.some((element) => element.id === selectedId && element.source === "time") && (
+                    <TypographyPanel key={selectedId} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                )}
+            </aside>
         </div>
     );
 }
