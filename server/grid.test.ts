@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { defaultGrid, gridPaths } from "../src/watch/grid.ts";
+import { defaultGrid, gridPaths, gridRadii } from "../src/watch/grid.ts";
 
 test("grid counts describe cells rather than dividers and visibility preserves settings", () => {
     const grid = { ...defaultGrid, rows: 3, columns: 5 };
@@ -52,5 +52,32 @@ test("invalid grid counts cannot create unbounded geometry", () => {
     for (const count of [0, -1, 25, 2.5, NaN, Infinity]) {
         assert.throws(() => gridPaths(416, 16, { ...defaultGrid, visible: true, rows: count }), RangeError);
         assert.throws(() => gridPaths(416, 16, { ...defaultGrid, visible: true, columns: count }), RangeError);
+    }
+});
+
+
+test("extra circumferences divide the usable radius without duplicating the boundary", () => {
+    for (const size of [390, 416, 454]) {
+        for (const inset of [0, 16, size / 2 - 1]) {
+            for (let count = 0; count <= 24; count++) {
+                const grid = { ...defaultGrid, visible: true, circumferences: count };
+                const radii = gridRadii(size, inset, grid);
+                assert.equal(radii.length, count);
+                const boundary = size / 2 - inset;
+                const spacing = boundary / (count + 1);
+                radii.forEach((radius, index) => {
+                    assert.ok(radius > 0 && radius < boundary);
+                    assert.ok(Math.abs(radius - (radii[index - 1] ?? 0) - spacing) < 1e-9);
+                });
+                assert.deepEqual(gridRadii(size, inset, { ...grid, visible: false }), []);
+            }
+        }
+    }
+    assert.deepEqual(gridRadii(416, 16, { ...defaultGrid, visible: true, circumferences: 3 }), [48, 96, 144]);
+});
+
+test("invalid circumference counts cannot create unbounded geometry", () => {
+    for (const count of [-1, 25, 2.5, NaN, Infinity]) {
+        assert.throws(() => gridRadii(416, 16, { ...defaultGrid, visible: true, circumferences: count }), RangeError);
     }
 });

@@ -230,7 +230,8 @@ body,
     height: 100%;
     pointer-events: none;
 }
-.watch-grid path {
+.watch-grid path,
+.watch-grid circle {
     fill: none;
     stroke: #a6b39c;
     stroke-opacity: 0.4;

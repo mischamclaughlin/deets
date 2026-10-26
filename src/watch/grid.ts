@@ -3,6 +3,7 @@ export interface GridSettings {
     visible: boolean;
     rows: number;
     columns: number;
+    circumferences: number;
     curvedRows: boolean;
     curvedColumns: boolean;
 }
@@ -11,6 +12,7 @@ export const defaultGrid: GridSettings = {
     visible: false,
     rows: 4,
     columns: 4,
+    circumferences: 0,
     curvedRows: false,
     curvedColumns: false,
 };
@@ -43,4 +45,14 @@ export function gridPaths(size: number, inset: number, grid: GridSettings): stri
         }
     }
     return paths;
+}
+
+/** Extra rings divide the usable radius into equal intervals, excluding its boundary. */
+export function gridRadii(size: number, inset: number, grid: GridSettings): number[] {
+    const radius = size / 2 - inset;
+    if (!grid.visible || radius <= 0) return [];
+    if (!Number.isInteger(grid.circumferences) || grid.circumferences < 0 || grid.circumferences > 24)
+        throw new RangeError("Extra circumferences must be an integer from 0 to 24.");
+    return Array.from({ length: grid.circumferences }, (_, index) =>
+        radius * (index + 1) / (grid.circumferences + 1));
 }

@@ -67,6 +67,19 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             </label>
                         ))}
                     </div>
+                    <div className="grid-counts">
+                        <label>
+                            Extra circumferences
+                            <select value={grid.circumferences}
+                                onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value) }))}
+                                aria-describedby="grid-circumferences-note">
+                                {Array.from({ length: 25 }, (_, count) => (
+                                    <option key={count} value={count}>{count}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                    <p id="grid-circumferences-note" className="control-note">Evenly spaced inside the content boundary.</p>
                     <label className="guide-toggle">
                         <input type="checkbox" checked={grid.curvedRows}
                             onChange={(event) => setGrid((current) => ({ ...current, curvedRows: event.target.checked }))} />
