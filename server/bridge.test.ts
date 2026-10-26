@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { callBridge, GarminError } from "./bridge.ts";
 import { populatedScene as scene } from "./scene.fixture.ts";
-import { scene as blankScene } from "../src/watch/scene.ts";
+import { scene as initialScene } from "../src/watch/scene.ts";
 import { moveElement } from "../src/watch/snapping.ts";
 import { devices } from "../shared/scene.ts";
 import type { WatchMapping } from "../shared/scene.ts";
+
+const blankScene = { ...initialScene, elements: [] };
 
 test("native mapping round-trips the typed scene and exposes exact element bounds", async () => {
     const layout = await callBridge<WatchMapping>("layout", { scene });
@@ -81,4 +83,21 @@ test("snapped positions round-trip the native validator on every device", async 
         assert.equal(mapped.areas[0].y, position.y);
         assert.ok(mapped.ops.length > 0);
     }
+});
+
+
+test("initial HH:MM time uses native glyphs and is centred on both axes", async () => {
+    const layout = await callBridge<WatchMapping>("layout", { scene: initialScene });
+    assert.deepEqual(layout.scene, initialScene);
+    assert.equal(layout.areas.length, 1);
+    const area = layout.areas[0];
+    assert.equal(area.source, "time");
+    assert.equal(area.x + area.width / 2, layout.size / 2);
+    assert.equal(area.y + area.height / 2, layout.size / 2);
+    assert.equal(layout.ops.length, 5);
+    assert.ok(layout.ops.every((op) => op.kind === "bitmap" && op.elementId === "time"));
+    const shifted = moveElement(initialScene, initialScene.elements[0], { x: 91, y: 167 }, {
+        enabled: true, showGuideLines: true, showCircumference: true,
+    });
+    assert.deepEqual(shifted, { x: 88, y: 164 });
 });

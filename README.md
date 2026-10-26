@@ -10,7 +10,7 @@ npm run export:garmin
 ```
 
 `npm run dev` serves the local Vite app at `http://127.0.0.1:5173`. Start with
-an empty watch face and a sidebar containing the circumference control. Edge
+a centred HH:MM time face and a sidebar containing the circumference control. Edge
 clearance is an integer inset in native watch pixels, initially 16 px. The dashed
 guide can be hidden independently; it never enters the canvas raster or export.
 The optional grid supports 1–24 rows and columns independently, plus 0–24 extra
@@ -31,8 +31,9 @@ centre guides, grid dividers, rings and the circumference. Drag a mapped element
 to preview its bounding box; release to commit its integer native-pixel position
 and remap its ink. Arrow keys move by one pixel, Shift by ten; Alt temporarily
 bypasses snapping. Escape or pointer cancellation discards a drag. The full box
-remains inside the content boundary even with snapping off. The initial canvas
-is still empty; these interactions apply to elements supplied in the scene.
+remains inside the content boundary even with snapping off. The initial time element
+uses the native bitmap font, with a fixed 10:08 design preview and live time in
+the Garmin export (following the watch’s 12/24-hour setting).
 
 The sidebar contains controls only and scrolls independently of the canvas.
 Native-pixel and usable-diameter information sits beneath the watch. On narrow
