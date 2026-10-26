@@ -24,6 +24,8 @@ export interface Scene {
     name: string;
     device: Device;
     background: number;
+    /** Minimum radial clearance in native pixels; omitted for legacy scenes. */
+    edgeInset?: number;
     elements: SceneElement[];
 }
 export interface MappedArea {

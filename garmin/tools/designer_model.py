@@ -175,7 +175,8 @@ def _integer(value, label, minimum, maximum):
 
 
 def validate_scene(payload):
-    if not isinstance(payload, dict) or set(payload) != {"version", "name", "device", "background", "elements"}:
+    fields = {"version", "name", "device", "background", "elements"}
+    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset"}:
         raise ValueError("Expected a version-2 watch-face scene.")
     if type(payload["version"]) is not int or payload["version"] != 2:
         raise ValueError("This scene version is unsupported.")
@@ -186,6 +187,8 @@ def validate_scene(payload):
     if not isinstance(device, str) or device not in DEVICES:
         raise ValueError("Choose a supported epix Pro device.")
     size = DEVICES[device]
+    edge_inset = (_integer(payload["edgeInset"], "Edge inset", 0, size // 2 - 1)
+                  if "edgeInset" in payload else None)
     background = _integer(payload["background"], "Background colour", 0, 0xFFFFFF)
     if not isinstance(payload["elements"], list) or len(payload["elements"]) > 40:
         raise ValueError("A design can contain at most 40 elements.")
@@ -216,6 +219,13 @@ def validate_scene(payload):
         default_height = (pack["fonts"][font]["height"] if info["kind"] == "text" else
                           18 if info["kind"] == "bars" else width if info["kind"] == "ring" else 14)
         height = _integer(original.get("height", default_height), "Element height", 1, size - y)
+        if edge_inset is not None:
+            # Check the complete clipping box, including its outer pixel edges.
+            # A rectangle lies within a circle exactly when all four corners do.
+            radius_twice = size - 2 * edge_inset
+            if any((2 * corner_x - size) ** 2 + (2 * corner_y - size) ** 2 > radius_twice ** 2
+                   for corner_x in (x, x + width) for corner_y in (y, y + height)):
+                raise ValueError(f"Element '{identity}' must fit inside the circumference boundary.")
         if info["kind"] == "text" and height != pack["fonts"][font]["height"]:
             raise ValueError("Text height must match its native bitmap font.")
         if info["kind"] == "ring" and (width != height or width < 4):
@@ -237,8 +247,11 @@ def validate_scene(payload):
                 raise ValueError("Labels support up to 80 characters from the selected bitmap font.")
             result["text"] = text
         elements.append(result)
-    return {"version": 2, "name": name.strip(), "device": device,
-            "background": background, "elements": elements}
+    scene = {"version": 2, "name": name.strip(), "device": device,
+             "background": background, "elements": elements}
+    if edge_inset is not None:
+        scene["edgeInset"] = edge_inset
+    return scene
 
 
 def layout_text(text, element, font):

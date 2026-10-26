@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Scene, WatchMapping } from "../../shared/scene.ts";
+import { devices, type Scene, type WatchMapping } from "../../shared/scene.ts";
 import { mapWatch } from "./api.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
@@ -7,6 +7,7 @@ import "./watch.css";
 interface Props {
     scene: Scene;
     night?: boolean;
+    showCircumference?: boolean;
 }
 interface Result {
     scene: Scene;
@@ -15,8 +16,9 @@ interface Result {
     error?: string;
 }
 
-/** The only visible surface: the watch and its native-pixel area information. */
-export function WatchCanvas({ scene, night = false }: Props) {
+/** Native watch pixels with browser-only area and circumference annotations. */
+export function WatchCanvas({ scene, night = false, showCircumference = false }: Props) {
+    const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const [result, setResult] = useState<Result>();
     const [painted, setPainted] = useState<string>();
@@ -80,6 +82,20 @@ export function WatchCanvas({ scene, night = false }: Props) {
                 <span className="watch-status" role="status">
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>
+            )}
+            {showCircumference && (
+                <svg
+                    className="watch-circumference"
+                    viewBox={`0 0 ${size} ${size}`}
+                    aria-label={`Content boundary, ${scene.edgeInset ?? 0} native pixels from the edge`}
+                    role="img"
+                >
+                    <circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={size / 2 - (scene.edgeInset ?? 0)}
+                    />
+                </svg>
             )}
             {mapping && ready && (
                 <svg

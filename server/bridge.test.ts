@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { callBridge, GarminError } from "./bridge.ts";
-import { scene } from "../src/watch/scene.ts";
+import { populatedScene as scene } from "./scene.fixture.ts";
+import { scene as blankScene } from "../src/watch/scene.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 
 test("native mapping round-trips the typed scene and exposes exact element bounds", async () => {
@@ -41,4 +42,17 @@ test("layout and asset changes invalidate the mapping token", async () => {
     });
     assert.notEqual(original.mapping, updated.mapping);
     assert.equal(updated.areas.find((area) => area.id === "time")?.x, 33);
+});
+
+
+test("blank canvas preserves its circumference without adding exported ink", async () => {
+    const layout = await callBridge<WatchMapping>("layout", { scene: blankScene });
+    assert.deepEqual(layout.scene, blankScene);
+    assert.deepEqual(layout.ops, []);
+    assert.deepEqual(layout.areas, []);
+    const updated = await callBridge<WatchMapping>("layout", {
+        scene: { ...blankScene, edgeInset: 32 },
+    });
+    assert.notEqual(updated.mapping, layout.mapping);
+    assert.deepEqual(updated.ops, []);
 });

@@ -46,6 +46,51 @@ class SceneValidationTests(unittest.TestCase):
             with self.subTest(scene=scene), self.assertRaises(ValueError):
                 model.validate_scene(scene)
 
+    def test_circumference_accepts_tangent_boxes_and_rejects_crossing_corners(self):
+        for device, size in model.DEVICES.items():
+            with self.subTest(device=device):
+                centre = size // 2
+                scene = self.scene()
+                scene.update(device=device, edgeInset=centre - 100)
+                # A 3:4:5 triangle places each corner exactly on the circle.
+                scene["elements"][0].update(source="solarTimeline", font="widget",
+                    x=centre - 60, y=centre - 80, width=120, height=160)
+                original = copy.deepcopy(scene)
+                self.assertEqual(model.validate_scene(scene), original)
+                self.assertEqual(scene, original)
+                scene["elements"][0]["x"] -= 1
+                with self.assertRaisesRegex(ValueError, "circumference boundary"):
+                    model.validate_scene(scene)
+
+    def test_circumference_checks_all_corners_rather_than_square_inset(self):
+        scene = self.scene()
+        scene["edgeInset"] = 20
+        scene["elements"][0].update(x=20, y=20, width=100)
+        with self.assertRaisesRegex(ValueError, "circumference boundary"):
+            model.validate_scene(scene)
+
+    def test_circumference_inset_range_and_empty_scene_round_trip(self):
+        for device, size in model.DEVICES.items():
+            for inset in (0, 20, size // 2 - 1):
+                with self.subTest(device=device, inset=inset):
+                    scene = self.scene()
+                    scene.update(device=device, edgeInset=inset, elements=[])
+                    self.assertEqual(model.validate_scene(scene), scene)
+            for inset in (-1, size // 2, True, 2.5, "20", None):
+                with self.subTest(device=device, inset=inset):
+                    scene = self.scene()
+                    scene.update(device=device, edgeInset=inset, elements=[])
+                    with self.assertRaisesRegex(ValueError, "Edge inset"):
+                        model.validate_scene(scene)
+
+    def test_zero_inset_still_enforces_round_display_and_legacy_scenes_stay_unchanged(self):
+        scene = self.scene()
+        scene["elements"][0].update(x=0, y=0, width=100)
+        self.assertNotIn("edgeInset", model.validate_scene(scene))
+        scene["edgeInset"] = 0
+        with self.assertRaisesRegex(ValueError, "circumference boundary"):
+            model.validate_scene(scene)
+
     def test_text_label_support_and_chart_sizes(self):
         scene = self.scene()
         element = scene["elements"][0]

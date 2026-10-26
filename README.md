@@ -9,18 +9,24 @@ npm test
 npm run export:garmin
 ```
 
-`npm run dev` opens the local Vite app at `http://127.0.0.1:5173`. The visible
-surface is only the watch. Hover or focus a mapped area to see its data binding,
-X/Y coordinates and native width/height. These annotations are not exported ink.
+`npm run dev` serves the local Vite app at `http://127.0.0.1:5173`. Start with
+an empty watch face and a sidebar containing the circumference control. Edge
+clearance is an integer inset in native watch pixels, initially 16 px. The dashed
+guide can be hidden independently; it never enters the canvas raster or export.
+On narrow screens the sidebar stacks above the canvas.
 
-`src/watch/scene.ts` is the typed scene definition. Its integer coordinates,
-fonts, colours, clipping boxes and data bindings supply both the canvas and the
-Garmin program. `WatchCanvas` also accepts a scene and optional night mode as
-props. There is no editor, sidebar, inspector, library or application shell.
+`src/watch/scene.ts` is the initial typed scene definition. The editor keeps its
+current scene in memory. The CLI exports the scene definition on disk. Integer
+coordinates, fonts, colours, clipping boxes and data bindings supply both the
+canvas and the Garmin program. `edgeInset` constrains entire element rectangles
+to the inner circle in the canonical native validator. Legacy scenes without it
+retain their existing bounds. Dedicated edge content such as outer seconds
+markers can gain an explicit exception later; no exception is enabled yet.
 
 ## Core
 
 - `shared/scene.ts`: typed scenes, draw operations and mapped areas.
+- `src/watch/WatchEditor.tsx`: sidebar, scene state and guide visibility.
 - `src/watch/WatchCanvas.tsx`: watch canvas and translated area information.
 - `src/watch/raster.ts`: paints canonical glyph masks and integer draw operations.
 - `src/watch/api.ts`: `mapWatch(scene)` and `exportGarmin(scene)`.
@@ -30,7 +36,7 @@ props. There is no editor, sidebar, inspector, library or application shell.
   inputs required by export. No signing keys are copied into this project.
 
 The TypeScript server invokes the Python Garmin boundary with JSON. It has no
-account, persistence, simulator-control or designer UI layer. The Python boundary
+account, persistence or simulator-control layer. The Python boundary
 retains shared bitmap masks, exact clipping, RGB565 conversion and live firmware
 fallbacks rather than replacing verified rendering rules during migration.
 
