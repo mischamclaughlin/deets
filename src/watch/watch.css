@@ -297,3 +297,38 @@ body,
 .watch-areas.editable .area:active > rect {
     cursor: grabbing;
 }
+
+.circumference-controls {
+    flex-direction: column;
+    gap: 8px;
+}
+.circumference-inputs {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+}
+.circumference-inputs select {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+.circumference-direction {
+    min-width: 48px;
+    padding: 8px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.circumference-direction[aria-pressed="true"] {
+    background: #c3d8ab;
+    color: #111410;
+    border-color: #c3d8ab;
+}
+.circumference-direction:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}

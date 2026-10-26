@@ -83,30 +83,32 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             </label>
                         ))}
                     </div>
-                    <div className="grid-counts">
-                        <label>
-                            Extra circumferences
-                            <select value={grid.circumferences}
+                    <div className="grid-counts circumference-controls">
+                        <label htmlFor="extra-circumferences">Extra circumferences</label>
+                        <div className="circumference-inputs">
+                            <select
+                                id="extra-circumferences"
+                                value={grid.circumferences}
                                 onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value) }))}
-                                title="Spacing reduces automatically to fit all rings.">
+                                title="Spacing reduces automatically to fit all rings."
+                            >
                                 {Array.from({ length: 25 }, (_, count) => (
                                     <option key={count} value={count}>{count}</option>
                                 ))}
                             </select>
-                        </label>
-                    </div>
-                    <div className="grid-counts">
-                        <label>
-                            Start from
-                            <select value={grid.circumferenceStart}
-                                onChange={(event) => setGrid((current) => ({
+                            <button
+                                type="button"
+                                className="circumference-direction"
+                                aria-label="Start circumferences from inside"
+                                aria-pressed={grid.circumferenceStart === "inside"}
+                                onClick={() => setGrid((current) => ({
                                     ...current,
-                                    circumferenceStart: event.target.value === "inside" ? "inside" : "outside",
-                                }))}>
-                                <option value="inside">Inside · centre</option>
-                                <option value="outside">Outside · boundary</option>
-                            </select>
-                        </label>
+                                    circumferenceStart: current.circumferenceStart === "inside" ? "outside" : "inside",
+                                }))}
+                            >
+                                {grid.circumferenceStart === "inside" ? "in" : "out"}
+                            </button>
+                        </div>
                     </div>
                     <div className="control-heading">
                         <label htmlFor="circumference-spacing">Ring spacing</label>
