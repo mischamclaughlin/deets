@@ -1,0 +1,15 @@
+info face="JetBrains Mono Regular" size=144 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=0,0 outline=0
+common lineHeight=192 base=192 scaleW=880 scaleH=192 pages=1 packed=0 alphaChnl=1 redChnl=0 greenChnl=0 blueChnl=0
+page id=0 file="jetbrains_mono_numeric_time_0.png"
+chars count=10
+char id=48 x=0 y=0 width=88 height=192 xoffset=-11 yoffset=-6 xadvance=65 page=0 chnl=15
+char id=49 x=88 y=0 width=88 height=192 xoffset=-12 yoffset=-6 xadvance=68 page=0 chnl=15
+char id=50 x=176 y=0 width=88 height=192 xoffset=-9 yoffset=-6 xadvance=68 page=0 chnl=15
+char id=51 x=264 y=0 width=88 height=192 xoffset=-9 yoffset=-6 xadvance=66 page=0 chnl=15
+char id=52 x=352 y=0 width=88 height=192 xoffset=-8 yoffset=-6 xadvance=64 page=0 chnl=15
+char id=53 x=440 y=0 width=88 height=192 xoffset=-9 yoffset=-6 xadvance=66 page=0 chnl=15
+char id=54 x=528 y=0 width=88 height=192 xoffset=-8 yoffset=-6 xadvance=71 page=0 chnl=15
+char id=55 x=616 y=0 width=88 height=192 xoffset=-11 yoffset=-6 xadvance=69 page=0 chnl=15
+char id=56 x=704 y=0 width=88 height=192 xoffset=-8 yoffset=-6 xadvance=71 page=0 chnl=15
+char id=57 x=792 y=0 width=88 height=192 xoffset=-8 yoffset=-6 xadvance=71 page=0 chnl=15
+kernings count=0

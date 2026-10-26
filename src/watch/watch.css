@@ -1,0 +1,84 @@
+:root {
+    color-scheme: dark;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #111410;
+}
+* {
+    box-sizing: border-box;
+}
+html,
+body,
+#root {
+    min-width: 280px;
+    min-height: 100%;
+    margin: 0;
+}
+#root {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+}
+.watch {
+    width: min(78dvh, 86vw, 640px);
+    aspect-ratio: 1;
+    position: relative;
+    border-radius: 50%;
+    background: #000;
+    box-shadow:
+        0 0 0 2px #333c2e,
+        0 0 0 12px #1e241b;
+}
+.watch canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    image-rendering: pixelated;
+}
+.watch-areas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.area > rect {
+    fill: transparent;
+    stroke: #c3d8ab;
+    stroke-opacity: 0.13;
+    stroke-width: 0.5;
+    stroke-dasharray: 2 4;
+    cursor: crosshair;
+}
+.area.selected > rect,
+.area:focus > rect {
+    stroke-opacity: 0.8;
+    stroke-width: 0.75;
+    stroke-dasharray: none;
+}
+.area:focus {
+    outline: none;
+}
+.area-label {
+    pointer-events: none;
+}
+.area-label rect {
+    fill: #1b2817;
+    fill-opacity: 0.95;
+}
+.area-label text {
+    fill: #dceccf;
+    font-size: 9px;
+    font-weight: 400;
+}
+.watch-status {
+    position: absolute;
+    inset: 25%;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #b8c6aa;
+}

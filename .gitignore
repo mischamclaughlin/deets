@@ -26,3 +26,8 @@ dist-ssr
 
 # Secrets
 .env
+# Local Python environment, bytecode and generated Garmin programs
+.venv/
+__pycache__/
+*.prg
+exports/

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings>
+    <string id="AppName">Epix Canvas</string>
+    <string id="AccentColorTitle">Accent Colour</string>
+    <string id="TopMiddleWidgetTitle">Top Middle Widget</string>
+    <string id="BottomMiddleWidgetTitle">Bottom Middle Widget</string>
+    <string id="NightTopMiddleWidgetTitle">Night Top Middle Widget</string>
+    <string id="NightBottomMiddleWidgetTitle">Night Bottom Middle Widget</string>
+    <string id="WidgetDate">Date</string>
+    <string id="WidgetNumericDate">Date (dd/mm/yy)</string>
+    <string id="WidgetNumericDateLargeHours">Date (dd/mm/yy, large hours)</string>
+    <string id="WidgetLinkedData">Linked Centre Data</string>
+    <string id="WidgetAlarms">Alarms</string>
+    <string id="ColorRed">Red</string>
+    <string id="ColorOrange">Orange</string>
+    <string id="ColorYellow">Yellow</string>
+    <string id="ColorGreen">Green</string>
+    <string id="ColorBlue">Blue</string>
+    <string id="ColorPurple">Purple</string>
+    <string id="ColorLight">Light</string>
+    <string id="ColorDark">Dark</string>
+    <string id="ColorMoon">Moon</string>
+    <string id="TopLeftDataTitle">Top Left Data</string>
+    <string id="TopCentreDataTitle">Top Centre Data</string>
+    <string id="TopRightDataTitle">Top Right Data</string>
+    <string id="BottomLeftDataTitle">Bottom Left Data</string>
+    <string id="BottomCentreDataTitle">Bottom Centre Data</string>
+    <string id="BottomRightDataTitle">Bottom Right Data</string>
+    <string id="DataOff">Off</string>
+    <string id="DataHeartRate">Heart Rate</string>
+    <string id="DataTemperature">Temperature</string>
+    <string id="DataHighLow">Temperature High / Low</string>
+    <string id="DataSunriseSunset">Sunrise / Sunset</string>
+    <string id="DataFloors">Floors</string>
+    <string id="DataSteps">Steps</string>
+    <string id="DataWeeklyRun">Run Distance (Week)</string>
+</strings>

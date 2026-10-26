@@ -1,0 +1,19 @@
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <fonts>
+        <font id="TimeFont"
+              filename="jetbrains_mono_time.fnt"
+              filter="0123456789:" />
+        <font id="TallMinuteFont"
+              filename="jetbrains_mono_minutes.fnt"
+              filter="0123456789" />
+        <font id="NumericTimeFont"
+              filename="jetbrains_mono_numeric_time.fnt"
+              filter="0123456789" />
+        <font id="NumericDateFont"
+              filename="jetbrains_mono_date.fnt"
+              filter="0123456789/" />
+        <font id="WidgetFont"
+              filename="jetbrains_mono_widget.fnt" />
+    </fonts>
+</resources>

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "export:garmin": "node scripts/export.ts",
+    "test": "node --test server/bridge.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
   },
   "dependencies": {
     "react": "^19.3.1",

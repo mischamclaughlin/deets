@@ -1,0 +1,7 @@
+using Toybox.Application;
+using Toybox.WatchUi;
+
+class EpixCanvasApp extends Application.AppBase {
+    function initialize() { AppBase.initialize(); }
+    function getInitialView() { return [new DesignerView()]; }
+}

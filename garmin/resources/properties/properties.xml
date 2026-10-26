@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <properties>
+        <property id="AccentColor" type="number">5086688</property>
+        <property id="TopMiddleWidget" type="number">0</property>
+        <property id="BottomMiddleWidget" type="number">1</property>
+        <property id="NightTopMiddleWidget" type="number">0</property>
+        <property id="NightBottomMiddleWidget" type="number">1</property>
+        <property id="TopLeftData" type="number">18</property>
+        <property id="TopCentreData" type="number">38</property>
+        <property id="TopRightData" type="number">39</property>
+        <property id="BottomLeftData" type="number">4</property>
+        <property id="BottomCentreData" type="number">2</property>
+        <property id="BottomRightData" type="number">19</property>
+    </properties>
+</resources>
