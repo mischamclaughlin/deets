@@ -452,3 +452,25 @@ body,
     outline: 2px solid #c3d8ab;
     outline-offset: 3px;
 }
+
+.add-element {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 10px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+.add-element:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.add-element:focus-visible {
+    outline: 2px solid #c3d8ab;
+    outline-offset: 3px;
+}

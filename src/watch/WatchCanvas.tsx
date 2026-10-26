@@ -13,6 +13,7 @@ interface Props {
     showGuideLines?: boolean;
     grid?: GridSettings;
     snapEnabled?: boolean;
+    selectedElementId?: string;
     onSelectElement?: (id: string) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
 }
@@ -39,7 +40,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, onMoveElement, onSelectElement }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -211,9 +212,11 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     viewBox={`0 0 ${mapping.size} ${mapping.size}`}
                     aria-label="Translated watch areas"
                 >
-                    {mapping.areas.map((area) => {
+                    {mapping.areas.toSorted((left, right) =>
+                        Number(left.id === (selectedElementId ?? active)) - Number(right.id === (selectedElementId ?? active)),
+                    ).map((area) => {
                         const position = preview?.element.id === area.id ? preview.position : area;
-                        const selected = area.id === active;
+                        const selected = area.id === (selectedElementId ?? active);
                         const label = `${area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
                         const labelX = Math.max(
                             8,

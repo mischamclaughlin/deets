@@ -147,3 +147,18 @@ test("clock display API switches between combined time, hours and minutes", asyn
     const invalid = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "date" }))], { "content-type": "application/json" });
     assert.equal(invalid.status, 400);
 });
+
+
+test("add-time API appends independent elements without replacing existing clocks", async () => {
+    let current = scene;
+    for (let count = 2; count <= 3; count++) {
+        const result = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source: "time" }))], { "content-type": "application/json" });
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const mapped = result.body as unknown as WatchMapping;
+        assert.deepEqual(mapped.scene.elements.slice(0, -1), current.elements);
+        assert.equal(mapped.scene.elements.length, count);
+        assert.equal(mapped.scene.elements.at(-1)?.id, `time-${count}`);
+        assert.equal(mapped.ops.length, count * 5);
+        current = mapped.scene;
+    }
+});

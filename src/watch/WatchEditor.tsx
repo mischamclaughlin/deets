@@ -22,7 +22,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
-                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
+                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} onSceneChange={setScene} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -146,6 +146,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         showGuideLines={showGuideLines}
                         grid={grid}
                         snapEnabled={snapEnabled}
+                        selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({
                             ...current,

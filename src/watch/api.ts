@@ -65,3 +65,7 @@ export async function uploadFont(file: File): Promise<{ id: string; name: string
 
 export const setClockSource = (scene: Scene, elementId: string, source: ClockSource, signal?: AbortSignal) =>
     post<WatchMapping>("clock", { scene, elementId, source }, signal);
+
+
+export const addTime = (scene: Scene, signal?: AbortSignal) =>
+    post<WatchMapping>("add", { scene, source: "time" }, signal);

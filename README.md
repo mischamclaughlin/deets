@@ -50,7 +50,9 @@ markers can gain an explicit exception later; no exception is enabled yet.
 
 ## Elements
 
-The left sidebar lists scene elements. Select Time in the list or on the canvas
+The left sidebar has a + Time button that creates and selects a fresh, centred
+HH:MM element. Existing clocks remain listed as Time 1, Time 2 and so on, with
+independent display modes and typography. Select a clock in the list or on the canvas
 to reveal its controls on the right, including HH:MM, hours only (HH) or minutes
 only (MM). Changes preserve the
 same element, its typography and its centre to the nearest native pixel. Native

@@ -87,3 +87,35 @@ class ClockModeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "does not fit"):
             typography.set_clock_source(scene, "clock", "time")
         self.assertEqual(scene, before)
+
+
+    def test_add_time_creates_unique_independent_clocks_from_native_metrics(self):
+        for device in model.DEVICES:
+            with self.subTest(device=device):
+                original = self.scene()
+                original.update(device=device, elements=[])
+                before = copy.deepcopy(original)
+                added = typography.add_time(original)
+                second = typography.add_time(added)
+                self.assertEqual(original, before)
+                self.assertEqual([element["id"] for element in second["elements"]], ["time", "time-2"])
+                self.assertEqual(second["elements"][0], added["elements"][0])
+                self.assertEqual(len(bridge.layout({"scene": second})["ops"]), 10)
+                for element in second["elements"]:
+                    self.assertEqual(element["source"], "time")
+                    self.assertEqual(element["font"], "time")
+                    self.assertLessEqual(abs(element["x"] + element["width"] / 2 - model.DEVICES[device] / 2), 0.5)
+                changed = typography.set_clock_source(second, "time-2", "hours")
+                self.assertEqual(changed["elements"][0], second["elements"][0])
+                self.assertEqual(changed["elements"][1]["source"], "hours")
+
+    def test_add_rejects_element_limit_and_non_fitting_boundary(self):
+        scene = self.scene()
+        scene["elements"] = [{**scene["elements"][0], "id": f"clock-{index}"} for index in range(40)]
+        with self.assertRaisesRegex(ValueError, "at most 40"):
+            typography.add_time(scene)
+        scene.update(elements=[], edgeInset=200)
+        with self.assertRaisesRegex(ValueError, "cannot fit"):
+            typography.add_time(scene)
+        with self.assertRaisesRegex(ValueError, "supported element"):
+            bridge.dispatch({"operation": "add", "payload": {"scene": self.scene(), "source": "date"}})

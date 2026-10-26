@@ -228,3 +228,30 @@ def apply(scene, element_id, value):
     _clock_target(scene, element_id)
     key, record = generate(scene["device"], value)
     return _fit_clock(scene, element_id, record["font"], font=key, typography=settings(value))
+
+
+def add_time(scene):
+    """Create a fresh clock using native metrics without copying another clock's state."""
+    from designer_model import validate_scene, font_pack, DEVICES
+    scene = validate_scene(scene)
+    if len(scene["elements"]) >= 40:
+        raise ValueError("A design can contain at most 40 elements.")
+    font = font_pack(scene["device"])["fonts"]["time"]
+    width, height = _clock_width(font, "time"), font["height"]
+    size = DEVICES[scene["device"]]
+    identifiers = {element["id"] for element in scene["elements"]}
+    identity, index = "time", 2
+    while identity in identifiers:
+        identity = f"time-{index}"
+        index += 1
+    edited = copy.deepcopy(scene)
+    edited["elements"].append({
+        "id": identity, "source": "time", "font": "time",
+        "x": (size - width) // 2, "y": (size - height) // 2,
+        "width": width, "height": height, "align": "centre",
+        "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both",
+    })
+    try:
+        return validate_scene(edited)
+    except ValueError as error:
+        raise ValueError("A new time element cannot fit inside this boundary. Reduce the edge clearance first.") from error

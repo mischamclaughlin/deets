@@ -108,6 +108,11 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "typography"}:
             raise ValueError("Choose a scene, element and typography settings.")
         return layout({"scene": apply(payload["scene"], payload["elementId"], payload["typography"])})
+    if operation == "add":
+        from designer_typography import add_time
+        if set(payload) != {"scene", "source"} or payload["source"] != "time":
+            raise ValueError("Choose a scene and a supported element to add.")
+        return layout({"scene": add_time(payload["scene"])})
     if operation == "clock":
         from designer_typography import set_clock_source
         if set(payload) != {"scene", "elementId", "source"}:
