@@ -120,10 +120,15 @@ def dispatch(request):
             raise ValueError("Choose a scene, element and font inheritance.")
         return layout({"scene": set_inheritance(payload["scene"], payload["elementId"], payload["inherit"])})
     if operation == "add":
-        from designer_typography import add_time
-        if set(payload) != {"scene", "source"} or payload["source"] != "time":
+        from designer_typography import add_time, add_divider
+        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider"}:
             raise ValueError("Choose a scene and a supported element to add.")
-        return layout({"scene": add_time(payload["scene"])})
+        return layout({"scene": (add_divider if payload["source"] == "divider" else add_time)(payload["scene"])})
+    if operation == "divider":
+        from designer_typography import set_divider_symbol
+        if set(payload) != {"scene", "elementId", "symbol"}:
+            raise ValueError("Choose a scene, divider element and symbol.")
+        return layout({"scene": set_divider_symbol(payload["scene"], payload["elementId"], payload["symbol"])})
     if operation == "clock":
         from designer_typography import set_clock_source
         if set(payload) != {"scene", "elementId", "source"}:

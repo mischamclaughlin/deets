@@ -11,6 +11,8 @@ import struct
 
 CACHE = Path(tempfile.gettempdir()) / "deets-fonts-v1"
 CODES = "0123456789:-?"
+DIVIDER_CODES = CODES + "./|"
+DIVIDER_SYMBOLS = {":", ".", "-", "/", "|"}
 
 
 def family_setting(family):
@@ -78,9 +80,10 @@ def _morph(rows, amount):
              for x in range(width)] for y in range(height)]
 
 
-def generate(device, value):
+def generate(device, value, *, divider=False):
     from designer_model import font_pack, _png_rgba
     value = settings(value)
+    codes = DIVIDER_CODES if divider else CODES
     family = value["family"]
     cells = {}
     if family in {"time", "widget"}:
@@ -88,7 +91,7 @@ def generate(device, value):
         font = pack["fonts"][family]
         width, _, raw = _raw(pack["images"][family])
         native_height = font["height"]
-        for char in CODES:
+        for char in codes:
             glyph = font["glyphs"].get(str(ord(char)))
             source_width, source_raw, source_height = width, raw, native_height
             if not glyph or not glyph["width"]:
@@ -111,7 +114,7 @@ def generate(device, value):
         data = path.read_bytes()
         if hashlib.sha256(data).hexdigest() != identity or data[:4] not in (b"\x00\x01\x00\x00", b"OTTO"):
             raise ValueError("The uploaded font is invalid or has changed.")
-        for char in CODES:
+        for char in codes:
             # Explicit paths prevent font names, filenames and label text becoming commands.
             image = _magick(["-background", "none", "-fill", "white", "-font", str(path), "-pointsize", str(value["size"]), f"label:{char}", "png:-"])
             width, height, raw = _raw(image)
@@ -185,9 +188,9 @@ def load(key, device):
     return record
 
 
-def _clock_values(source):
+def _clock_values(source, symbol=":"):
     if source == "divider":
-        return (":",)
+        return (symbol,)
     if source == "hours":
         return (f"{hour:02d}" for hour in range(24))
     if source in {"minutes", "seconds"}:
@@ -195,7 +198,7 @@ def _clock_values(source):
     return (f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60))
 
 
-def _clock_width(font, source):
+def _clock_width(font, source, symbol=":"):
     """Reserve the widest live value using the renderer's exact measurement rule."""
     def text_width(text):
         glyphs = [font["glyphs"][str(ord(char))] for char in text]
@@ -206,7 +209,7 @@ def _clock_width(font, source):
             right = max(right, pen + glyph["width"])
             pen += glyph["xadvance"]
         return right
-    return max(text_width(text) for text in _clock_values(source))
+    return max(text_width(text) for text in _clock_values(source, symbol))
 
 
 def _clock_target(scene, element_id):
@@ -228,7 +231,7 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
             element.update(x=0, y=0, width=size, height=size)
         element.update(**changes)
     else:
-        width, height = _clock_width(metrics, source), metrics["height"]
+        width, height = _clock_width(metrics, source, changes.get("dividerSymbol", element.get("dividerSymbol", ":"))), metrics["height"]
         element.update(x=(2*element["x"] + element["width"] - width)//2,
                        y=(2*element["y"] + element["height"] - height)//2,
                        width=width, height=height, **changes)
@@ -237,16 +240,18 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
     try:
         return validate_scene(edited)
     except ValueError as error:
-        raise ValueError("This clock setting does not fit at the element's position inside the watch boundary. Reduce size or width, or move it towards the centre.") from error
+        raise ValueError("This text setting does not fit at the element's position inside the watch boundary. Reduce size or width, or move it towards the centre.") from error
 
 
 def set_clock_source(scene, element_id, source):
     """Change the shown clock component while preserving its font and centre."""
     from designer_model import validate_scene, scene_font_pack
-    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}:
-        raise ValueError("Choose HH:MM, hours only, minutes only, seconds, an outer ring or a divider.")
+    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "seconds", "secondsRing"}:
+        raise ValueError("Choose HH:MM, hours only, minutes only, seconds or an outer ring.")
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
+    if target["source"] == "divider":
+        raise ValueError("Choose a time element; dividers are independent Library elements.")
     font = scene_font_pack(scene)["fonts"][target["font"]]
     return _fit_clock(scene, element_id, font, source=source)
 
@@ -259,7 +264,7 @@ def apply(scene, element_id, value):
     inherited = inherits(target)
     if inherited:
         value["family"] = scene.get("fontFamily", "time")
-    key, record = generate(scene["device"], value)
+    key, record = generate(scene["device"], value, divider=target["source"] == "divider")
     return _fit_clock(scene, element_id, record["font"], font=key, typography=value, inheritFont=inherited)
 
 
@@ -307,14 +312,14 @@ def set_watch_font(scene, family):
     if family.startswith("upload:"):
         # Validate even a watch with no inheritors before accepting its default.
         value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
-        generated[tuple(sorted(value.items()))] = generate(scene["device"], value)
+        generated[(False, tuple(sorted(value.items())))] = generate(scene["device"], value)
     for element in scene["elements"]:
         if element["source"] not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} or not inherits(element):
             continue
         value = {**element_settings(element, scene["device"]), "family": family}
-        signature = tuple(sorted(value.items()))
+        signature = (element["source"] == "divider", tuple(sorted(value.items())))
         if signature not in generated:
-            generated[signature] = generate(scene["device"], value)
+            generated[signature] = generate(scene["device"], value, divider=element["source"] == "divider")
         key, record = generated[signature]
         edited = _fit_clock(edited, element["id"], record["font"], validate=False,
                             font=key, typography=value, inheritFont=True)
@@ -335,5 +340,49 @@ def set_inheritance(scene, element_id, inherit):
     if not inherit:
         return validate_scene(edited)
     value = {**element_settings(target, scene["device"]), "family": scene.get("fontFamily", "time")}
-    key, record = generate(scene["device"], value)
+    key, record = generate(scene["device"], value, divider=target["source"] == "divider")
     return _fit_clock(edited, element_id, record["font"], font=key, typography=value, inheritFont=True)
+
+
+def add_divider(scene):
+    """Create a separate centred divider with the watch's current family."""
+    from designer_model import validate_scene, DEVICES, font_pack
+    scene = validate_scene(scene)
+    if len(scene["elements"]) >= 40:
+        raise ValueError("A design can contain at most 40 elements.")
+    value = {"family": scene.get("fontFamily", "time"), "size": font_pack(scene["device"])["fonts"]["time"]["height"],
+             "thickness": 0, "width": 100, "letterSpacing": 1}
+    key, record = generate(scene["device"], value, divider=True)
+    width, height = _clock_width(record["font"], "divider"), record["font"]["height"]
+    size = DEVICES[scene["device"]]
+    identifiers = {element["id"] for element in scene["elements"]}
+    identity, index = "divider", 2
+    while identity in identifiers:
+        identity = f"divider-{index}"
+        index += 1
+    edited = copy.deepcopy(scene)
+    edited["elements"].append({"id": identity, "source": "divider", "font": key,
+        "inheritFont": True, "typography": value, "dividerSymbol": ":", "dividerPosition": "middle",
+        "x": (size-width)//2, "y": (size-height)//2, "width": width, "height": height,
+        "align": "centre", "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both"})
+    return validate_scene(edited)
+
+
+def set_divider_symbol(scene, element_id, symbol):
+    from designer_model import validate_scene, scene_font_pack
+    if not isinstance(symbol, str) or symbol not in DIVIDER_SYMBOLS:
+        raise ValueError("Choose colon, dot, dash, slash or vertical bar for the divider.")
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    if target["source"] != "divider":
+        raise ValueError("Select a divider element to change its symbol.")
+    font = scene_font_pack(scene)["fonts"][target["font"]]
+    changes = {"dividerSymbol": symbol}
+    if str(ord(symbol)) not in font["glyphs"]:
+        value = element_settings(target, scene["device"])
+        if inherits(target):
+            value["family"] = scene.get("fontFamily", "time")
+        key, record = generate(scene["device"], value, divider=True)
+        font = record["font"]
+        changes.update(font=key, typography=value, inheritFont=inherits(target))
+    return _fit_clock(scene, element_id, font, **changes)

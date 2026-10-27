@@ -5,10 +5,11 @@ export const devices = {
 } as const;
 export type Device = keyof typeof devices;
 export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;
-export type ClockSource = "time" | "hours" | "minutes" | "divider" | "seconds" | "secondsRing";
+export type ClockSource = "time" | "hours" | "minutes" | "seconds" | "secondsRing";
 export const isClockSource = (source: string): source is ClockSource =>
-    source === "time" || source === "hours" || source === "minutes" || source === "divider" ||
+    source === "time" || source === "hours" || source === "minutes" ||
     source === "seconds" || source === "secondsRing";
+export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {
     family: string;
     size: number;
@@ -32,6 +33,8 @@ export interface SceneElement {
     typography?: Typography;
     /** When omitted, clocks with legacy typography stay custom; others inherit. */
     inheritFont?: boolean;
+    /** Character drawn by an independent divider element. Defaults to colon. */
+    dividerSymbol?: DividerSymbol;
     /** Vertical placement of divider ink within its native text box. Defaults to middle. */
     dividerPosition?: "top" | "middle" | "bottom";
     /** Align all seconds-ring outer tick tips to the edge-clearance circumference. */

@@ -1,4 +1,4 @@
-import type { ClockSource, Scene, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ClockSource, DividerSymbol, Scene, Typography, WatchMapping } from "../../shared/scene.ts";
 
 async function post<T>(
     path: string,
@@ -75,3 +75,9 @@ export const setWatchFont = (scene: Scene, family: string, signal?: AbortSignal)
 
 export const setFontInheritance = (scene: Scene, elementId: string, inherit: boolean, signal?: AbortSignal) =>
     post<WatchMapping>("inherit-font", { scene, elementId, inherit }, signal);
+
+export const addDivider = (scene: Scene, signal?: AbortSignal) =>
+    post<WatchMapping>("add", { scene, source: "divider" }, signal);
+
+export const setDividerSymbol = (scene: Scene, elementId: string, symbol: DividerSymbol, signal?: AbortSignal) =>
+    post<WatchMapping>("divider", { scene, elementId, symbol }, signal);

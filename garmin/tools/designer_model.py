@@ -46,7 +46,7 @@ CATALOG = [
     _source("time", "Time", "Clock & date", "10:08"),
     _source("hours", "Hours", "Clock & date", "10"),
     _source("minutes", "Minutes", "Clock & date", "08"),
-    _source("divider", "Divider", "Clock & date", ":"),
+    _source("divider", "Divider", "Design", ":"),
     _source("seconds", "Seconds", "Clock & date", "23"),
     _source("date", "Date", "Clock & date", "MON 26 OCT 2026"),
     _source("numericDate", "Numeric date", "Clock & date", "26/10/26"),
@@ -215,7 +215,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -250,6 +250,13 @@ def validate_scene(payload):
             raise ValueError("Choose whether seconds-ring ticks stretch to the circumference on a clock element.")
         if original.get("ringTicksToCircumference", False) and original.get("ringTicksStretchToCircumference", False):
             raise ValueError("Choose alignment or stretching for seconds-ring ticks, not both.")
+        if "dividerSymbol" in original:
+            from designer_typography import DIVIDER_SYMBOLS
+            symbol = original["dividerSymbol"]
+            if source != "divider" or not isinstance(symbol, str) or symbol not in DIVIDER_SYMBOLS:
+                raise ValueError("Choose a supported divider symbol on a divider element.")
+        if source == "divider" and str(ord(original.get("dividerSymbol", ":"))) not in pack["fonts"][font]["glyphs"]:
+            raise ValueError("The selected font does not contain this divider symbol; apply its typography again.")
         if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or not isinstance(original["dividerPosition"], str)
                 or original["dividerPosition"] not in {"top", "middle", "bottom"}):
@@ -294,6 +301,8 @@ def validate_scene(payload):
             result["typography"] = typography
         if "inheritFont" in original:
             result["inheritFont"] = original["inheritFont"]
+        if "dividerSymbol" in original:
+            result["dividerSymbol"] = original["dividerSymbol"]
         if "dividerPosition" in original:
             result["dividerPosition"] = original["dividerPosition"]
         if "ringTicksToCircumference" in original:
@@ -365,6 +374,8 @@ def render_text_ops(scene, values=None, night=False):
         if element["visible"] == ("day" if night else "night"):
             continue
         text = element.get("text", "") if element["source"] == "label" else values.get(element["source"], "--")
+        if element["source"] == "divider":
+            text = element.get("dividerSymbol", ":")
         if text is None:
             text = "--"
         for operation in layout_text(str(text), element, pack["fonts"][element["font"]]):

@@ -11,6 +11,11 @@ import designer_typography as typography
 import designer_export as exporter
 
 
+def legacy_divider(scene, element_id):
+    font = model.scene_font_pack(scene)["fonts"][next(e for e in scene["elements"] if e["id"] == element_id)["font"]]
+    return typography._fit_clock(scene, element_id, font, source="divider")
+
+
 SETTINGS = {"family": "time", "size": 70, "thickness": 1, "width": 110, "letterSpacing": -4}
 
 
@@ -24,7 +29,7 @@ class ClockModeTests(unittest.TestCase):
         original = self.scene()
         before = copy.deepcopy(original)
         widths = {}
-        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08"), ("seconds", "23"), ("divider", ":")):
+        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08"), ("seconds", "23")):
             with self.subTest(source=source):
                 changed = typography.set_clock_source(original, "clock", source)
                 element = changed["elements"][0]
@@ -42,13 +47,12 @@ class ClockModeTests(unittest.TestCase):
                     for operation in expected])
         self.assertLess(widths["hours"], widths["time"])
         self.assertLess(widths["minutes"], widths["time"])
-        self.assertLess(widths["divider"], widths["minutes"])
         self.assertEqual(original, before)
 
     def test_every_component_value_fits_native_bounds(self):
         for generated in (False, True):
             scene = typography.apply(self.scene(), "clock", SETTINGS) if generated else self.scene()
-            for source in ("time", "hours", "minutes", "seconds", "divider"):
+            for source in ("time", "hours", "minutes", "seconds"):
                 changed = typography.set_clock_source(scene, "clock", source)
                 element = changed["elements"][0]
                 font = model.scene_font_pack(changed)["fonts"][element["font"]]
@@ -59,7 +63,7 @@ class ClockModeTests(unittest.TestCase):
 
     def test_generated_font_survives_mode_changes_and_typography_can_be_edited_again(self):
         scene = typography.apply(self.scene(), "clock", SETTINGS)
-        for source in ("hours", "minutes", "seconds", "divider", "time"):
+        for source in ("hours", "minutes", "seconds", "time"):
             changed = typography.set_clock_source(scene, "clock", source)
             self.assertEqual(changed["elements"][0]["typography"], SETTINGS)
             self.assertEqual(changed["elements"][0]["font"], scene["elements"][0]["font"])
@@ -126,7 +130,7 @@ class ClockModeTests(unittest.TestCase):
             bridge.dispatch({"operation": "add", "payload": {"scene": self.scene(), "source": "date"}})
 
     def test_divider_inherits_watch_font_and_exports_a_literal_colon(self):
-        scene = typography.set_clock_source(self.scene(), "clock", "divider")
+        scene = legacy_divider(self.scene(), "clock")
         scene = typography.set_watch_font(scene, "widget")
         element = scene["elements"][0]
         self.assertTrue(element["inheritFont"])
@@ -140,7 +144,7 @@ class ClockModeTests(unittest.TestCase):
             shutil.copy2(model.ROOT / "manifest.xml", project / "manifest.xml")
             exporter.prepare_scene_project(project, scene)
             source = (project / "source/DesignerView.mc").read_text()
-            self.assertIn('case "divider": return ":";', source)
+            self.assertIn('source.equals("divider")', source)
 
 
     def test_divider_position_aligns_native_and_generated_ink_without_changing_its_box(self):
@@ -151,7 +155,7 @@ class ClockModeTests(unittest.TestCase):
                 original = typography.add_time(original)
                 if generated:
                     original = typography.apply(original, "time", SETTINGS)
-                original = typography.set_clock_source(original, "time", "divider")
+                original = legacy_divider(original, "time")
                 element = original["elements"][0]
                 font = model.scene_font_pack(original)["fonts"][element["font"]]
                 glyph = font["glyphs"][str(ord(":"))]
@@ -174,16 +178,13 @@ class ClockModeTests(unittest.TestCase):
                 self.assertEqual(bridge.layout({"scene": original})["ops"], bridge.layout({"scene": middle})["ops"])
 
     def test_divider_position_survives_font_size_and_source_edits(self):
-        scene = typography.set_clock_source(self.scene(), "clock", "divider")
+        scene = legacy_divider(self.scene(), "clock")
         scene["elements"][0]["dividerPosition"] = "bottom"
         scene = typography.set_watch_font(scene, "widget")
         scene = typography.apply(scene, "clock", {**SETTINGS, "size": 55})
-        scene = typography.set_clock_source(scene, "clock", "hours")
+        scene = typography.set_divider_symbol(scene, "clock", ".")
         self.assertEqual(scene["elements"][0]["dividerPosition"], "bottom")
-        font = model.scene_font_pack(scene)["fonts"][scene["elements"][0]["font"]]
-        element = scene["elements"][0]
-        self.assertEqual(model.layout_text("10", element, font), model.layout_text("10", {k: v for k, v in element.items() if k != "dividerPosition"}, font))
-        scene = typography.set_clock_source(scene, "clock", "divider")
+        scene = typography.set_divider_symbol(scene, "clock", ":")
         operation, = bridge.layout({"scene": scene})["ops"]
         self.assertEqual(operation["y"] + operation["height"], scene["elements"][0]["y"] + 55)
         with tempfile.TemporaryDirectory() as directory:

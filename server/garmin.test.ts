@@ -132,16 +132,16 @@ test("typography API generates canonical clock pixels from an included or upload
 });
 
 
-test("clock display API switches between combined time, hours, minutes, seconds and divider", async () => {
+test("clock display API switches between combined time, hours, minutes and seconds", async () => {
     let current = scene;
-    for (const source of ["hours", "minutes", "divider", "seconds", "time"]) {
+    for (const source of ["hours", "minutes", "seconds", "time"]) {
         const payload = { scene: current, elementId: "time", source };
         const result = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify(payload))], { "content-type": "application/json" });
         assert.equal(result.status, 200, JSON.stringify(result.body));
         const mapped = result.body as unknown as WatchMapping;
         current = mapped.scene;
         assert.equal(current.elements[0].source, source);
-        assert.equal(mapped.ops.length, source === "time" ? 5 : source === "divider" ? 1 : 2);
+        assert.equal(mapped.ops.length, source === "time" ? 5 : 2);
         assert.ok(Math.abs(current.elements[0].x + current.elements[0].width / 2 - 208) <= 0.5);
     }
     const invalid = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "date" }))], { "content-type": "application/json" });
@@ -189,7 +189,7 @@ test("watch fonts resolve inherited clocks and inheritance requests keep strict 
 
 test("layout API positions divider ink within its native box and rejects invalid positions", async () => {
     const headers = { "content-type": "application/json" };
-    const response = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "divider" }))], headers);
+    const response = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: { ...scene, elements: [] }, source: "divider" }))], headers);
     assert.equal(response.status, 200);
     const divider = (response.body as unknown as WatchMapping).scene;
     const element = divider.elements[0];
@@ -272,4 +272,32 @@ test("stretched seconds ticks keep outer tips fixed and reach clearance inwards"
         const invalid = { ...ring, elements: [{ ...ring.elements[0], ...flags }] };
         assert.equal((await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: invalid }))], headers)).status, 400);
     }
+});
+
+test("library dividers are independent elements with native symbol choices", async () => {
+    const headers = { "content-type": "application/json" };
+    const response = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "divider" }))], headers);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    let current = (response.body as unknown as WatchMapping).scene;
+    assert.deepEqual(current.elements[0], scene.elements[0]);
+    const identity = current.elements[1].id;
+    assert.equal(current.elements[1].source, "divider");
+    assert.equal(current.elements[1].inheritFont, true);
+    for (const symbol of [":", ".", "-", "/", "|"]) {
+        const result = await requestApi("/api/garmin/divider", [Buffer.from(JSON.stringify({ scene: current, elementId: identity, symbol }))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const mapped = result.body as unknown as WatchMapping;
+        assert.equal(mapped.scene.elements[1].dividerSymbol, symbol);
+        assert.deepEqual(mapped.scene.elements[0], scene.elements[0]);
+        assert.equal(mapped.ops.filter((op) => op.kind === "bitmap" && op.elementId === identity).length, 1);
+        current = mapped.scene;
+    }
+    for (const payload of [
+        { scene: current, elementId: identity, symbol: "unsupported" },
+        { scene: current, elementId: "time", symbol: ":" },
+    ]) {
+        assert.equal((await requestApi("/api/garmin/divider", [Buffer.from(JSON.stringify(payload))], headers)).status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", source: "divider" }))], headers)).status, 400);
+    assert.equal((await requestApi("/api/garmin/divider", [], { origin: "https://attacker.example" })).status, 403);
 });

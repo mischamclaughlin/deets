@@ -2,6 +2,7 @@ import { useState } from "react";
 import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { defaultGrid } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
+import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
@@ -169,9 +170,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </p>
             </main>
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
-                {scene.elements.some((element) => element.id === selectedId && isClockSource(element.source)) && (
+                {scene.elements.some((element) => element.id === selectedId && (isClockSource(element.source) || element.source === "divider")) && (
                     <>
-                        <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                        {selected?.source === "divider"
+                            ? <DividerPanel key={`divider-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                            : <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />}
                         {selected?.source !== "secondsRing" && <TypographyPanel key={`typography-${selectedId}-${selected?.inheritFont ?? !selected?.typography}-${selected?.typography?.family ?? scene.fontFamily}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />}
                     </>
                 )}

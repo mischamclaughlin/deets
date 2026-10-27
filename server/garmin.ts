@@ -144,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider"].includes(
                         request.url ?? "",
                     )
                 )
@@ -182,12 +182,14 @@ export function garmin(): Plugin {
                 const exporting = request.url === "/api/garmin/export";
                 const typography = request.url === "/api/garmin/typography";
                 const clock = request.url === "/api/garmin/clock";
+                const divider = request.url === "/api/garmin/divider";
                 const adding = request.url === "/api/garmin/add";
                 const watchFont = request.url === "/api/garmin/watch-font";
                 const inheritFont = request.url === "/api/garmin/inherit-font";
                 const allowed = exporting
                     ? ["scene", "mapping"]
                     : typography ? ["scene", "elementId", "typography"]
+                        : divider ? ["scene", "elementId", "symbol"]
                         : clock ? ["scene", "elementId", "source"]
                             : adding ? ["scene", "source"]
                                 : watchFont ? ["scene", "family"]
@@ -199,6 +201,7 @@ export function garmin(): Plugin {
                     !("scene" in payload) ||
                     (typography && (!("elementId" in payload) || !("typography" in payload))) ||
                     (clock && (!("elementId" in payload) || !("source" in payload))) ||
+                    (divider && (!("elementId" in payload) || !("symbol" in payload))) ||
                     (adding && !("source" in payload)) ||
                     (watchFont && !("family" in payload)) ||
                     (inheritFont && (!("elementId" in payload) || !("inherit" in payload)))
@@ -210,7 +213,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        typography ? "typography" : clock ? "clock" : adding ? "add"
+                        typography ? "typography" : divider ? "divider" : clock ? "clock" : adding ? "add"
                             : watchFont ? "watch-font" : inheritFont ? "inherit-font" : "layout",
                         payload,
                     );

@@ -126,14 +126,14 @@ def _font_code(pack, used_fonts, needed_codes):
 
 def _element_codes(element, catalogue, proof):
     source = element["source"]
-    if source == "label":
+    if source == "divider":
+        text = element.get("dividerSymbol", ":")
+    elif source == "label":
         text = element.get("text", "")
     elif proof:
         text = str(catalogue[source].get("sample", "--"))
     elif source in {"hours", "minutes", "seconds", "day", "year"}:
         text = "0123456789"
-    elif source == "divider":
-        text = ":"
     elif source == "time":
         text = "0123456789:"
     elif source == "numericDate":
@@ -277,7 +277,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             element["width"], {"left": 0, "centre": 1, "right": 2}[element["align"]],
             element["colour"], element["nightColour"],
             {"both": 0, "day": 1, "night": 2}[element["visible"]],
-            element.get("text", ""), kind, element["height"], day_rectangles, night_rectangles,
+            (element.get("dividerSymbol", ":") if source == "divider" else element.get("text", "")), kind, element["height"], day_rectangles, night_rectangles,
             atlas_indices.get((element["font"], element["colour"]), -1),
             atlas_indices.get((element["font"], element["nightColour"]), -1),
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
@@ -531,13 +531,12 @@ class DesignerView extends WatchUi.WatchFace {
     }
 
     private function textFor(source as String, literal as String) as String {
-        if (source.equals("label")) { return literal; }
+        if (source.equals("label") || source.equals("divider")) { return literal; }
         if (_proof && _samples.hasKey(source)) { return _samples[source].toString(); }
         switch (source) {
             case "time": return _values.timeText;
             case "hours": return _values.hourText;
             case "minutes": return _values.minuteText;
-            case "divider": return ":";
             case "seconds": return _values.seconds.format("%02d");
             case "date": return _values.dateLeftText + " " + _values.dateCentreText + " " + _values.dateRightText;
             case "numericDate": return _values.numericDateText;
