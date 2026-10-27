@@ -192,7 +192,7 @@ def _integer(value, label, minimum, maximum):
 
 def validate_scene(payload):
     fields = {"version", "name", "device", "background", "elements"}
-    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset"}:
+    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily"}:
         raise ValueError("Expected a version-2 watch-face scene.")
     if type(payload["version"]) is not int or payload["version"] != 2:
         raise ValueError("This scene version is unsupported.")
@@ -208,11 +208,13 @@ def validate_scene(payload):
     background = _integer(payload["background"], "Background colour", 0, 0xFFFFFF)
     if not isinstance(payload["elements"], list) or len(payload["elements"]) > 40:
         raise ValueError("A design can contain at most 40 elements.")
+    from designer_typography import family_setting, inherits
+    family = family_setting(payload.get("fontFamily", "time"))
     pack = scene_font_pack(payload)
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -233,6 +235,12 @@ def validate_scene(payload):
             typography = settings(original["typography"])
             if not generated or load(font, device)["typography"] != typography:
                 raise ValueError("The typography settings do not match the generated font.")
+        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes"}):
+            raise ValueError("Only clock elements can choose whether to inherit the watch font.")
+        if source in {"time", "hours", "minutes"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
+            actual_family = typography["family"] if "typography" in original else font
+            if actual_family != family:
+                raise ValueError("The inheriting element does not match the watch font.")
         x = _integer(original["x"], "Element X", 0, size - 1)
         y = _integer(original["y"], "Element Y", 0, size - 1)
         width = _integer(original["width"], "Element width", 1, size - x)
@@ -267,6 +275,8 @@ def validate_scene(payload):
                   "nightColour": night_colour, "visible": original["visible"]}
         if "typography" in original:
             result["typography"] = typography
+        if "inheritFont" in original:
+            result["inheritFont"] = original["inheritFont"]
         if "text" in original or source == "label":
             text = original.get("text", "EPIX CANVAS")
             if not isinstance(text, str) or len(text) > 80 or any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in text):
@@ -277,6 +287,8 @@ def validate_scene(payload):
              "background": background, "elements": elements}
     if edge_inset is not None:
         scene["edgeInset"] = edge_inset
+    if "fontFamily" in payload:
+        scene["fontFamily"] = family
     return scene
 
 

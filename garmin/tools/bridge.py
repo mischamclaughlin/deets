@@ -108,6 +108,16 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "typography"}:
             raise ValueError("Choose a scene, element and typography settings.")
         return layout({"scene": apply(payload["scene"], payload["elementId"], payload["typography"])})
+    if operation == "watch-font":
+        from designer_typography import set_watch_font
+        if set(payload) != {"scene", "family"}:
+            raise ValueError("Choose a scene and watch font.")
+        return layout({"scene": set_watch_font(payload["scene"], payload["family"])})
+    if operation == "inherit-font":
+        from designer_typography import set_inheritance
+        if set(payload) != {"scene", "elementId", "inherit"}:
+            raise ValueError("Choose a scene, element and font inheritance.")
+        return layout({"scene": set_inheritance(payload["scene"], payload["elementId"], payload["inherit"])})
     if operation == "add":
         from designer_typography import add_time
         if set(payload) != {"scene", "source"} or payload["source"] != "time":

@@ -5,6 +5,8 @@ import { moveElement } from "./snapping.ts";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
+import { WatchFontPanel } from "./WatchFontPanel.tsx";
+import type { UploadedFont } from "./FontPicker.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
@@ -16,6 +18,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [selectedId, setSelectedId] = useState(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [grid, setGrid] = useState(defaultGrid);
+    const [uploads, setUploads] = useState<UploadedFont[]>([]);
+    const rememberFont = (font: UploadedFont) => setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
+    const selected = scene.elements.find((element) => element.id === selectedId);
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
 
@@ -25,6 +30,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 <h1>deets</h1>
                 <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
+                <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -166,7 +172,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 {scene.elements.some((element) => element.id === selectedId && isClockSource(element.source)) && (
                     <>
                         <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                        <TypographyPanel key={`typography-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                        <TypographyPanel key={`typography-${selectedId}-${selected?.inheritFont ?? !selected?.typography}-${selected?.typography?.family ?? scene.fontFamily}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
                     </>
                 )}
             </aside>

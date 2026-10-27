@@ -13,12 +13,25 @@ CACHE = Path(tempfile.gettempdir()) / "deets-fonts-v1"
 CODES = "0123456789:-?"
 
 
+def family_setting(family):
+    if not isinstance(family, str) or (family not in {"time", "widget"} and not re.fullmatch(r"upload:[a-f0-9]{64}", family)):
+        raise ValueError("Choose an included font or upload a TTF/OTF font.")
+    return family
+
+
+def inherits(element):
+    return element.get("inheritFont", "typography" not in element)
+
+
+def element_settings(element):
+    return dict(element.get("typography", {"family": "widget" if element["font"] == "widget" else "time",
+        "size": element["height"], "thickness": 0, "width": 100, "letterSpacing": 1}))
+
+
 def settings(value):
     if not isinstance(value, dict) or set(value) != {"family", "size", "thickness", "width", "letterSpacing"}:
         raise ValueError("Choose a font, size, thickness, width and letter spacing.")
-    family = value["family"]
-    if not isinstance(family, str) or (family not in {"time", "widget"} and not re.fullmatch(r"upload:[a-f0-9]{64}", family)):
-        raise ValueError("Choose an included font or upload a TTF/OTF font.")
+    family_setting(value["family"])
     for field, low, high in (("size", 12, 160), ("thickness", -2, 6), ("width", 50, 200), ("letterSpacing", -4, 24)):
         if type(value[field]) is not int or not low <= value[field] <= high:
             raise ValueError(f"Typography {field} must be an integer from {low} to {high}.")
@@ -196,7 +209,7 @@ def _clock_target(scene, element_id):
     return target
 
 
-def _fit_clock(scene, element_id, metrics, **changes):
+def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
     from designer_model import validate_scene
     edited = copy.deepcopy(scene)
     element = _clock_target(edited, element_id)
@@ -205,6 +218,8 @@ def _fit_clock(scene, element_id, metrics, **changes):
     element.update(x=(2*element["x"] + element["width"] - width)//2,
                    y=(2*element["y"] + element["height"] - height)//2,
                    width=width, height=height, **changes)
+    if not validate:
+        return edited
     try:
         return validate_scene(edited)
     except ValueError as error:
@@ -225,9 +240,13 @@ def set_clock_source(scene, element_id, source):
 def apply(scene, element_id, value):
     from designer_model import validate_scene
     scene = validate_scene(scene)
-    _clock_target(scene, element_id)
+    target = _clock_target(scene, element_id)
+    value = settings(value)
+    inherited = inherits(target)
+    if inherited:
+        value["family"] = scene.get("fontFamily", "time")
     key, record = generate(scene["device"], value)
-    return _fit_clock(scene, element_id, record["font"], font=key, typography=settings(value))
+    return _fit_clock(scene, element_id, record["font"], font=key, typography=value, inheritFont=inherited)
 
 
 def add_time(scene):
@@ -237,6 +256,11 @@ def add_time(scene):
     if len(scene["elements"]) >= 40:
         raise ValueError("A design can contain at most 40 elements.")
     font = font_pack(scene["device"])["fonts"]["time"]
+    key, value = "time", None
+    if scene.get("fontFamily", "time") != "time":
+        value = {"family": scene["fontFamily"], "size": font["height"], "thickness": 0, "width": 100, "letterSpacing": 1}
+        key, record = generate(scene["device"], value)
+        font = record["font"]
     width, height = _clock_width(font, "time"), font["height"]
     size = DEVICES[scene["device"]]
     identifiers = {element["id"] for element in scene["elements"]}
@@ -246,7 +270,8 @@ def add_time(scene):
         index += 1
     edited = copy.deepcopy(scene)
     edited["elements"].append({
-        "id": identity, "source": "time", "font": "time",
+        "id": identity, "source": "time", "font": key, "inheritFont": True,
+        **({"typography": value} if value else {}),
         "x": (size - width) // 2, "y": (size - height) // 2,
         "width": width, "height": height, "align": "centre",
         "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both",
@@ -255,3 +280,46 @@ def add_time(scene):
         return validate_scene(edited)
     except ValueError as error:
         raise ValueError("A new time element cannot fit inside this boundary. Reduce the edge clearance first.") from error
+
+
+def set_watch_font(scene, family):
+    """Resolve every inheriting clock in one atomic scene edit."""
+    from designer_model import validate_scene
+    scene = validate_scene(scene)
+    family = family_setting(family)
+    edited = copy.deepcopy(scene)
+    edited["fontFamily"] = family
+    generated = {}
+    if family.startswith("upload:"):
+        # Validate even a watch with no inheritors before accepting its default.
+        value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
+        generated[tuple(sorted(value.items()))] = generate(scene["device"], value)
+    for element in scene["elements"]:
+        if element["source"] not in {"time", "hours", "minutes"} or not inherits(element):
+            continue
+        value = {**element_settings(element), "family": family}
+        signature = tuple(sorted(value.items()))
+        if signature not in generated:
+            generated[signature] = generate(scene["device"], value)
+        key, record = generated[signature]
+        edited = _fit_clock(edited, element["id"], record["font"], validate=False,
+                            font=key, typography=value, inheritFont=True)
+    try:
+        return validate_scene(edited)
+    except ValueError as error:
+        raise ValueError("This watch font does not fit every inheriting element. Reduce its size or width, or move it towards the centre.") from error
+
+
+def set_inheritance(scene, element_id, inherit):
+    from designer_model import validate_scene
+    if type(inherit) is not bool:
+        raise ValueError("Choose whether to inherit the watch font.")
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    edited = copy.deepcopy(scene)
+    _clock_target(edited, element_id)["inheritFont"] = inherit
+    if not inherit:
+        return validate_scene(edited)
+    value = {**element_settings(target), "family": scene.get("fontFamily", "time")}
+    key, record = generate(scene["device"], value)
+    return _fit_clock(edited, element_id, record["font"], font=key, typography=value, inheritFont=True)

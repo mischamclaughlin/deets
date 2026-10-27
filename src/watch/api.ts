@@ -69,3 +69,9 @@ export const setClockSource = (scene: Scene, elementId: string, source: ClockSou
 
 export const addTime = (scene: Scene, signal?: AbortSignal) =>
     post<WatchMapping>("add", { scene, source: "time" }, signal);
+
+export const setWatchFont = (scene: Scene, family: string, signal?: AbortSignal) =>
+    post<WatchMapping>("watch-font", { scene, family }, signal);
+
+export const setFontInheritance = (scene: Scene, elementId: string, inherit: boolean, signal?: AbortSignal) =>
+    post<WatchMapping>("inherit-font", { scene, elementId, inherit }, signal);

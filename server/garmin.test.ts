@@ -116,7 +116,7 @@ test("typography API generates canonical clock pixels from an included or upload
         if (!existed) uploadedPath = cachePath;
         for (const family of families) {
             const typography = { family, size: 60, thickness: 1, width: 110, letterSpacing: 2 };
-            const result = await requestApi("/api/garmin/typography", [Buffer.from(JSON.stringify({ scene, elementId: "time", typography }))], { "content-type": "application/json" });
+            const result = await requestApi("/api/garmin/typography", [Buffer.from(JSON.stringify({ scene: { ...scene, elements: scene.elements.map((element) => ({ ...element, inheritFont: false })) }, elementId: "time", typography }))], { "content-type": "application/json" });
             assert.equal(result.status, 200, JSON.stringify(result.body));
             const mapped = result.body as unknown as WatchMapping;
             const clock = mapped.scene.elements[0];
@@ -161,4 +161,28 @@ test("add-time API appends independent elements without replacing existing clock
         assert.equal(mapped.ops.length, count * 5);
         current = mapped.scene;
     }
+});
+
+test("watch fonts resolve inherited clocks and inheritance requests keep strict bounds", async () => {
+    const headers = { "content-type": "application/json" };
+    const changed = await requestApi("/api/garmin/watch-font", [Buffer.from(JSON.stringify({ scene, family: "widget" }))], headers);
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    const current = (changed.body as unknown as WatchMapping).scene;
+    assert.equal(current.fontFamily, "widget");
+    assert.equal(current.elements[0].typography?.family, "widget");
+    assert.equal(current.elements[0].inheritFont, true);
+    const custom = await requestApi("/api/garmin/inherit-font", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", inherit: false }))], headers);
+    assert.equal(custom.status, 200, JSON.stringify(custom.body));
+    assert.equal((custom.body as unknown as WatchMapping).scene.elements[0].inheritFont, false);
+    for (const [path, payload] of [
+        ["watch-font", { scene }],
+        ["watch-font", { scene, family: "../../font" }],
+        ["inherit-font", { scene, elementId: "time" }],
+        ["inherit-font", { scene, elementId: "time", inherit: "yes" }],
+    ] as const) {
+        const result = await requestApi(`/api/garmin/${path}`, [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(result.status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/watch-font", [], { host: "attacker.example" })).status, 403);
+    assert.equal((await requestApi("/api/garmin/inherit-font", [], { origin: "https://attacker.example" })).status, 403);
 });

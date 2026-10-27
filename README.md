@@ -63,7 +63,13 @@ Typography remains in the right sidebar for all three display modes.
 
 ## Typography
 
-Select the time element to edit its font, visible height (12–160 native pixels),
+Set the default family in **Watch font** on the left. Each clock offers
+**Inherit watch font** or **Custom font** on the right. New clocks inherit;
+custom clocks keep their family when the watch font changes. Size, thickness,
+width and spacing remain independent for every element. A watch-wide change
+updates all inheriting clocks together, or leaves the scene intact if any cannot fit.
+
+Select a time element to edit its visible height (12–160 native pixels),
 thickness (−2 to +6 pixels), width (50–200%) and letter spacing (−4 to +24 pixels).
 Choose the included JetBrains Mono Regular or NL Thin glyphs, or upload a TTF/OTF
 font up to 5 MB. Thickness applies synthetic pixel erosion/dilation; width scales

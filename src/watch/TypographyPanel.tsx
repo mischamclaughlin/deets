@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Scene, Typography } from "../../shared/scene.ts";
-import { setTypography, uploadFont } from "./api.ts";
+import { setFontInheritance, setTypography } from "./api.ts";
+import { FontPicker, type UploadedFont } from "./FontPicker.tsx";
 
 interface Props {
     scene: Scene;
     elementId: string;
     onSceneChange: (scene: Scene) => void;
+    uploads: UploadedFont[];
+    onUpload: (font: UploadedFont) => void;
 }
 
 const controls = [
@@ -16,10 +19,12 @@ const controls = [
 ] as const;
 
 /** Every accepted edit comes back through the native glyph and layout validator. */
-export function TypographyPanel({ scene, elementId, onSceneChange }: Props) {
+export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUpload }: Props) {
     const element = scene.elements.find((item) => item.id === elementId)!;
+    const inherits = element.inheritFont ?? !element.typography;
+    const [pendingInheritance, setPendingInheritance] = useState<boolean>();
     const [draft, setDraft] = useState<Typography>(element.typography ?? {
-        family: element.font === "widget" ? "widget" : "time",
+        family: inherits ? scene.fontFamily ?? "time" : element.font === "widget" ? "widget" : "time",
         size: element.height,
         thickness: 0,
         width: 100,
@@ -27,11 +32,22 @@ export function TypographyPanel({ scene, elementId, onSceneChange }: Props) {
     });
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string>();
-    const [uploads, setUploads] = useState<Array<{ id: string; name: string }>>([]);
-    const fileInput = useRef<HTMLInputElement>(null);
-    const uploadRequest = useRef(0);
+    useEffect(() => {
+        if (pendingInheritance === undefined) return;
+        const controller = new AbortController();
+        void setFontInheritance(scene, elementId, pendingInheritance, controller.signal).then((layout) => {
+            if (controller.signal.aborted) return;
+            onSceneChange(layout.scene);
+            setPendingInheritance(undefined);
+            setError(undefined);
+        }).catch((failure) => {
+            if (controller.signal.aborted) return;
+            setPendingInheritance(undefined);
+            setError(failure instanceof Error ? failure.message : "The font choice could not be changed.");
+        });
+        return () => controller.abort();
+    }, [pendingInheritance, scene, elementId, onSceneChange]);
 
     useEffect(() => {
         if (!dirty) return;
@@ -69,55 +85,29 @@ export function TypographyPanel({ scene, elementId, onSceneChange }: Props) {
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
             <label className="font-choice">
-                Font
-                <select value={draft.family} onChange={(event) => change({ ...draft, family: event.target.value })}>
-                    <option value="time">JetBrains Mono Regular</option>
-                    <option value="widget">JetBrains Mono NL Thin</option>
-                    {draft.family.startsWith("upload:") && !uploads.some((font) => font.id === draft.family) && (
-                        <option value={draft.family}>Uploaded font</option>
-                    )}
-                    {uploads.map((font) => <option key={font.id} value={font.id}>{font.name}</option>)}
+                Font source
+                <select value={inherits ? "inherit" : "custom"} disabled={busy || dirty || pendingInheritance !== undefined}
+                    onChange={(event) => { setError(undefined); setPendingInheritance(event.target.value === "inherit"); }}>
+                    <option value="inherit">Inherit watch font</option>
+                    <option value="custom">Custom font</option>
                 </select>
             </label>
-            <input
-                ref={fileInput}
-                type="file"
-                accept=".ttf,.otf"
-                hidden
-                onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    const request = ++uploadRequest.current;
-                    setUploading(true);
-                    setError(undefined);
-                    void uploadFont(file).then((font) => {
-                        if (request !== uploadRequest.current) return;
-                        setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
-                        setDraft((current) => ({ ...current, family: font.id }));
-                        setDirty(true);
-                    }).catch((failure) => {
-                        if (request === uploadRequest.current)
-                            setError(failure instanceof Error ? failure.message : "The font could not be uploaded.");
-                    }).finally(() => { if (request === uploadRequest.current) setUploading(false); });
-                }}
-            />
-            <button className="font-upload" type="button" disabled={uploading} onClick={() => fileInput.current?.click()}>
-                {uploading ? "Uploading…" : "Upload font…"}
-            </button>
+            <FontPicker family={inherits ? scene.fontFamily ?? "time" : draft.family}
+                uploads={uploads} onUpload={onUpload} disabled={inherits || pendingInheritance !== undefined}
+                onChange={(family) => change({ ...draft, family })} />
             {controls.map(({ key, label, min, max, unit }) => (
                 <div className="typography-control" key={key}>
                     <div className="control-heading">
                         <label htmlFor={`type-${key}`}>{label}</label>
                         <output htmlFor={`type-${key}`}>{draft[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
                     </div>
-                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={draft[key]}
+                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={draft[key]} disabled={pendingInheritance !== undefined}
                         onChange={(event) => change({ ...draft, [key]: Number(event.target.value) })} />
                 </div>
             ))}
-            {(busy || uploading || error) && (
+            {(busy || pendingInheritance !== undefined || error) && (
                 <p className="typography-status" role={error ? "alert" : "status"}>
-                    {error ?? (uploading ? "Uploading font…" : "Generating glyphs…")}
+                    {error ?? (pendingInheritance !== undefined ? "Updating font choice…" : "Generating glyphs…")}
                 </p>
             )}
         </section>
