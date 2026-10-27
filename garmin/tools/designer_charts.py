@@ -67,8 +67,23 @@ def _ring_rectangles(pixels):
     return tuple(packed)
 
 
+def ring_tick_length(scene, element):
+    """Use the guide radius as the longest tick's inner radial edge."""
+    width = element["width"]
+    scale = min(1, width / 40)
+    if not element.get("ringTicksToCircumference", False):
+        return 15 * scale
+    from designer_model import DEVICES
+    guide_radius = DEVICES[scene["device"]] / 2 - scene.get("edgeInset", 0)
+    return max(1, width / 2 - 4 * scale - guide_radius)
+
+
+def ring_signature(scene, element):
+    return element["width"], ring_tick_length(scene, element)
+
+
 @functools.lru_cache(maxsize=64)
-def ring_geometry(width):
+def ring_geometry(width, longest=None):
     """Parent watch tick hierarchy, rasterised once to shared integer masks.
 
     Native drawing decodes these same rectangles rather than rasterising its own
@@ -77,11 +92,12 @@ def ring_geometry(width):
     scale = min(1, width / 40)
     centre = width / 2
     outer = centre - 4 * scale
+    longest = 15 * scale if longest is None else longest
     groups = []
     for second in range(60):
         angle = second * math.pi / 30
         radial_x, radial_y = math.sin(angle), -math.cos(angle)
-        length = (15 if second % 15 == 0 else 11 if second % 5 == 0 else 7) * scale
+        length = (15 if second % 15 == 0 else 11 if second % 5 == 0 else 7) * longest / 15
         half_width = (6 if second % 15 == 0 else 4 if second % 5 == 0 else 2) * scale / 2
         inner = max(0, outer - length)
         corners = [(centre + radial_x * radius - radial_y * side,
@@ -104,7 +120,7 @@ def ring_geometry(width):
     return tuple(groups)
 
 
-def chart_ops(element, value=None, night=False):
+def chart_ops(element, value=None, night=False, *, ring_length=None):
     source = element['source']
     value = SAMPLES[source] if value is None else value
     x, y, width, height = (element[k] for k in ('x', 'y', 'width', 'height'))
@@ -140,7 +156,7 @@ def chart_ops(element, value=None, night=False):
                 rect(x + a, y + height // 2 - 1, width - a, 3, colour)
         rect(x + min(width - 1, max(0, width * now // 86400)), y, 1, height, colour)
     elif source == 'secondsRing':
-        for i, group in enumerate(ring_geometry(width)):
+        for i, group in enumerate(ring_geometry(width, ring_length)):
             brightness = 42 if i == 60 else 100 if i == value else 68 if i < value else 24
             for packed in group:
                 tx, ty, tw, th = unpack_ring_rect(packed)

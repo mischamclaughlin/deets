@@ -66,7 +66,10 @@ native element box. Seconds offer **Digits** or **Outer ring**. The ring uses
 based on the parent watch face. It stays centred on the physical screen,
 independent of the content edge clearance. Switching back to digits retains the
 font settings. The ring's selection area follows its circumference so inner
-elements remain selectable.
+elements remain selectable. **Fit ticks to circumference** scales the varied
+tick lengths together so the longest reaches the content guide; the shorter
+ticks keep their proportions. While enabled, lengths follow the edge clearance.
+Toggle it off to restore the parent face’s tick lengths.
 
 ## Typography
 

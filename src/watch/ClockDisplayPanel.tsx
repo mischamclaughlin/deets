@@ -61,6 +61,18 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                     </select>
                 </label>
             )}
+            {selected?.source === "secondsRing" && (
+                <button type="button" className="snap-button" aria-pressed={selected.ringTicksToCircumference ?? false}
+                    disabled={requested !== undefined}
+                    onClick={() => onSceneChange({
+                        ...scene,
+                        elements: scene.elements.map((element) => element.id === elementId
+                            ? { ...element, ringTicksToCircumference: !element.ringTicksToCircumference }
+                            : element),
+                    })}>
+                    Fit ticks to circumference
+                </button>
+            )}
             {selected?.source === "divider" && (
                 <label className="font-choice">
                     Divider position

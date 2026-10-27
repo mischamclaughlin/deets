@@ -13,7 +13,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from designer_model import CATALOG, scene_font_pack, validate_scene
-from designer_charts import chart_ops, ring_geometry
+from designer_charts import chart_ops, ring_geometry, ring_signature
 
 
 TYPE_SOURCES = {
@@ -194,9 +194,9 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
             if catalogue[element["source"]]["kind"] not in {"text", "ring"}:
                 rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
     # One positive packed number per merged rectangle, with conservative array
-    # slot/container overhead. Equal ring widths share the same immutable table.
-    rings = {element["width"] for element in scene["elements"] if element["source"] == "secondsRing"}
-    ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(width)) for width in rings)
+    # slot/container overhead. Equal width/length pairs share the same immutable table.
+    rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
+    ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(*signature)) for signature in rings)
     return metadata + lookup + max(mode_costs, default=0) + rectangles + ring_cost + 80 * len(scene["elements"])
 
 
@@ -260,6 +260,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
                          "Use fewer font/colour combinations, shorter labels or fewer elements before exporting.")
     atlas_pairs = sorted(pair_codes)
     atlas_indices = {pair: index for index, pair in enumerate(atlas_pairs)}
+    ring_indices = {signature: index for index, signature in enumerate(sorted({ring_signature(scene, element)
+        for element in scene["elements"] if element["source"] == "secondsRing"}))}
     rows = []
     for element in scene["elements"]:
         source = element["source"]
@@ -279,6 +281,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             atlas_indices.get((element["font"], element["colour"]), -1),
             atlas_indices.get((element["font"], element["nightColour"]), -1),
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
+            ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -340,8 +343,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     proof_values = {item["id"]: item.get("sample", "--") for item in CATALOG if item["id"] in text_sources}
     proof_dictionary = ", ".join(f"{_mc(key)} => {_mc(value)}" for key, value in proof_values.items()
                                  if not isinstance(value, dict))
-    rings = {element["width"]: [list(group) for group in ring_geometry(element["width"])] for element in scene["elements"]
-             if element["source"] == "secondsRing"}
+    rings = {index: [list(group) for group in ring_geometry(*signature)]
+             for signature, index in ring_indices.items()}
     ring_table = "{" + ", ".join(f"{width} => {_mc(positions)}" for width, positions in rings.items()) + "}"
     source = VIEW_SOURCE
     replacements = {
@@ -667,7 +670,7 @@ class DesignerView extends WatchUi.WatchFace {
 
     private function drawRing(dc as Graphics.Dc, element as Array, colour as Number) {
         var seconds = _proof ? 23 : _values.seconds;
-        var ticks = ringTicks(element[4]);
+        var ticks = ringTicks(element[17]);
         for (var i = 0; i < ticks.size(); i += 1) {
             var brightness = i == 60 ? 42 : (i < seconds ? 68 : (i == seconds ? 100 : 24));
             dc.setColor(shade(colour, brightness), Graphics.COLOR_TRANSPARENT);
@@ -679,8 +682,8 @@ class DesignerView extends WatchUi.WatchFace {
         }
     }
 
-    private function ringTicks(width as Number) as Array<Array<Number>> {
-        if (_ringPositions.hasKey(width)) { return _ringPositions[width] as Array<Array<Number>>; }
+    private function ringTicks(identity as Number) as Array<Array<Number>> {
+        if (_ringPositions.hasKey(identity)) { return _ringPositions[identity] as Array<Array<Number>>; }
         return [];
     }
 }

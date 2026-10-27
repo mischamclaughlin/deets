@@ -34,6 +34,8 @@ export interface SceneElement {
     inheritFont?: boolean;
     /** Vertical placement of divider ink within its native text box. Defaults to middle. */
     dividerPosition?: "top" | "middle" | "bottom";
+    /** Scale seconds-ring tick lengths together to the content circumference. */
+    ringTicksToCircumference?: boolean;
 }
 export interface Scene {
     version: 2;

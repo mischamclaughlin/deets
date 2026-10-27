@@ -215,7 +215,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "ringTicksToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -242,6 +242,9 @@ def validate_scene(payload):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")
+        if "ringTicksToCircumference" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
+                or type(original["ringTicksToCircumference"]) is not bool):
+            raise ValueError("Choose whether seconds-ring ticks follow the circumference on a clock element.")
         if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or not isinstance(original["dividerPosition"], str)
                 or original["dividerPosition"] not in {"top", "middle", "bottom"}):
@@ -288,6 +291,8 @@ def validate_scene(payload):
             result["inheritFont"] = original["inheritFont"]
         if "dividerPosition" in original:
             result["dividerPosition"] = original["dividerPosition"]
+        if "ringTicksToCircumference" in original:
+            result["ringTicksToCircumference"] = original["ringTicksToCircumference"]
         if "text" in original or source == "label":
             text = original.get("text", "EPIX CANVAS")
             if not isinstance(text, str) or len(text) > 80 or any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in text):

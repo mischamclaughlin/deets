@@ -160,7 +160,7 @@ class DesignerExportTests(unittest.TestCase):
             project = self.project(temporary)
             exporter.prepare_scene_project(project, scene)
             source = (project / "source/DesignerView.mc").read_text()
-            self.assertIn("396 => " + exporter._mc([list(group) for group in ring_geometry(396)]), source)
+            self.assertIn("0 => " + exporter._mc([list(group) for group in ring_geometry(396)]), source)
             self.assertNotIn("Math.sin", source)
             self.assertIn('((packed >> 18) & 31) + 1', source)
             self.assertIn('i == 60 ? 42', source)
