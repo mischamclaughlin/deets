@@ -18,7 +18,7 @@ export function ElementsPanel({ scene, selectedId, onSelect }: Props) {
                             onClick={() => onSelect(element.id)}>
                             <span>{isClockSource(element.source) ? `Time ${scene.elements.slice(0, index + 1).filter((item) => isClockSource(item.source)).length}` : element.id}</span>
                             {isClockSource(element.source) && (
-                                <span className="element-format">{clockModes.find((mode) => mode.source === element.source)?.label}</span>
+                                <span className="element-format">{element.source === "secondsRing" ? "SS · Ring" : clockModes.find((mode) => mode.source === element.source)?.label}</span>
                             )}
                         </button>
                     </li>

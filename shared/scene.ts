@@ -5,9 +5,10 @@ export const devices = {
 } as const;
 export type Device = keyof typeof devices;
 export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;
-export type ClockSource = "time" | "hours" | "minutes" | "divider";
+export type ClockSource = "time" | "hours" | "minutes" | "divider" | "seconds" | "secondsRing";
 export const isClockSource = (source: string): source is ClockSource =>
-    source === "time" || source === "hours" || source === "minutes" || source === "divider";
+    source === "time" || source === "hours" || source === "minutes" || source === "divider" ||
+    source === "seconds" || source === "secondsRing";
 export interface Typography {
     family: string;
     size: number;

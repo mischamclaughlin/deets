@@ -24,7 +24,7 @@ class ClockModeTests(unittest.TestCase):
         original = self.scene()
         before = copy.deepcopy(original)
         widths = {}
-        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08"), ("divider", ":")):
+        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08"), ("seconds", "23"), ("divider", ":")):
             with self.subTest(source=source):
                 changed = typography.set_clock_source(original, "clock", source)
                 element = changed["elements"][0]
@@ -48,7 +48,7 @@ class ClockModeTests(unittest.TestCase):
     def test_every_component_value_fits_native_bounds(self):
         for generated in (False, True):
             scene = typography.apply(self.scene(), "clock", SETTINGS) if generated else self.scene()
-            for source in ("time", "hours", "minutes", "divider"):
+            for source in ("time", "hours", "minutes", "seconds", "divider"):
                 changed = typography.set_clock_source(scene, "clock", source)
                 element = changed["elements"][0]
                 font = model.scene_font_pack(changed)["fonts"][element["font"]]
@@ -59,7 +59,7 @@ class ClockModeTests(unittest.TestCase):
 
     def test_generated_font_survives_mode_changes_and_typography_can_be_edited_again(self):
         scene = typography.apply(self.scene(), "clock", SETTINGS)
-        for source in ("hours", "minutes", "divider", "time"):
+        for source in ("hours", "minutes", "seconds", "divider", "time"):
             changed = typography.set_clock_source(scene, "clock", source)
             self.assertEqual(changed["elements"][0]["typography"], SETTINGS)
             self.assertEqual(changed["elements"][0]["font"], scene["elements"][0]["font"])
@@ -74,7 +74,7 @@ class ClockModeTests(unittest.TestCase):
                         {"scene": scene, "elementId": "clock", "source": "hours", "extra": True}):
             with self.assertRaisesRegex(ValueError, "clock display"):
                 bridge.dispatch({"operation": "clock", "payload": payload})
-        for source in ("seconds", None, [], "../../outside"):
+        for source in ("date", None, [], "../../outside"):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, "hours only"):
                 typography.set_clock_source(scene, "clock", source)
         with self.assertRaisesRegex(ValueError, "Select a time element"):
@@ -206,4 +206,60 @@ class ClockModeTests(unittest.TestCase):
         scene = self.scene()
         scene["elements"][0].update(source="label", font="widget", height=26, text=":", dividerPosition="top")
         with self.assertRaisesRegex(ValueError, "divider position"):
+            model.validate_scene(scene)
+
+
+    def test_seconds_ring_uses_physical_screen_and_restores_numeric_metrics(self):
+        for device, size in model.DEVICES.items():
+            for generated in (False, True):
+                scene = self.scene()
+                scene.update(device=device, elements=[])
+                scene = typography.add_time(scene)
+                if generated:
+                    scene = typography.apply(scene, "time", SETTINGS)
+                scene = typography.set_clock_source(scene, "time", "seconds")
+                before = copy.deepcopy(scene)
+                font = before["elements"][0]["font"]
+                ring = typography.set_clock_source(scene, "time", "secondsRing")
+                self.assertEqual(scene, before)
+                element = ring["elements"][0]
+                self.assertEqual((element["x"], element["y"], element["width"], element["height"]), (0, 0, size, size))
+                self.assertEqual(element["font"], font)
+                ring["edgeInset"] = size // 2 - 1
+                self.assertEqual(model.validate_scene(ring), ring)
+                self.assertEqual(typography.set_clock_source(ring, "time", "secondsRing"), ring)
+                ring["edgeInset"] = 16
+                restored = typography.set_clock_source(ring, "time", "seconds")
+                self.assertEqual({k: v for k, v in restored["elements"][0].items() if k not in {"x", "y"}},
+                    {k: v for k, v in before["elements"][0].items() if k not in {"x", "y"}})
+                for axis, extent in (("x", "width"), ("y", "height")):
+                    self.assertLessEqual(abs(restored["elements"][0][axis] + restored["elements"][0][extent]/2 - size/2), 0.5)
+                self.assertEqual(len(bridge.layout({"scene": restored})["ops"]), 2)
+
+    def test_ring_font_edits_preserve_outer_geometry_and_numeric_settings(self):
+        scene = typography.set_clock_source(self.scene(), "clock", "secondsRing")
+        scene["elements"][0]["dividerPosition"] = "bottom"
+        for changed in (typography.set_watch_font(scene, "widget"),
+                        typography.apply(scene, "clock", {**SETTINGS, "size": 55}),
+                        typography.set_inheritance(scene, "clock", True)):
+            element = changed["elements"][0]
+            self.assertEqual((element["x"], element["y"], element["width"], element["height"]), (0, 0, 416, 416))
+            self.assertEqual(element["dividerPosition"], "bottom")
+            text = typography.set_clock_source(changed, "clock", "seconds")
+            self.assertEqual(text["elements"][0]["height"], element["typography"]["size"])
+            self.assertTrue(element["inheritFont"])
+        custom = typography.set_inheritance(scene, "clock", False)
+        custom = typography.apply(custom, "clock", {**SETTINGS, "family": "widget", "size": 55})
+        changed = typography.set_watch_font(custom, "time")
+        self.assertEqual(changed["elements"], custom["elements"])
+
+    def test_ring_geometry_rejects_shapes_outside_the_physical_screen(self):
+        scene = typography.set_clock_source(self.scene(), "clock", "secondsRing")
+        scene["elements"][0].update(x=0, y=0, width=200, height=200)
+        with self.assertRaisesRegex(ValueError, "physical watch circumference"):
+            model.validate_scene(scene)
+        scene["elements"][0].update(x=108, y=108)
+        self.assertEqual(model.validate_scene(scene), scene)
+        scene["elements"][0]["height"] = 199
+        with self.assertRaisesRegex(ValueError, "square"):
             model.validate_scene(scene)

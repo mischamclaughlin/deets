@@ -13,7 +13,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from designer_model import CATALOG, scene_font_pack, validate_scene
-from designer_charts import chart_ops, ring_positions
+from designer_charts import chart_ops, ring_geometry
 
 
 TYPE_SOURCES = {
@@ -154,7 +154,7 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
     """Conservative VM allocation allowance above the provider/runtime baseline.
 
     Count both mode lookup tables, the larger mode's live glyph bitmaps, cached
-    glyph positions, and proof rectangles. Native bitmap headers/containers are
+    glyph positions, packed seconds-ring masks and proof rectangles. Native bitmap headers/containers are
     deliberately budgeted above their payload size; this is a rejection guard,
     not a claim to predict the VM's exact peak allocation.
     """
@@ -191,9 +191,13 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
     rectangles = 0
     if proof:
         for element in scene["elements"]:
-            if catalogue[element["source"]]["kind"] != "text":
+            if catalogue[element["source"]]["kind"] not in {"text", "ring"}:
                 rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
-    return metadata + lookup + max(mode_costs, default=0) + rectangles + 80 * len(scene["elements"])
+    # One positive packed number per merged rectangle, with conservative array
+    # slot/container overhead. Equal ring widths share the same immutable table.
+    rings = {element["width"] for element in scene["elements"] if element["source"] == "secondsRing"}
+    ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(width)) for width in rings)
+    return metadata + lookup + max(mode_costs, default=0) + rectangles + ring_cost + 80 * len(scene["elements"])
 
 
 def _provider_patch(project, types, widget_types):
@@ -262,7 +266,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         kind = catalogue[source]["kind"]
         day_rectangles = []
         night_rectangles = []
-        if proof and kind != "text":
+        if proof and kind not in {"text", "ring"}:
             for night, destination in ((False, day_rectangles), (True, night_rectangles)):
                 destination.extend([[operation[key] for key in ("x", "y", "width", "height", "colour")]
                                     for operation in chart_ops(element, night=night)])
@@ -336,7 +340,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     proof_values = {item["id"]: item.get("sample", "--") for item in CATALOG if item["id"] in text_sources}
     proof_dictionary = ", ".join(f"{_mc(key)} => {_mc(value)}" for key, value in proof_values.items()
                                  if not isinstance(value, dict))
-    rings = {element["width"]: ring_positions(element["width"]) for element in scene["elements"]
+    rings = {element["width"]: [list(group) for group in ring_geometry(element["width"])] for element in scene["elements"]
              if element["source"] == "secondsRing"}
     ring_table = "{" + ", ".join(f"{width} => {_mc(positions)}" for width, positions in rings.items()) + "}"
     source = VIEW_SOURCE
@@ -574,7 +578,7 @@ class DesignerView extends WatchUi.WatchFace {
     }
 
     private function drawChart(dc as Graphics.Dc, element as Array, colour as Number, night as Boolean) {
-        if (_proof) {
+        if (_proof && !element[10].equals("ring")) {
             var rectangles = (night ? element[13] : element[12]) as Array<Array<Number>>;
             for (var i = 0; i < rectangles.size(); i += 1) {
                 var rectangle = rectangles[i];
@@ -664,9 +668,14 @@ class DesignerView extends WatchUi.WatchFace {
     private function drawRing(dc as Graphics.Dc, element as Array, colour as Number) {
         var seconds = _proof ? 23 : _values.seconds;
         var ticks = ringTicks(element[4]);
-        for (var i = 0; i < 60; i += 1) {
-            dc.setColor(shade(colour, i < seconds ? 68 : (i == seconds ? 100 : 24)), Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(element[2] + ticks[i][0], element[3] + ticks[i][1], 2, 2);
+        for (var i = 0; i < ticks.size(); i += 1) {
+            var brightness = i == 60 ? 42 : (i < seconds ? 68 : (i == seconds ? 100 : 24));
+            dc.setColor(shade(colour, brightness), Graphics.COLOR_TRANSPARENT);
+            for (var j = 0; j < ticks[i].size(); j += 1) {
+                var packed = ticks[i][j];
+                dc.fillRectangle(element[2] + (packed & 511), element[3] + ((packed >> 9) & 511),
+                    ((packed >> 18) & 31) + 1, ((packed >> 23) & 31) + 1);
+            }
         }
     }
 

@@ -83,3 +83,9 @@ test("legacy scenes retain screen bounds and unsnapped valid positions", () => {
     const halfPixel = moveElement(scene, { ...element, width: 21 }, { x: 197.5, y: 130 }, guides);
     assert.deepEqual(halfPixel, { x: 198, y: 130 });
 });
+
+test("the outer seconds ring stays anchored to the physical watch circumference", () => {
+    const ring: SceneElement = { ...element, source: "secondsRing", x: 0, y: 0, width: 416, height: 416 };
+    const design: Scene = { version: 2, name: "Ring", device: "epix2pro47mm", background: 0, edgeInset: 16, elements: [ring] };
+    assert.deepEqual(moveElement(design, ring, { x: 20, y: -20 }, { enabled: false, showGuideLines: false, showCircumference: false }), { x: 0, y: 0 });
+});

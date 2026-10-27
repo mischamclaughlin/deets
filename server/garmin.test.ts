@@ -132,9 +132,9 @@ test("typography API generates canonical clock pixels from an included or upload
 });
 
 
-test("clock display API switches between combined time, hours, minutes and divider", async () => {
+test("clock display API switches between combined time, hours, minutes, seconds and divider", async () => {
     let current = scene;
-    for (const source of ["hours", "minutes", "divider", "time"]) {
+    for (const source of ["hours", "minutes", "divider", "seconds", "time"]) {
         const payload = { scene: current, elementId: "time", source };
         const result = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify(payload))], { "content-type": "application/json" });
         assert.equal(result.status, 200, JSON.stringify(result.body));
@@ -208,4 +208,25 @@ test("layout API positions divider ink within its native box and rejects invalid
     assert.ok(positions[0] < positions[1] && positions[1] < positions[2]);
     const invalid = { ...divider, elements: [{ ...element, dividerPosition: "outside" }] };
     assert.equal((await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: invalid }))], headers)).status, 400);
+});
+
+test("seconds switch between digits and the full outer ring without replacing clocks", async () => {
+    const headers = { "content-type": "application/json" };
+    let current = scene;
+    for (const source of ["seconds", "secondsRing", "seconds", "secondsRing", "time"]) {
+        const result = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", source }))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const mapped = result.body as unknown as WatchMapping;
+        const element = mapped.scene.elements[0];
+        assert.equal(element.id, "time");
+        assert.equal(element.source, source);
+        if (source === "secondsRing") {
+            assert.deepEqual([element.x, element.y, element.width, element.height], [0, 0, 416, 416]);
+            assert.ok(mapped.ops.length > 60);
+            assert.ok(mapped.ops.every((op) => op.kind === "rect"));
+        } else {
+            assert.equal(mapped.ops.length, source === "time" ? 5 : 2);
+        }
+        current = mapped.scene;
+    }
 });

@@ -12,6 +12,7 @@ export interface SnapOptions {
 
 /** All geometry is in native pixels, independent of browser text and CSS. */
 export function moveElement(scene: Scene, element: SceneElement, desired: Point, options: SnapOptions): Point {
+    if (element.source === "secondsRing") return { x: element.x, y: element.y };
     const size = devices[scene.device];
     const centre = size / 2;
     const radius = centre - (scene.edgeInset ?? 0);

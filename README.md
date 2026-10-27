@@ -55,13 +55,18 @@ has a + Time button that creates and selects a fresh, centred HH:MM element.
 Existing clocks remain listed as Time 1, Time 2 and so on, with
 independent display modes and typography. Select a clock in the list or on the canvas
 to reveal its controls on the right, including HH:MM, hours only (HH), minutes
-only (MM) or a standalone divider (:). Changes preserve the
+only (MM), seconds (SS) or a standalone divider (:). Changes preserve the
 same element, its typography and its centre to the nearest native pixel. Native
 metrics determine the new width and snapping bounds. The preview shows 10:08,
-10, 08 or :; Garmin exports use live hours/minutes and the watch's clock settings.
-Typography remains in the right sidebar for all four display modes. Dividers
+10, 08, 23 or :; Garmin exports use live hours/minutes/seconds and the watch's clock settings.
+Typography remains in the right sidebar for all five display modes. Dividers
 can place the visible colon at the top, middle (default) or bottom of their
-native element box.
+native element box. Seconds offer **Digits** or **Outer ring**. The ring uses
+60 radial ticks, longer five-second and quarter-minute marks, and an outer circle
+based on the parent watch face. It stays centred on the physical screen,
+independent of the content edge clearance. Switching back to digits retains the
+font settings. The ring's selection area follows its circumference so inner
+elements remain selectable.
 
 ## Typography
 

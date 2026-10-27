@@ -1,5 +1,6 @@
 """Integer rectangle primitives shared by the builder and its Garmin generator."""
 import math
+import functools
 
 SAMPLES = {
     'stepsWeek': [4000, 8200, 6000, 10000, 7500, 3000, 5000],
@@ -22,9 +23,85 @@ def shade(colour, percent):
     return sum((((colour >> shift) & 255) * percent // 100) << shift for shift in (16, 8, 0))
 
 
-def ring_positions(width):
-    return [(round(width / 2 + math.sin(i * math.pi / 30) * (width / 2 - 2)) - 1,
-             round(width / 2 - math.cos(i * math.pi / 30) * (width / 2 - 2)) - 1) for i in range(60)]
+def pack_ring_rect(x, y, width, height):
+    """Keep a native rectangle in one positive 28-bit VM number."""
+    return x | (y << 9) | ((width - 1) << 18) | ((height - 1) << 23)
+
+
+def unpack_ring_rect(value):
+    return value & 511, (value >> 9) & 511, ((value >> 18) & 31) + 1, ((value >> 23) & 31) + 1
+
+
+def _ring_rectangles(pixels):
+    rows = {}
+    for x, y in pixels:
+        rows.setdefault(y, []).append(x)
+    active, rectangles = {}, []
+    for y in range(min(rows, default=0), max(rows, default=-1) + 2):
+        spans, left, previous = [], None, None
+        for x in sorted(rows.get(y, [])):
+            if previous is not None and x != previous + 1:
+                spans.append((left, previous - left + 1))
+                left = None
+            if left is None:
+                left = x
+            previous = x
+        if left is not None:
+            spans.append((left, previous - left + 1))
+        current = set(spans)
+        for span in list(active):
+            if span not in current:
+                top, height = active.pop(span)
+                rectangles.append((span[0], top, span[1], height))
+        for span in spans:
+            if span in active:
+                top, height = active[span]
+                active[span] = top, height + 1
+            else:
+                active[span] = y, 1
+    packed = []
+    for x, y, width, height in rectangles:
+        for dy in range(0, height, 32):
+            for dx in range(0, width, 32):
+                packed.append(pack_ring_rect(x + dx, y + dy, min(32, width - dx), min(32, height - dy)))
+    return tuple(packed)
+
+
+@functools.lru_cache(maxsize=64)
+def ring_geometry(width):
+    """Parent watch tick hierarchy, rasterised once to shared integer masks.
+
+    Native drawing decodes these same rectangles rather than rasterising its own
+    polygons. Small legacy rings scale their strokes to remain inside the box.
+    """
+    scale = min(1, width / 40)
+    centre = width / 2
+    outer = centre - 4 * scale
+    groups = []
+    for second in range(60):
+        angle = second * math.pi / 30
+        radial_x, radial_y = math.sin(angle), -math.cos(angle)
+        length = (15 if second % 15 == 0 else 11 if second % 5 == 0 else 7) * scale
+        half_width = (6 if second % 15 == 0 else 4 if second % 5 == 0 else 2) * scale / 2
+        inner = max(0, outer - length)
+        corners = [(centre + radial_x * radius - radial_y * side,
+                    centre + radial_y * radius + radial_x * side)
+                   for radius in (inner, outer) for side in (-half_width, half_width)]
+        pixels = set()
+        for y in range(max(0, math.floor(min(point[1] for point in corners))), min(width, math.ceil(max(point[1] for point in corners)))):
+            for x in range(max(0, math.floor(min(point[0] for point in corners))), min(width, math.ceil(max(point[0] for point in corners)))):
+                dx, dy = x + 0.5 - centre, y + 0.5 - centre
+                radial = dx * radial_x + dy * radial_y
+                tangent = -dx * radial_y + dy * radial_x
+                if inner - 1e-9 <= radial <= outer + 1e-9 and abs(tangent) <= half_width + 1e-9:
+                    pixels.add((x, y))
+        groups.append(_ring_rectangles(pixels))
+    radius = centre - 3 * scale
+    low, high = max(0, radius - scale) ** 2, (radius + scale) ** 2
+    outline = {(x, y) for y in range(width) for x in range(width)
+               if low <= (x + 0.5 - centre) ** 2 + (y + 0.5 - centre) ** 2 <= high}
+    groups.append(_ring_rectangles(outline))
+    return tuple(groups)
 
 
 def chart_ops(element, value=None, night=False):
@@ -63,6 +140,9 @@ def chart_ops(element, value=None, night=False):
                 rect(x + a, y + height // 2 - 1, width - a, 3, colour)
         rect(x + min(width - 1, max(0, width * now // 86400)), y, 1, height, colour)
     elif source == 'secondsRing':
-        for i, (tx, ty) in enumerate(ring_positions(width)):
-            rect(x + tx, y + ty, 2, 2, colour if i == value else shade(colour, 68 if i < value else 24))
+        for i, group in enumerate(ring_geometry(width)):
+            brightness = 42 if i == 60 else 100 if i == value else 68 if i < value else 24
+            for packed in group:
+                tx, ty, tw, th = unpack_ring_rect(packed)
+                rect(x + tx, y + ty, tw, th, shade(colour, brightness))
     return ops

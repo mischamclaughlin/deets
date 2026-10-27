@@ -38,9 +38,9 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
             <div className="clock-modes" role="group" aria-label="Time display">
                 {clockModes.map((mode) => (
                     <button key={mode.source} type="button" aria-label={mode.name}
-                        aria-pressed={(requested ?? selected?.source) === mode.source}
+                        aria-pressed={(requested ?? selected?.source) === mode.source || (mode.source === "seconds" && (requested ?? selected?.source) === "secondsRing")}
                         onClick={() => {
-                            if (selected?.source === mode.source && !requested) return;
+                            if (!requested && (selected?.source === mode.source || (mode.source === "seconds" && selected?.source === "secondsRing"))) return;
                             setError(undefined);
                             setRequested(mode.source);
                         }}>
@@ -48,6 +48,19 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                     </button>
                 ))}
             </div>
+            {(selected?.source === "seconds" || selected?.source === "secondsRing") && (
+                <label className="font-choice">
+                    Seconds display
+                    <select value={requested ?? selected.source} disabled={requested !== undefined}
+                        onChange={(event) => {
+                            setError(undefined);
+                            setRequested(event.target.value as "seconds" | "secondsRing");
+                        }}>
+                        <option value="seconds">Digits</option>
+                        <option value="secondsRing">Outer ring</option>
+                    </select>
+                </label>
+            )}
             {selected?.source === "divider" && (
                 <label className="font-choice">
                     Divider position

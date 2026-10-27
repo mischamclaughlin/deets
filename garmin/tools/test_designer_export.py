@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import designer_export as exporter
-from designer_charts import chart_ops, ring_positions
+from designer_charts import chart_ops, ring_geometry
 from designer_model import ROOT, font_pack, validate_scene, layout_text
 
 
@@ -150,7 +150,7 @@ class DesignerExportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "isolated project"):
             exporter.prepare_scene_project(ROOT, self.scene())
 
-    def test_ring_positions_are_precomputed_with_shared_rounding(self):
+    def test_ring_masks_are_precomputed_and_counted_in_resource_budget(self):
         scene = self.scene()
         scene["elements"] = [{"id": "ring1", "source": "secondsRing", "font": "widget", "x": 10,
             "y": 10, "width": 396, "height": 396, "align": "left", "colour": 0x4D9DE0,
@@ -160,8 +160,23 @@ class DesignerExportTests(unittest.TestCase):
             project = self.project(temporary)
             exporter.prepare_scene_project(project, scene)
             source = (project / "source/DesignerView.mc").read_text()
-            self.assertIn("396 => " + exporter._mc(ring_positions(396)), source)
+            self.assertIn("396 => " + exporter._mc([list(group) for group in ring_geometry(396)]), source)
             self.assertNotIn("Math.sin", source)
+            self.assertIn('((packed >> 18) & 31) + 1', source)
+            self.assertIn('i == 60 ? 42', source)
+            pack = font_pack(scene["device"])
+            cost = exporter._resource_cost(scene, pack, {entry["id"]: entry for entry in exporter.CATALOG}, {}, {}, False)
+            table_cost = 64 + sum(48 + 16*len(group) for group in ring_geometry(396))
+            self.assertEqual(cost, table_cost + 80)
+            repeated = copy.deepcopy(scene)
+            repeated["elements"].append({**scene["elements"][0], "id": "ring2"})
+            repeated_cost = exporter._resource_cost(repeated, pack, {entry["id"]: entry for entry in exporter.CATALOG}, {}, {}, False)
+            self.assertEqual(repeated_cost, cost + 80)
+            proof_cost = exporter._resource_cost(scene, pack, {entry["id"]: entry for entry in exporter.CATALOG}, {}, {}, True)
+            self.assertEqual(proof_cost, cost)
+            exporter.prepare_scene_project(project, scene, proof=True)
+            proof_source = (project / "source/DesignerView.mc").read_text()
+            self.assertIn('_proof && !element[10].equals("ring")', proof_source)
             self.assertNotIn("WatchUi.loadResource(Rez.Drawables.DesignerAtlas", source)
 
 

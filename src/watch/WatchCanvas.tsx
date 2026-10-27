@@ -192,6 +192,12 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                         if (!onMoveElement || event.button !== 0 || drag.current) return;
                         const target = event.target instanceof Element ? event.target.closest("[data-element-id]") : null;
                         const element = scene.elements.find((item) => item.id === target?.getAttribute("data-element-id"));
+                        if (element?.source === "secondsRing") {
+                            setActive(element.id);
+                            onSelectElement?.(element.id);
+                            target?.closest("g")?.focus();
+                            return;
+                        }
                         const start = nativePointer(event);
                         if (!element || !start) return;
                         event.preventDefault();
@@ -260,12 +266,17 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                     }
                                 }}
                             >
-                                <rect
+                                {area.source === "secondsRing" ? <>
+                                    <circle className="ring-area" cx={position.x + area.width / 2}
+                                        cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - 10)} />
+                                    <circle className="ring-hit-area" cx={position.x + area.width / 2}
+                                        cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - 10)} />
+                                </> : <rect
                                     x={position.x}
                                     y={position.y}
                                     width={area.width}
                                     height={area.height}
-                                />
+                                />}
                                 {selected && (
                                     <g
                                         className="area-label"

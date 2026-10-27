@@ -172,7 +172,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 {scene.elements.some((element) => element.id === selectedId && isClockSource(element.source)) && (
                     <>
                         <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                        <TypographyPanel key={`typography-${selectedId}-${selected?.inheritFont ?? !selected?.typography}-${selected?.typography?.family ?? scene.fontFamily}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
+                        {selected?.source !== "secondsRing" && <TypographyPanel key={`typography-${selectedId}-${selected?.inheritFont ?? !selected?.typography}-${selected?.typography?.family ?? scene.fontFamily}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />}
                     </>
                 )}
             </aside>

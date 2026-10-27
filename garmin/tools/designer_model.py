@@ -36,7 +36,7 @@ def _source(identity, label, group, sample, kind="text", complication=None):
         result["type"] = complication
     result["allowedFonts"] = (
         ["widget", "time"] if identity in {"time", "divider"} else
-        ["widget", "time", "numeric", "tall"] if identity in {"hours", "minutes", "seconds"} else
+        ["widget", "time", "numeric", "tall"] if identity in {"hours", "minutes", "seconds", "secondsRing"} else
         ["widget", "date"] if identity == "numericDate" else ["widget"]
     )
     return result
@@ -228,7 +228,7 @@ def validate_scene(payload):
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
-                (generated and (source not in {"time", "hours", "minutes", "divider"} or font not in pack["fonts"])) or
+                (generated and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
         if "typography" in original:
@@ -236,13 +236,13 @@ def validate_scene(payload):
             typography = settings(original["typography"])
             if not generated or load(font, device)["typography"] != typography:
                 raise ValueError("The typography settings do not match the generated font.")
-        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes", "divider"}):
+        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}):
             raise ValueError("Only clock elements can choose whether to inherit the watch font.")
-        if source in {"time", "hours", "minutes", "divider"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
+        if source in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")
-        if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider"}
+        if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or not isinstance(original["dividerPosition"], str)
                 or original["dividerPosition"] not in {"top", "middle", "bottom"}):
             raise ValueError("Choose top, middle or bottom for the divider position on a clock element.")
@@ -256,7 +256,13 @@ def validate_scene(payload):
         default_height = (pack["fonts"][font]["height"] if info["kind"] == "text" else
                           18 if info["kind"] == "bars" else width if info["kind"] == "ring" else 14)
         height = _integer(original.get("height", default_height), "Element height", 1, size - y)
-        if edge_inset is not None:
+        if info["kind"] == "ring":
+            if width != height or width < 4:
+                raise ValueError("A seconds ring must be square and at least four pixels wide.")
+            # The outer seconds decoration follows the physical screen, not the content inset.
+            if (2*x + width - size)**2 + (2*y + height - size)**2 > (size - width)**2:
+                raise ValueError("A seconds ring must fit inside the physical watch circumference.")
+        elif edge_inset is not None:
             # Check the complete clipping box, including its outer pixel edges.
             # A rectangle lies within a circle exactly when all four corners do.
             radius_twice = size - 2 * edge_inset
@@ -265,8 +271,6 @@ def validate_scene(payload):
                 raise ValueError(f"Element '{identity}' must fit inside the circumference boundary.")
         if info["kind"] == "text" and height != pack["fonts"][font]["height"]:
             raise ValueError("Text height must match its native bitmap font.")
-        if info["kind"] == "ring" and (width != height or width < 4):
-            raise ValueError("A seconds ring must be square and at least four pixels wide.")
         if info["kind"] == "solar" and height < 3:
             raise ValueError("A solar timeline needs at least three pixels of height.")
         if not isinstance(original["align"], str) or original["align"] not in {"left", "centre", "right"}:

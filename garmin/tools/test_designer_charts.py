@@ -1,5 +1,5 @@
 import unittest
-from designer_charts import chart_ops, ring_positions, shade, device_colour
+from designer_charts import chart_ops, ring_geometry, unpack_ring_rect, shade, device_colour
 
 class ChartTests(unittest.TestCase):
     def element(self, source, width=181, height=18):
@@ -24,8 +24,35 @@ class ChartTests(unittest.TestCase):
         for value,zone in [(0,0),(10,1),(17,2),(30,3),(31,4)]:
             ops=chart_ops(self.element('temperatureZones'),value)
             self.assertEqual([i for i,x in enumerate(ops) if x['height']==18],[zone])
-    def test_ring_positions_and_brightness(self):
-        ops=chart_ops(self.element('secondsRing',width=180,height=180))
-        self.assertEqual(len(ops),60)
-        self.assertTrue(all(0<=x<=178 and 0<=y<=178 for x,y in ring_positions(180)))
-        self.assertEqual(ops[23]['colour'],0x4D9DE0)
+    def test_ring_uses_parent_tick_hierarchy_and_shared_brightness(self):
+        width = 416
+        groups = ring_geometry(width)
+        self.assertEqual(len(groups), 61)
+        def pixels(group):
+            return {(x + dx, y + dy) for packed in group
+                    for x, y, w, h in [unpack_ring_rect(packed)]
+                    for dx in range(w) for dy in range(h)}
+        self.assertEqual(len(pixels(groups[0])), 15 * 6)
+        self.assertEqual(len(pixels(groups[5])), len(pixels(groups[10])))
+        self.assertGreater(len(pixels(groups[5])), len(pixels(groups[1])))
+        self.assertEqual(max(y for _, y in pixels(groups[0])) - min(y for _, y in pixels(groups[0])) + 1, 15)
+        ops = chart_ops(self.element('secondsRing', width=width, height=width))
+        expected = []
+        for i, group in enumerate(groups):
+            c = shade(0x4D9DE0, 42 if i == 60 else 100 if i == 23 else 68 if i < 23 else 24)
+            for packed in group:
+                x, y, w, h = unpack_ring_rect(packed)
+                expected.append(dict(kind='rect', x=x+20, y=y+40, width=w, height=h, colour=c))
+        self.assertEqual(ops, expected)
+
+    def test_ring_masks_are_bounded_and_packing_is_lossless(self):
+        for width in (4, 39, 180, 390, 416, 454):
+            with self.subTest(width=width):
+                for group in ring_geometry(width):
+                    for packed in group:
+                        x, y, w, h = unpack_ring_rect(packed)
+                        self.assertGreaterEqual(x, 0)
+                        self.assertGreaterEqual(y, 0)
+                        self.assertLessEqual(x+w, width)
+                        self.assertLessEqual(y+h, width)
+                        self.assertLess(packed, 1 << 28)

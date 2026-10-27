@@ -5,4 +5,5 @@ export const clockModes: Array<{ source: ClockSource; label: string; name: strin
     { source: "hours", label: "HH", name: "Hours only" },
     { source: "minutes", label: "MM", name: "Minutes only" },
     { source: "divider", label: ":", name: "Divider" },
+    { source: "seconds", label: "SS", name: "Seconds only" },
 ];

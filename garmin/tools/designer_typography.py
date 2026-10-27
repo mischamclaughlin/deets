@@ -23,9 +23,14 @@ def inherits(element):
     return element.get("inheritFont", "typography" not in element)
 
 
-def element_settings(element):
-    return dict(element.get("typography", {"family": "widget" if element["font"] == "widget" else "time",
-        "size": element["height"], "thickness": 0, "width": 100, "letterSpacing": 1}))
+def element_settings(element, device):
+    if "typography" in element:
+        return dict(element["typography"])
+    from designer_model import font_pack
+    height = (font_pack(device)["fonts"][element["font"]]["height"]
+              if element["source"] == "secondsRing" else element["height"])
+    return {"family": "widget" if element["font"] == "widget" else "time",
+        "size": height, "thickness": 0, "width": 100, "letterSpacing": 1}
 
 
 def settings(value):
@@ -185,7 +190,7 @@ def _clock_values(source):
         return (":",)
     if source == "hours":
         return (f"{hour:02d}" for hour in range(24))
-    if source == "minutes":
+    if source in {"minutes", "seconds"}:
         return (f"{minute:02d}" for minute in range(60))
     return (f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60))
 
@@ -206,7 +211,7 @@ def _clock_width(font, source):
 
 def _clock_target(scene, element_id):
     target = next((element for element in scene["elements"] if element["id"] == element_id), None)
-    if not target or target["source"] not in {"time", "hours", "minutes", "divider"}:
+    if not target or target["source"] not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}:
         raise ValueError("Select a time element to edit its clock settings.")
     return target
 
@@ -216,10 +221,17 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
     edited = copy.deepcopy(scene)
     element = _clock_target(edited, element_id)
     source = changes.get("source", element["source"])
-    width, height = _clock_width(metrics, source), metrics["height"]
-    element.update(x=(2*element["x"] + element["width"] - width)//2,
-                   y=(2*element["y"] + element["height"] - height)//2,
-                   width=width, height=height, **changes)
+    if source == "secondsRing":
+        if element["source"] != "secondsRing":
+            from designer_model import DEVICES
+            size = DEVICES[scene["device"]]
+            element.update(x=0, y=0, width=size, height=size)
+        element.update(**changes)
+    else:
+        width, height = _clock_width(metrics, source), metrics["height"]
+        element.update(x=(2*element["x"] + element["width"] - width)//2,
+                       y=(2*element["y"] + element["height"] - height)//2,
+                       width=width, height=height, **changes)
     if not validate:
         return edited
     try:
@@ -231,8 +243,8 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
 def set_clock_source(scene, element_id, source):
     """Change the shown clock component while preserving its font and centre."""
     from designer_model import validate_scene, scene_font_pack
-    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "divider"}:
-        raise ValueError("Choose HH:MM, hours only, minutes only or a divider.")
+    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}:
+        raise ValueError("Choose HH:MM, hours only, minutes only, seconds, an outer ring or a divider.")
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
     font = scene_font_pack(scene)["fonts"][target["font"]]
@@ -297,9 +309,9 @@ def set_watch_font(scene, family):
         value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
         generated[tuple(sorted(value.items()))] = generate(scene["device"], value)
     for element in scene["elements"]:
-        if element["source"] not in {"time", "hours", "minutes", "divider"} or not inherits(element):
+        if element["source"] not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} or not inherits(element):
             continue
-        value = {**element_settings(element), "family": family}
+        value = {**element_settings(element, scene["device"]), "family": family}
         signature = tuple(sorted(value.items()))
         if signature not in generated:
             generated[signature] = generate(scene["device"], value)
@@ -322,6 +334,6 @@ def set_inheritance(scene, element_id, inherit):
     _clock_target(edited, element_id)["inheritFont"] = inherit
     if not inherit:
         return validate_scene(edited)
-    value = {**element_settings(target), "family": scene.get("fontFamily", "time")}
+    value = {**element_settings(target, scene["device"]), "family": scene.get("fontFamily", "time")}
     key, record = generate(scene["device"], value)
     return _fit_clock(edited, element_id, record["font"], font=key, typography=value, inheritFont=True)
