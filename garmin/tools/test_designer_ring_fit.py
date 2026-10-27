@@ -33,6 +33,9 @@ class RingFitTests(unittest.TestCase):
             element = scene["elements"][0]
             self.assertEqual(charts.ring_tick_radius(scene, element), size / 2 - 4)
             self.assertEqual(charts.ring_geometry(size), charts.ring_geometry(size, size / 2 - 4))
+            element["ringTicksToCircumference"] = False
+            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2 - 4)
+            self.assertEqual(min(y for _, y in self.pixels(charts.ring_geometry(size)[0])), 4)
             element["ringTicksToCircumference"] = True
             for inset in (16, 34, 49):
                 scene["edgeInset"] = inset
@@ -50,7 +53,7 @@ class RingFitTests(unittest.TestCase):
                     length = 15 if index % 15 == 0 else 11 if index % 5 == 0 else 7
                     self.assertAlmostEqual(max(projections), radius, delta=1)
                     self.assertAlmostEqual(max(projections)-min(projections), length, delta=2)
-                self.assertEqual(groups[60], charts.ring_geometry(size)[60])
+                self.assertEqual(len(groups), 60)
                 expected = charts.chart_ops(element, ring_radius=radius)
                 actual = bridge.layout({"scene": scene})["ops"]
                 self.assertEqual(actual, [{**op, "colour": charts.device_colour(op["colour"])} for op in expected])

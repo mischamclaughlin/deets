@@ -27,7 +27,7 @@ class ChartTests(unittest.TestCase):
     def test_ring_uses_parent_tick_hierarchy_and_shared_brightness(self):
         width = 416
         groups = ring_geometry(width)
-        self.assertEqual(len(groups), 61)
+        self.assertEqual(len(groups), 60)
         def pixels(group):
             return {(x + dx, y + dy) for packed in group
                     for x, y, w, h in [unpack_ring_rect(packed)]
@@ -39,11 +39,13 @@ class ChartTests(unittest.TestCase):
         ops = chart_ops(self.element('secondsRing', width=width, height=width))
         expected = []
         for i, group in enumerate(groups):
-            c = shade(0x4D9DE0, 42 if i == 60 else 100 if i == 23 else 68 if i < 23 else 24)
+            c = shade(0x4D9DE0, 100 if i == 23 else 68 if i < 23 else 24)
             for packed in group:
                 x, y, w, h = unpack_ring_rect(packed)
                 expected.append(dict(kind='rect', x=x+20, y=y+40, width=w, height=h, colour=c))
         self.assertEqual(ops, expected)
+        # Only the sixty tick masks remain; there is no continuous outer outline.
+        self.assertNotIn(shade(0x4D9DE0, 42), {op['colour'] for op in ops})
 
     def test_ring_masks_are_bounded_and_packing_is_lossless(self):
         for width in (4, 39, 180, 390, 416, 454):

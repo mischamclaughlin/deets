@@ -672,7 +672,7 @@ class DesignerView extends WatchUi.WatchFace {
         var seconds = _proof ? 23 : _values.seconds;
         var ticks = ringTicks(element[17]);
         for (var i = 0; i < ticks.size(); i += 1) {
-            var brightness = i == 60 ? 42 : (i < seconds ? 68 : (i == seconds ? 100 : 24));
+            var brightness = i < seconds ? 68 : (i == seconds ? 100 : 24);
             dc.setColor(shade(colour, brightness), Graphics.COLOR_TRANSPARENT);
             for (var j = 0; j < ticks[i].size(); j += 1) {
                 var packed = ticks[i][j];

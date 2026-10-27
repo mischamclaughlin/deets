@@ -62,8 +62,8 @@ metrics determine the new width and snapping bounds. The preview shows 10:08,
 Typography remains in the right sidebar for all five display modes. Dividers
 can place the visible colon at the top, middle (default) or bottom of their
 native element box. Seconds offer **Digits** or **Outer ring**. The ring uses
-60 radial ticks, longer five-second and quarter-minute marks, and an outer circle
-based on the parent watch face. It stays centred on the physical screen,
+60 radial ticks with longer five-second and quarter-minute marks, based on the
+parent watch face. It stays centred on the physical screen,
 independent of the content edge clearance. Switching back to digits retains the
 font settings. The ring's selection area follows its circumference so inner
 elements remain selectable. **Align tick tips to clearance** places every tick’s outer tip on the

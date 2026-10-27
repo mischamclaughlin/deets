@@ -111,11 +111,6 @@ def ring_geometry(width, outer_radius=None):
                 if inner - 1e-9 <= radial <= outer + 1e-9 and abs(tangent) <= half_width + 1e-9:
                     pixels.add((x, y))
         groups.append(_ring_rectangles(pixels))
-    radius = centre - 3 * scale
-    low, high = max(0, radius - scale) ** 2, (radius + scale) ** 2
-    outline = {(x, y) for y in range(width) for x in range(width)
-               if low <= (x + 0.5 - centre) ** 2 + (y + 0.5 - centre) ** 2 <= high}
-    groups.append(_ring_rectangles(outline))
     return tuple(groups)
 
 
@@ -156,7 +151,7 @@ def chart_ops(element, value=None, night=False, *, ring_radius=None):
         rect(x + min(width - 1, max(0, width * now // 86400)), y, 1, height, colour)
     elif source == 'secondsRing':
         for i, group in enumerate(ring_geometry(width, ring_radius)):
-            brightness = 42 if i == 60 else 100 if i == value else 68 if i < value else 24
+            brightness = 100 if i == value else 68 if i < value else 24
             for packed in group:
                 tx, ty, tw, th = unpack_ring_rect(packed)
                 rect(x + tx, y + ty, tw, th, shade(colour, brightness))

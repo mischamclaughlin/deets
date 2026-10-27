@@ -475,20 +475,6 @@ body,
     outline-offset: 3px;
 }
 
-.area > .ring-area {
-    fill: none;
-    stroke: #c3d8ab;
-    stroke-opacity: 0.13;
-    stroke-width: 0.5;
-    stroke-dasharray: 2 4;
-    pointer-events: none;
-}
-.area.selected > .ring-area,
-.area:focus > .ring-area {
-    stroke-opacity: 0.8;
-    stroke-width: 0.75;
-    stroke-dasharray: none;
-}
 .area > .ring-hit-area {
     fill: none;
     stroke: transparent;
