@@ -223,8 +223,11 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     ).map((area) => {
                         const position = preview?.element.id === area.id ? preview.position : area;
                         const selected = area.id === (selectedElementId ?? active);
-                        const ticksAligned = scene.elements.find((element) => element.id === area.id)?.ringTicksToCircumference;
-                        const tickInset = ticksAligned ? scene.edgeInset ?? 0 : 4;
+                        const ring = scene.elements.find((element) => element.id === area.id);
+                        const clearance = scene.edgeInset ?? 0;
+                        const tickHitInset = ring?.ringTicksStretchToCircumference ? (4 + clearance) / 2
+                            : (ring?.ringTicksToCircumference ? clearance : 4) + 7.5;
+                        const tickHitWidth = ring?.ringTicksStretchToCircumference ? Math.max(24, clearance) : 24;
                         const label = `${area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
                         const labelX = Math.max(
                             8,
@@ -269,7 +272,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                 }}
                             >
                                 {area.source === "secondsRing" ? <circle className="ring-hit-area" cx={position.x + area.width / 2}
-                                    cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - tickInset - 7.5)} /> : <rect
+                                    cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - tickHitInset)} style={{ strokeWidth: tickHitWidth }} /> : <rect
                                     x={position.x}
                                     y={position.y}
                                     width={area.width}

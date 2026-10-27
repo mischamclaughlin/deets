@@ -69,7 +69,10 @@ font settings. The ring's selection area follows its circumference so inner
 elements remain selectable. **Align tick tips to clearance** places every tick’s outer tip on the
 circumference defined by edge clearance. The varied tick lengths extend inwards
 from that circle. While enabled, the tips follow edge-clearance changes.
-Toggle it off to restore their original outer positions.
+**Stretch ticks to clearance** instead keeps the outer tips in their default
+outside positions and extends every tick inwards to the clearance circle. The
+quarter-minute, five-second and ordinary tick widths stay distinct. The two
+buttons are mutually exclusive; toggle the active one off for default geometry.
 
 ## Typography
 

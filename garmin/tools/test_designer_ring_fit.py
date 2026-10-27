@@ -85,7 +85,7 @@ class RingFitTests(unittest.TestCase):
         scene["elements"].append(fitted)
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
-        self.assertEqual(signatures, {(416, 204), (416, 174)})
+        self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1)})
         expected = sum(64 + sum(48+16*len(group) for group in charts.ring_geometry(*signature)) for signature in signatures) + 160
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
@@ -96,5 +96,80 @@ class RingFitTests(unittest.TestCase):
             exporter.prepare_scene_project(project, scene)
             source = (project/"source/DesignerView.mc").read_text()
             self.assertIn("ringTicks(element[17])", source)
+            for index, signature in enumerate(sorted(signatures)):
+                self.assertIn(f"{index} => " + exporter._mc([list(group) for group in charts.ring_geometry(*signature)]), source)
+
+    def test_stretched_ticks_keep_outer_tips_and_reach_clearance_on_every_watch(self):
+        for device, size in model.DEVICES.items():
+            scene = self.scene(device)
+            element = scene["elements"][0]
+            element["ringTicksStretchToCircumference"] = True
+            for inset in (16, 34, 49):
+                scene["edgeInset"] = inset
+                outer = charts.ring_tick_radius(scene, element)
+                inner = charts.ring_tick_inner_radius(scene, element)
+                self.assertEqual(outer, size/2 - 4)
+                self.assertEqual(inner, size/2 - inset)
+                groups = charts.ring_geometry(*charts.ring_signature(scene, element))
+                self.assertEqual(len(groups), 60)
+                self.assertEqual(min(y for _, y in self.pixels(groups[0])), 4)
+                self.assertEqual(max(y for _, y in self.pixels(groups[0])) + 1, inset)
+                self.assertEqual(len({x for x, _ in self.pixels(groups[0])}), 6)
+                for index in range(60):
+                    angle = index * math.pi / 30
+                    radial = math.sin(angle), -math.cos(angle)
+                    projections = [(x+.5-size/2)*radial[0] + (y+.5-size/2)*radial[1]
+                                   for x, y in self.pixels(groups[index])]
+                    self.assertAlmostEqual(max(projections), outer, delta=1)
+                    self.assertAlmostEqual(min(projections), inner, delta=1)
+                expected = charts.chart_ops(element, ring_radius=outer, ring_inner_radius=inner)
+                actual = bridge.layout({"scene": scene})["ops"]
+                self.assertEqual(actual, [{**op, "colour": charts.device_colour(op["colour"])} for op in expected])
+            scene["edgeInset"] = 0
+            self.assertEqual(charts.ring_tick_inner_radius(scene, element), charts.ring_tick_radius(scene, element))
+            self.assertTrue(all(not group for group in charts.ring_geometry(*charts.ring_signature(scene, element))))
+
+    def test_stretch_mode_validation_and_preservation(self):
+        scene = self.scene()
+        scene["elements"][0]["ringTicksStretchToCircumference"] = True
+        scene = typography.set_clock_source(scene, "time", "seconds")
+        scene = typography.set_watch_font(scene, "widget")
+        scene = typography.set_clock_source(scene, "time", "secondsRing")
+        self.assertTrue(scene["elements"][0]["ringTicksStretchToCircumference"])
+        for value in (None, 0, 1, "yes", []):
+            invalid = copy.deepcopy(scene)
+            invalid["elements"][0]["ringTicksStretchToCircumference"] = value
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "circumference"):
+                model.validate_scene(invalid)
+        invalid = copy.deepcopy(scene)
+        invalid["elements"][0]["ringTicksToCircumference"] = True
+        with self.assertRaisesRegex(ValueError, "not both"):
+            model.validate_scene(invalid)
+        invalid = self.scene()
+        invalid["elements"][0].pop("inheritFont", None)
+        invalid["elements"][0].update(source="label", font="widget", height=26, width=26, text=":", ringTicksStretchToCircumference=True)
+        with self.assertRaisesRegex(ValueError, "circumference"):
+            model.validate_scene(invalid)
+
+    def test_stretched_geometry_has_distinct_export_tables_and_budget(self):
+        scene = self.scene()
+        scene["edgeInset"] = 34
+        original = scene["elements"][0]
+        scene["elements"].extend([
+            {**original, "id": "aligned", "ringTicksToCircumference": True},
+            {**original, "id": "stretched", "ringTicksStretchToCircumference": True},
+        ])
+        catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
+        signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
+        self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1), (416, 204, 174)})
+        expected = sum(64 + sum(48+16*len(group) for group in charts.ring_geometry(*signature)) for signature in signatures) + 240
+        self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
+        with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
+            project = Path(directory)
+            shutil.copytree(model.ROOT/"source", project/"source")
+            shutil.copytree(model.ROOT/"resources", project/"resources")
+            shutil.copy2(model.ROOT/"manifest.xml", project/"manifest.xml")
+            exporter.prepare_scene_project(project, scene)
+            source = (project/"source/DesignerView.mc").read_text()
             for index, signature in enumerate(sorted(signatures)):
                 self.assertIn(f"{index} => " + exporter._mc([list(group) for group in charts.ring_geometry(*signature)]), source)

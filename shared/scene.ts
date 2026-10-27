@@ -36,6 +36,8 @@ export interface SceneElement {
     dividerPosition?: "top" | "middle" | "bottom";
     /** Align all seconds-ring outer tick tips to the edge-clearance circumference. */
     ringTicksToCircumference?: boolean;
+    /** Keep outer tips fixed and stretch all tick inner ends to edge clearance. */
+    ringTicksStretchToCircumference?: boolean;
 }
 export interface Scene {
     version: 2;

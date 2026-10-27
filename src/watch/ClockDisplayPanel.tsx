@@ -62,16 +62,23 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                 </label>
             )}
             {selected?.source === "secondsRing" && (
-                <button type="button" className="snap-button" aria-pressed={selected.ringTicksToCircumference ?? false}
-                    disabled={requested !== undefined}
-                    onClick={() => onSceneChange({
-                        ...scene,
-                        elements: scene.elements.map((element) => element.id === elementId
-                            ? { ...element, ringTicksToCircumference: !element.ringTicksToCircumference }
-                            : element),
-                    })}>
-                    Align tick tips to clearance
-                </button>
+                <div role="group" aria-label="Seconds tick geometry">
+                    {([
+                        { key: "ringTicksToCircumference", label: "Align tick tips to clearance" },
+                        { key: "ringTicksStretchToCircumference", label: "Stretch ticks to clearance" },
+                    ] as const).map(({ key, label }) => (
+                        <button key={key} type="button" className="snap-button" aria-pressed={selected[key] ?? false}
+                            disabled={requested !== undefined}
+                            onClick={() => onSceneChange({
+                                ...scene,
+                                elements: scene.elements.map((element) => element.id === elementId
+                                    ? { ...element, ringTicksToCircumference: false, ringTicksStretchToCircumference: false, [key]: !element[key] }
+                                    : element),
+                            })}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
             )}
             {selected?.source === "divider" && (
                 <label className="font-choice">

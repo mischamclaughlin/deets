@@ -194,7 +194,7 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
             if catalogue[element["source"]]["kind"] not in {"text", "ring"}:
                 rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
     # One positive packed number per merged rectangle, with conservative array
-    # slot/container overhead. Equal width/radius pairs share the same immutable table.
+    # slot/container overhead. Equal width/outer/inner radius triples share the same immutable table.
     rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
     ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(*signature)) for signature in rings)
     return metadata + lookup + max(mode_costs, default=0) + rectangles + ring_cost + 80 * len(scene["elements"])
