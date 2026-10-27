@@ -70,7 +70,7 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                             ? { ...element, ringTicksToCircumference: !element.ringTicksToCircumference }
                             : element),
                     })}>
-                    Fit ticks to circumference
+                    Align tick tips to clearance
                 </button>
             )}
             {selected?.source === "divider" && (

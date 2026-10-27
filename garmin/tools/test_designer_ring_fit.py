@@ -27,32 +27,35 @@ class RingFitTests(unittest.TestCase):
                 for x, y, width, height in [charts.unpack_ring_rect(packed)]
                 for dx in range(width) for dy in range(height)}
 
-    def test_fitted_ticks_keep_ratios_and_follow_changed_guide_on_every_watch(self):
+    def test_fitted_outer_tips_follow_clearance_and_keep_varied_lengths_on_every_watch(self):
         for device, size in model.DEVICES.items():
             scene = self.scene(device)
             element = scene["elements"][0]
-            self.assertEqual(charts.ring_tick_length(scene, element), 15)
-            self.assertEqual(charts.ring_geometry(size), charts.ring_geometry(size, 15))
+            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2 - 4)
+            self.assertEqual(charts.ring_geometry(size), charts.ring_geometry(size, size / 2 - 4))
             element["ringTicksToCircumference"] = True
             for inset in (16, 34, 49):
                 scene["edgeInset"] = inset
-                length = charts.ring_tick_length(scene, element)
-                self.assertEqual(length, inset - 4)
-                groups = charts.ring_geometry(size, length)
-                # The quarter-minute top tick has an exact integer inner edge at the guide.
-                self.assertEqual(max(y for _, y in self.pixels(groups[0])) + 1, inset)
-                for index, ratio in ((1, 7/15), (5, 11/15), (15, 1)):
-                    angle = index * math.pi/30
+                radius = charts.ring_tick_radius(scene, element)
+                self.assertEqual(radius, size / 2 - inset)
+                groups = charts.ring_geometry(size, radius)
+                # The top tick starts on the clearance circle and extends 15 pixels inwards.
+                self.assertEqual(min(y for _, y in self.pixels(groups[0])), inset)
+                self.assertEqual(max(y for _, y in self.pixels(groups[0])) + 1, inset + 15)
+                for index in range(60):
+                    angle = index * math.pi / 30
                     radial = (math.sin(angle), -math.cos(angle))
                     projections = [(x+.5-size/2)*radial[0] + (y+.5-size/2)*radial[1]
                                    for x, y in self.pixels(groups[index])]
-                    self.assertAlmostEqual(max(projections)-min(projections), length*ratio, delta=1.5)
+                    length = 15 if index % 15 == 0 else 11 if index % 5 == 0 else 7
+                    self.assertAlmostEqual(max(projections), radius, delta=1)
+                    self.assertAlmostEqual(max(projections)-min(projections), length, delta=2)
                 self.assertEqual(groups[60], charts.ring_geometry(size)[60])
-                expected = charts.chart_ops(element, ring_length=length)
+                expected = charts.chart_ops(element, ring_radius=radius)
                 actual = bridge.layout({"scene": scene})["ops"]
                 self.assertEqual(actual, [{**op, "colour": charts.device_colour(op["colour"])} for op in expected])
             scene["edgeInset"] = 0
-            self.assertEqual(charts.ring_tick_length(scene, element), 1)
+            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2)
 
     def test_fit_setting_survives_clock_edits_and_rejects_unsupported_values(self):
         scene = self.scene()
@@ -72,14 +75,14 @@ class RingFitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "circumference"):
             model.validate_scene(invalid)
 
-    def test_export_tables_and_budget_distinguish_same_width_different_lengths(self):
+    def test_export_tables_and_budget_distinguish_same_width_different_radii(self):
         scene = self.scene()
         scene["edgeInset"] = 34
         fitted = {**scene["elements"][0], "id": "fitted", "ringTicksToCircumference": True}
         scene["elements"].append(fitted)
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
-        self.assertEqual(signatures, {(416, 15), (416, 30)})
+        self.assertEqual(signatures, {(416, 204), (416, 174)})
         expected = sum(64 + sum(48+16*len(group) for group in charts.ring_geometry(*signature)) for signature in signatures) + 160
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):

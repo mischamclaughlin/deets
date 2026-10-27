@@ -231,7 +231,7 @@ test("seconds switch between digits and the full outer ring without replacing cl
     }
 });
 
-test("fitted seconds ticks follow the circumference guide as edge clearance changes", async () => {
+test("seconds tick outer tips follow edge clearance and retain their inward lengths", async () => {
     const headers = { "content-type": "application/json" };
     const response = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "secondsRing" }))], headers);
     assert.equal(response.status, 200);
@@ -242,8 +242,9 @@ test("fitted seconds ticks follow the circumference guide as edge clearance chan
         assert.equal(result.status, 200, JSON.stringify(result.body));
         const mapped = result.body as unknown as WatchMapping;
         assert.equal(mapped.scene.elements[0].ringTicksToCircumference, true);
-        const topTick = mapped.ops.filter((op) => op.x <= 208 && op.x + op.width > 208 && op.y < 100);
-        assert.equal(Math.max(...topTick.map((op) => op.y + op.height)), edgeInset);
+        const topTick = mapped.ops.filter((op) => op.x <= 208 && op.x + op.width > 208 && op.y > 4 && op.y < 100);
+        assert.equal(Math.min(...topTick.map((op) => op.y)), edgeInset);
+        assert.equal(Math.max(...topTick.map((op) => op.y + op.height)), edgeInset + 15);
     }
     const invalid = { ...ring, elements: [{ ...ring.elements[0], ringTicksToCircumference: "yes" }] };
     assert.equal((await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: invalid }))], headers)).status, 400);

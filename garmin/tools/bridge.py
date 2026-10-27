@@ -12,7 +12,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 import designer_model as model
-from designer_charts import chart_ops, device_colour, ring_tick_length
+from designer_charts import chart_ops, device_colour, ring_tick_radius
 from designer_export import prepare_scene_project
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +48,7 @@ def layout(payload):
             operations.extend(model.render_text_ops({**scene, "elements": [element]}, night=night))
             fonts.add(element["font"])
         else:
-            operations.extend(chart_ops(element, night=night, ring_length=ring_tick_length(scene, element)))
+            operations.extend(chart_ops(element, night=night, ring_radius=ring_tick_radius(scene, element)))
     pack = model.scene_font_pack(scene)
     return {"scene": scene, "size": model.DEVICES[scene["device"]], "mapping": mapping(scene),
             "background": device_colour(0 if night else scene["background"]), "areas": areas,
