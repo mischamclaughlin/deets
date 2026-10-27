@@ -141,3 +141,69 @@ class ClockModeTests(unittest.TestCase):
             exporter.prepare_scene_project(project, scene)
             source = (project / "source/DesignerView.mc").read_text()
             self.assertIn('case "divider": return ":";', source)
+
+
+    def test_divider_position_aligns_native_and_generated_ink_without_changing_its_box(self):
+        for device in model.DEVICES:
+            for generated in (False, True):
+                original = self.scene()
+                original.update(device=device, elements=[])
+                original = typography.add_time(original)
+                if generated:
+                    original = typography.apply(original, "time", SETTINGS)
+                original = typography.set_clock_source(original, "time", "divider")
+                element = original["elements"][0]
+                font = model.scene_font_pack(original)["fonts"][element["font"]]
+                glyph = font["glyphs"][str(ord(":"))]
+                spare = element["height"] - glyph["height"]
+                for position, offset in (("top", 0), ("middle", spare // 2), ("bottom", spare)):
+                    with self.subTest(device=device, generated=generated, position=position):
+                        scene = copy.deepcopy(original)
+                        scene["elements"][0]["dividerPosition"] = position
+                        mapped = bridge.layout({"scene": scene})
+                        self.assertEqual(mapped["scene"], scene)
+                        self.assertEqual(mapped["areas"][0]["y"], element["y"])
+                        self.assertEqual(mapped["areas"][0]["height"], element["height"])
+                        operation, = mapped["ops"]
+                        self.assertEqual(operation["y"], element["y"] + offset)
+                        self.assertEqual(operation["height"], glyph["height"])
+                        self.assertEqual(operation["sy"], glyph["y"])
+                        self.assertEqual(operation["width"], glyph["width"])
+                middle = copy.deepcopy(original)
+                middle["elements"][0]["dividerPosition"] = "middle"
+                self.assertEqual(bridge.layout({"scene": original})["ops"], bridge.layout({"scene": middle})["ops"])
+
+    def test_divider_position_survives_font_size_and_source_edits(self):
+        scene = typography.set_clock_source(self.scene(), "clock", "divider")
+        scene["elements"][0]["dividerPosition"] = "bottom"
+        scene = typography.set_watch_font(scene, "widget")
+        scene = typography.apply(scene, "clock", {**SETTINGS, "size": 55})
+        scene = typography.set_clock_source(scene, "clock", "hours")
+        self.assertEqual(scene["elements"][0]["dividerPosition"], "bottom")
+        font = model.scene_font_pack(scene)["fonts"][scene["elements"][0]["font"]]
+        element = scene["elements"][0]
+        self.assertEqual(model.layout_text("10", element, font), model.layout_text("10", {k: v for k, v in element.items() if k != "dividerPosition"}, font))
+        scene = typography.set_clock_source(scene, "clock", "divider")
+        operation, = bridge.layout({"scene": scene})["ops"]
+        self.assertEqual(operation["y"] + operation["height"], scene["elements"][0]["y"] + 55)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            shutil.copytree(model.ROOT / "source", project / "source")
+            shutil.copytree(model.ROOT / "resources", project / "resources")
+            shutil.copy2(model.ROOT / "manifest.xml", project / "manifest.xml")
+            exporter.prepare_scene_project(project, scene)
+            source = (project / "source/DesignerView.mc").read_text()
+            self.assertIn('element[0].equals("divider")', source)
+            self.assertIn('if (element[16] == 2) { glyphY += spare; }', source)
+            self.assertIn('operations.add([pen, glyphY, code]);', source)
+
+    def test_divider_position_rejects_invalid_values_and_non_clock_sources(self):
+        for value in (None, True, 1, [], "centre", "elsewhere"):
+            scene = self.scene()
+            scene["elements"][0]["dividerPosition"] = value
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "divider position"):
+                model.validate_scene(scene)
+        scene = self.scene()
+        scene["elements"][0].update(source="label", font="widget", height=26, text=":", dividerPosition="top")
+        with self.assertRaisesRegex(ValueError, "divider position"):
+            model.validate_scene(scene)

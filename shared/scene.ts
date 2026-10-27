@@ -31,6 +31,8 @@ export interface SceneElement {
     typography?: Typography;
     /** When omitted, clocks with legacy typography stay custom; others inherit. */
     inheritFont?: boolean;
+    /** Vertical placement of divider ink within its native text box. Defaults to middle. */
+    dividerPosition?: "top" | "middle" | "bottom";
 }
 export interface Scene {
     version: 2;

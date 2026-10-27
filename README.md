@@ -59,7 +59,9 @@ only (MM) or a standalone divider (:). Changes preserve the
 same element, its typography and its centre to the nearest native pixel. Native
 metrics determine the new width and snapping bounds. The preview shows 10:08,
 10, 08 or :; Garmin exports use live hours/minutes and the watch's clock settings.
-Typography remains in the right sidebar for all four display modes.
+Typography remains in the right sidebar for all four display modes. Dividers
+can place the visible colon at the top, middle (default) or bottom of their
+native element box.
 
 ## Typography
 

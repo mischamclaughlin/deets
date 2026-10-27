@@ -48,6 +48,22 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                     </button>
                 ))}
             </div>
+            {selected?.source === "divider" && (
+                <label className="font-choice">
+                    Divider position
+                    <select value={selected.dividerPosition ?? "middle"} disabled={requested !== undefined}
+                        onChange={(event) => onSceneChange({
+                            ...scene,
+                            elements: scene.elements.map((element) => element.id === elementId
+                                ? { ...element, dividerPosition: event.target.value as "top" | "middle" | "bottom" }
+                                : element),
+                        })}>
+                        <option value="top">Top</option>
+                        <option value="middle">Middle</option>
+                        <option value="bottom">Bottom</option>
+                    </select>
+                </label>
+            )}
             {requested && <p className="typography-status" role="status">Updating time…</p>}
             {error && <p className="typography-status" role="alert">{error}</p>}
         </section>

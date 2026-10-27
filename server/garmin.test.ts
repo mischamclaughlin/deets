@@ -186,3 +186,26 @@ test("watch fonts resolve inherited clocks and inheritance requests keep strict 
     assert.equal((await requestApi("/api/garmin/watch-font", [], { host: "attacker.example" })).status, 403);
     assert.equal((await requestApi("/api/garmin/inherit-font", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+test("layout API positions divider ink within its native box and rejects invalid positions", async () => {
+    const headers = { "content-type": "application/json" };
+    const response = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "divider" }))], headers);
+    assert.equal(response.status, 200);
+    const divider = (response.body as unknown as WatchMapping).scene;
+    const element = divider.elements[0];
+    const positions = [];
+    for (const dividerPosition of ["top", "middle", "bottom"] as const) {
+        const changed = { ...divider, elements: [{ ...element, dividerPosition }] };
+        const result = await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: changed }))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const mapped = result.body as unknown as WatchMapping;
+        const ink = mapped.ops[0];
+        assert.equal(mapped.scene.elements[0].dividerPosition, dividerPosition);
+        assert.equal(ink.y, element.y + (dividerPosition === "top" ? 0 : dividerPosition === "bottom"
+            ? element.height - ink.height : Math.floor((element.height - ink.height) / 2)));
+        positions.push(ink.y);
+    }
+    assert.ok(positions[0] < positions[1] && positions[1] < positions[2]);
+    const invalid = { ...divider, elements: [{ ...element, dividerPosition: "outside" }] };
+    assert.equal((await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: invalid }))], headers)).status, 400);
+});

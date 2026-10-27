@@ -274,6 +274,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             element.get("text", ""), kind, element["height"], day_rectangles, night_rectangles,
             atlas_indices.get((element["font"], element["colour"]), -1),
             atlas_indices.get((element["font"], element["nightColour"]), -1),
+            {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -498,7 +499,14 @@ class DesignerView extends WatchUi.WatchFace {
             var glyph = glyphFor(font, code);
             if (glyph == null) { continue; }
             var dx = pen;
-            var dy = top + glyph[4];
+            var glyphY = top + glyph[4];
+            if (element[0].equals("divider")) {
+                var spare = _fontHeights[element[1]] - glyph[3];
+                glyphY = top;
+                if (element[16] == 1) { glyphY += Math.floor(spare / 2.0).toNumber(); }
+                if (element[16] == 2) { glyphY += spare; }
+            }
+            var dy = glyphY;
             var sx = glyph[0];
             var sy = glyph[1];
             var width = glyph[2];
@@ -508,7 +516,7 @@ class DesignerView extends WatchUi.WatchFace {
             if (dx + width > right) { width = right - dx; }
             if (dy + height > bottom) { height = bottom - dy; }
             if (width > 0 && height > 0) {
-                operations.add([pen, top + glyph[4], code]);
+                operations.add([pen, glyphY, code]);
             }
             pen += glyph[5];
         }

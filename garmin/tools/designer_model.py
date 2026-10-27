@@ -215,7 +215,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -242,6 +242,10 @@ def validate_scene(payload):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")
+        if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider"}
+                or not isinstance(original["dividerPosition"], str)
+                or original["dividerPosition"] not in {"top", "middle", "bottom"}):
+            raise ValueError("Choose top, middle or bottom for the divider position on a clock element.")
         x = _integer(original["x"], "Element X", 0, size - 1)
         y = _integer(original["y"], "Element Y", 0, size - 1)
         width = _integer(original["width"], "Element width", 1, size - x)
@@ -278,6 +282,8 @@ def validate_scene(payload):
             result["typography"] = typography
         if "inheritFont" in original:
             result["inheritFont"] = original["inheritFont"]
+        if "dividerPosition" in original:
+            result["dividerPosition"] = original["dividerPosition"]
         if "text" in original or source == "label":
             text = original.get("text", "EPIX CANVAS")
             if not isinstance(text, str) or len(text) > 80 or any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in text):
@@ -316,7 +322,12 @@ def layout_text(text, element, font):
     clip_bottom = top + element.get("height", font["height"])
     operations = []
     for glyph in glyphs:
-        x, y = cursor + glyph["xoffset"], top + glyph["yoffset"]
+        glyph_y = glyph["yoffset"]
+        if element.get("source") == "divider":
+            spare = element.get("height", font["height"]) - glyph["height"]
+            position = element.get("dividerPosition", "middle")
+            glyph_y = 0 if position == "top" else spare if position == "bottom" else spare // 2
+        x, y = cursor + glyph["xoffset"], top + glyph_y
         left, upper = max(x, element["x"]), max(y, top)
         right, bottom = min(x + glyph["width"], clip_right), min(y + glyph["height"], clip_bottom)
         if right > left and bottom > upper:
