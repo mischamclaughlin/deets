@@ -181,6 +181,8 @@ def load(key, device):
 
 
 def _clock_values(source):
+    if source == "divider":
+        return (":",)
     if source == "hours":
         return (f"{hour:02d}" for hour in range(24))
     if source == "minutes":
@@ -204,7 +206,7 @@ def _clock_width(font, source):
 
 def _clock_target(scene, element_id):
     target = next((element for element in scene["elements"] if element["id"] == element_id), None)
-    if not target or target["source"] not in {"time", "hours", "minutes"}:
+    if not target or target["source"] not in {"time", "hours", "minutes", "divider"}:
         raise ValueError("Select a time element to edit its clock settings.")
     return target
 
@@ -229,8 +231,8 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
 def set_clock_source(scene, element_id, source):
     """Change the shown clock component while preserving its font and centre."""
     from designer_model import validate_scene, scene_font_pack
-    if not isinstance(source, str) or source not in {"time", "hours", "minutes"}:
-        raise ValueError("Choose HH:MM, hours only or minutes only.")
+    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "divider"}:
+        raise ValueError("Choose HH:MM, hours only, minutes only or a divider.")
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
     font = scene_font_pack(scene)["fonts"][target["font"]]
@@ -295,7 +297,7 @@ def set_watch_font(scene, family):
         value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
         generated[tuple(sorted(value.items()))] = generate(scene["device"], value)
     for element in scene["elements"]:
-        if element["source"] not in {"time", "hours", "minutes"} or not inherits(element):
+        if element["source"] not in {"time", "hours", "minutes", "divider"} or not inherits(element):
             continue
         value = {**element_settings(element), "family": family}
         signature = tuple(sorted(value.items()))

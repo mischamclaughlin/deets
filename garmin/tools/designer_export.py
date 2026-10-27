@@ -132,6 +132,8 @@ def _element_codes(element, catalogue, proof):
         text = str(catalogue[source].get("sample", "--"))
     elif source in {"hours", "minutes", "seconds", "day", "year"}:
         text = "0123456789"
+    elif source == "divider":
+        text = ":"
     elif source == "time":
         text = "0123456789:"
     elif source == "numericDate":
@@ -520,6 +522,7 @@ class DesignerView extends WatchUi.WatchFace {
             case "time": return _values.timeText;
             case "hours": return _values.hourText;
             case "minutes": return _values.minuteText;
+            case "divider": return ":";
             case "seconds": return _values.seconds.format("%02d");
             case "date": return _values.dateLeftText + " " + _values.dateCentreText + " " + _values.dateRightText;
             case "numericDate": return _values.numericDateText;

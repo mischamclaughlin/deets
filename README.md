@@ -54,12 +54,12 @@ The left sidebar lists existing elements at the top. The Library section below
 has a + Time button that creates and selects a fresh, centred HH:MM element.
 Existing clocks remain listed as Time 1, Time 2 and so on, with
 independent display modes and typography. Select a clock in the list or on the canvas
-to reveal its controls on the right, including HH:MM, hours only (HH) or minutes
-only (MM). Changes preserve the
+to reveal its controls on the right, including HH:MM, hours only (HH), minutes
+only (MM) or a standalone divider (:). Changes preserve the
 same element, its typography and its centre to the nearest native pixel. Native
 metrics determine the new width and snapping bounds. The preview shows 10:08,
-10 or 08; Garmin exports use live hours/minutes and the watch's clock settings.
-Typography remains in the right sidebar for all three display modes.
+10, 08 or :; Garmin exports use live hours/minutes and the watch's clock settings.
+Typography remains in the right sidebar for all four display modes.
 
 ## Typography
 

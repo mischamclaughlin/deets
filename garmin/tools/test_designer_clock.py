@@ -1,10 +1,14 @@
 """Clock components share native glyph metrics, typography and export behaviour."""
 import copy
+from pathlib import Path
+import shutil
+import tempfile
 import unittest
 
 import bridge
 import designer_model as model
 import designer_typography as typography
+import designer_export as exporter
 
 
 SETTINGS = {"family": "time", "size": 70, "thickness": 1, "width": 110, "letterSpacing": -4}
@@ -20,7 +24,7 @@ class ClockModeTests(unittest.TestCase):
         original = self.scene()
         before = copy.deepcopy(original)
         widths = {}
-        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08")):
+        for source, sample in (("time", "10:08"), ("hours", "10"), ("minutes", "08"), ("divider", ":")):
             with self.subTest(source=source):
                 changed = typography.set_clock_source(original, "clock", source)
                 element = changed["elements"][0]
@@ -38,12 +42,13 @@ class ClockModeTests(unittest.TestCase):
                     for operation in expected])
         self.assertLess(widths["hours"], widths["time"])
         self.assertLess(widths["minutes"], widths["time"])
+        self.assertLess(widths["divider"], widths["minutes"])
         self.assertEqual(original, before)
 
     def test_every_component_value_fits_native_bounds(self):
         for generated in (False, True):
             scene = typography.apply(self.scene(), "clock", SETTINGS) if generated else self.scene()
-            for source in ("time", "hours", "minutes"):
+            for source in ("time", "hours", "minutes", "divider"):
                 changed = typography.set_clock_source(scene, "clock", source)
                 element = changed["elements"][0]
                 font = model.scene_font_pack(changed)["fonts"][element["font"]]
@@ -54,14 +59,14 @@ class ClockModeTests(unittest.TestCase):
 
     def test_generated_font_survives_mode_changes_and_typography_can_be_edited_again(self):
         scene = typography.apply(self.scene(), "clock", SETTINGS)
-        for source in ("hours", "minutes", "time"):
+        for source in ("hours", "minutes", "divider", "time"):
             changed = typography.set_clock_source(scene, "clock", source)
             self.assertEqual(changed["elements"][0]["typography"], SETTINGS)
             self.assertEqual(changed["elements"][0]["font"], scene["elements"][0]["font"])
             edited = typography.apply(changed, "clock", {**SETTINGS, "size": 75})
             self.assertEqual(edited["elements"][0]["source"], source)
             self.assertEqual(edited["elements"][0]["height"], 75)
-            self.assertEqual(len(bridge.layout({"scene": edited})["ops"]), 5 if source == "time" else 2)
+            self.assertEqual(len(bridge.layout({"scene": edited})["ops"]), 5 if source == "time" else 1 if source == "divider" else 2)
 
     def test_strict_bridge_clock_requests_and_stale_mapping_rejection(self):
         scene = self.scene()
@@ -119,3 +124,20 @@ class ClockModeTests(unittest.TestCase):
             typography.add_time(scene)
         with self.assertRaisesRegex(ValueError, "supported element"):
             bridge.dispatch({"operation": "add", "payload": {"scene": self.scene(), "source": "date"}})
+
+    def test_divider_inherits_watch_font_and_exports_a_literal_colon(self):
+        scene = typography.set_clock_source(self.scene(), "clock", "divider")
+        scene = typography.set_watch_font(scene, "widget")
+        element = scene["elements"][0]
+        self.assertTrue(element["inheritFont"])
+        self.assertEqual(element["typography"]["family"], "widget")
+        self.assertEqual(len(bridge.layout({"scene": scene})["ops"]), 1)
+        self.assertEqual(exporter._element_codes(element, model.SOURCES, False), {ord(":"), ord("?")})
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            shutil.copytree(model.ROOT / "source", project / "source")
+            shutil.copytree(model.ROOT / "resources", project / "resources")
+            shutil.copy2(model.ROOT / "manifest.xml", project / "manifest.xml")
+            exporter.prepare_scene_project(project, scene)
+            source = (project / "source/DesignerView.mc").read_text()
+            self.assertIn('case "divider": return ":";', source)

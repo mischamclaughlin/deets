@@ -35,7 +35,7 @@ def _source(identity, label, group, sample, kind="text", complication=None):
     if complication is not None:
         result["type"] = complication
     result["allowedFonts"] = (
-        ["widget", "time"] if identity == "time" else
+        ["widget", "time"] if identity in {"time", "divider"} else
         ["widget", "time", "numeric", "tall"] if identity in {"hours", "minutes", "seconds"} else
         ["widget", "date"] if identity == "numericDate" else ["widget"]
     )
@@ -46,6 +46,7 @@ CATALOG = [
     _source("time", "Time", "Clock & date", "10:08"),
     _source("hours", "Hours", "Clock & date", "10"),
     _source("minutes", "Minutes", "Clock & date", "08"),
+    _source("divider", "Divider", "Clock & date", ":"),
     _source("seconds", "Seconds", "Clock & date", "23"),
     _source("date", "Date", "Clock & date", "MON 26 OCT 2026"),
     _source("numericDate", "Numeric date", "Clock & date", "26/10/26"),
@@ -227,7 +228,7 @@ def validate_scene(payload):
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
-                (generated and (source not in {"time", "hours", "minutes"} or font not in pack["fonts"])) or
+                (generated and (source not in {"time", "hours", "minutes", "divider"} or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
         if "typography" in original:
@@ -235,9 +236,9 @@ def validate_scene(payload):
             typography = settings(original["typography"])
             if not generated or load(font, device)["typography"] != typography:
                 raise ValueError("The typography settings do not match the generated font.")
-        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes"}):
+        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes", "divider"}):
             raise ValueError("Only clock elements can choose whether to inherit the watch font.")
-        if source in {"time", "hours", "minutes"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
+        if source in {"time", "hours", "minutes", "divider"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")

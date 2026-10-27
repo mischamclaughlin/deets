@@ -30,7 +30,6 @@ export function WatchFontPanel({ scene, onSceneChange, uploads, onUpload }: {
         <h2 id="watch-font-heading">Watch font</h2>
         <FontPicker family={pending ?? scene.fontFamily ?? "time"} uploads={uploads} onUpload={onUpload}
             disabled={pending !== undefined} onChange={(family) => { setError(undefined); setPending(family); }} />
-        <p className="typography-status">Inherited by elements unless they use a custom font. Size and spacing stay independent.</p>
         {(pending !== undefined || error) && <p className="typography-status" role={error ? "alert" : "status"}>
             {error ?? "Updating inherited fonts…"}
         </p>}

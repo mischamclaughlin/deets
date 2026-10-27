@@ -132,16 +132,16 @@ test("typography API generates canonical clock pixels from an included or upload
 });
 
 
-test("clock display API switches between combined time, hours and minutes", async () => {
+test("clock display API switches between combined time, hours, minutes and divider", async () => {
     let current = scene;
-    for (const source of ["hours", "minutes", "time"]) {
+    for (const source of ["hours", "minutes", "divider", "time"]) {
         const payload = { scene: current, elementId: "time", source };
         const result = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify(payload))], { "content-type": "application/json" });
         assert.equal(result.status, 200, JSON.stringify(result.body));
         const mapped = result.body as unknown as WatchMapping;
         current = mapped.scene;
         assert.equal(current.elements[0].source, source);
-        assert.equal(mapped.ops.length, source === "time" ? 5 : 2);
+        assert.equal(mapped.ops.length, source === "time" ? 5 : source === "divider" ? 1 : 2);
         assert.ok(Math.abs(current.elements[0].x + current.elements[0].width / 2 - 208) <= 0.5);
     }
     const invalid = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "date" }))], { "content-type": "application/json" });
