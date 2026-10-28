@@ -27,11 +27,12 @@ lines across the watch, independently of grid visibility and edge clearance.
 These are browser-only annotations and are excluded from Garmin exports.
 
 The Snap button enables alignment of element edges and centre axes to visible
-centre guides, grid dividers, rings and the circumference. Drag a mapped element
+centre guides, grid dividers and rings. The document circumference is only a
+hard movement limit, never a snap target. Drag a mapped element
 to preview its bounding box; release to commit its integer native-pixel position
 and remap its ink. Arrow keys move by one pixel, Shift by ten; Alt temporarily
 bypasses snapping. The **Grid**, **Guide** and **Elements** checkboxes choose
-snap targets independently: visible grid lines/rings, visible centre/circumference
+snap targets independently: visible grid lines/rings, visible centre
 guides, and other visible elements’ edges/centres (including touching edges).
 Snap off disables every category while retaining the checkbox selections. All
 three categories are selected by default. The seconds ring’s full-screen bounds

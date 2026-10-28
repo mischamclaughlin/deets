@@ -7,8 +7,8 @@ import { devices, type Scene, type SceneElement } from "../shared/scene.ts";
 const element: SceneElement = { id: "test", source: "label", font: "widget", text: "TEST",
     x: 180, y: 180, width: 20, height: 20, align: "centre", colour: 0xffffff, nightColour: 0xffffff, visible: "both" };
 const scene: Scene = { version: 2, name: "Snap tests", device: "epix2pro47mm", background: 0, edgeInset: 16, elements: [element] };
-const guides: SnapOptions = { enabled: true, showGuideLines: true, showCircumference: false };
-const none: SnapOptions = { enabled: false, showGuideLines: false, showCircumference: false };
+const guides: SnapOptions = { enabled: true, showGuideLines: true };
+const none: SnapOptions = { enabled: false, showGuideLines: false };
 
 test("each rectangle edge and centre snaps independently to centre guides", () => {
     for (const offset of [0, 10, 20]) {
@@ -49,7 +49,7 @@ test("grid chords, curved dividers and rings supply visible snap targets", () =>
 test("dragging stays within the whole-box circular boundary on every device", () => {
     for (const [device, size] of Object.entries(devices)) {
         const local = { ...scene, device: device as Scene["device"] };
-        for (const options of [none, { ...guides, showCircumference: true }]) {
+        for (const options of [none, guides]) {
             for (const x of [-100, 0, 40, size / 2, size - 10, size + 100]) {
                 for (const y of [-100, 0, 40, size / 2, size - 10, size + 100]) {
                     const position = moveElement(local, element, { x, y }, options);
@@ -65,9 +65,10 @@ test("dragging stays within the whole-box circular boundary on every device", ()
     }
 });
 
-test("boundary snaps use outer corners and preserve the element when no placement fits", () => {
-    const result = moveElement(scene, element, { x: 22, y: 198 }, { ...none, enabled: true, showCircumference: true });
-    assert.deepEqual(result, { x: 17, y: 198 });
+test("the circumference limits movement without attracting nearby elements", () => {
+    const result = moveElement(scene, element, { x: 22, y: 198 }, { ...none, enabled: true });
+    assert.deepEqual(result, { x: 22, y: 198 });
+    assert.deepEqual(moveElement(scene, element, { x: 0, y: 198 }, none), { x: 17, y: 198 });
     assert.deepEqual(moveElement({ ...scene, edgeInset: 205 }, element, { x: 1, y: 1 }, guides), { x: element.x, y: element.y });
     assert.deepEqual(moveElement(scene, element, { x: NaN, y: 5 }, guides), { x: element.x, y: element.y });
 });
@@ -87,7 +88,7 @@ test("legacy scenes retain screen bounds and unsnapped valid positions", () => {
 test("the outer seconds ring stays anchored to the physical watch circumference", () => {
     const ring: SceneElement = { ...element, source: "secondsRing", x: 0, y: 0, width: 416, height: 416 };
     const design: Scene = { version: 2, name: "Ring", device: "epix2pro47mm", background: 0, edgeInset: 16, elements: [ring] };
-    assert.deepEqual(moveElement(design, ring, { x: 20, y: -20 }, { enabled: false, showGuideLines: false, showCircumference: false }), { x: 0, y: 0 });
+    assert.deepEqual(moveElement(design, ring, { x: 20, y: -20 }, { enabled: false, showGuideLines: false }), { x: 0, y: 0 });
 });
 
 const neighbour: SceneElement = { ...element, id: "neighbour", x: 140, y: 150, width: 40, height: 30 };
@@ -181,10 +182,11 @@ test("Grid, Guide and Elements categories work independently under the master sw
     }
 });
 
-test("Guide controls circumference snapping as well as centre guides", () => {
-    const desired = { x: 22, y: 198 };
-    const options: SnapOptions = { ...none, enabled: true, showCircumference: true, snapToGuides: true };
-    assert.deepEqual(moveElement(scene, element, desired, options), { x: 17, y: 198 });
-    assert.deepEqual(moveElement(scene, element, desired, { ...options, snapToGuides: false }), desired);
-    assert.deepEqual(moveElement(scene, element, desired, { ...options, enabled: false }), desired);
+test("Guide controls centre-line attraction while the circumference stays a hard limit", () => {
+    const desired = { x: 201, y: 201 };
+    assert.deepEqual(moveElement(scene, element, desired, { ...guides, snapToGuides: true }), { x: 198, y: 198 });
+    assert.deepEqual(moveElement(scene, element, desired, { ...guides, snapToGuides: false }), desired);
+    for (const snapToGuides of [false, true]) {
+        assert.deepEqual(moveElement(scene, element, { x: 0, y: 198 }, { ...guides, snapToGuides }), { x: 17, y: 198 });
+    }
 });

@@ -74,7 +74,7 @@ test("snapped positions round-trip the native validator on every device", async 
         };
         const element = original.elements[0];
         const position = moveElement(original, element, { x: 157, y: 205 }, {
-            enabled: true, showGuideLines: true, showCircumference: true,
+            enabled: true, showGuideLines: true,
         });
         const moved = { ...original, elements: [{ ...element, ...position }] };
         const mapped = await callBridge<WatchMapping>("layout", { scene: moved });
@@ -97,7 +97,7 @@ test("initial HH:MM time uses native glyphs and is centred on both axes", async 
     assert.equal(layout.ops.length, 5);
     assert.ok(layout.ops.every((op) => op.kind === "bitmap" && op.elementId === "time"));
     const shifted = moveElement(initialScene, initialScene.elements[0], { x: 91, y: 167 }, {
-        enabled: true, showGuideLines: true, showCircumference: true,
+        enabled: true, showGuideLines: true,
     });
     assert.deepEqual(shifted, { x: 88, y: 164 });
 });

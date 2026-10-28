@@ -5,7 +5,6 @@ interface Point { x: number; y: number }
 export interface SnapOptions {
     enabled: boolean;
     showGuideLines: boolean;
-    showCircumference: boolean;
     snapToGrid?: boolean;
     snapToGuides?: boolean;
     snapToElements?: boolean;
@@ -91,16 +90,6 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
         const extent = axis === "x" ? width : height;
         const values = targets(axis, location).flatMap((target) => [0, extent / 2, extent]
             .flatMap((anchor) => [Math.floor(target - anchor), Math.ceil(target - anchor)]));
-        if (options.snapToGuides !== false && options.showCircumference) {
-            // Use the farthest box corner to make boundary snaps safe for the whole box.
-            const perpendicular = axis === "x" ? location.y : location.x;
-            const otherExtent = axis === "x" ? height : width;
-            const farthest = Math.max(Math.abs(perpendicular - centre), Math.abs(perpendicular + otherExtent - centre));
-            if (farthest <= radius) {
-                const span = Math.sqrt(Math.max(0, radius ** 2 - farthest ** 2));
-                values.push(Math.ceil(centre - span), Math.floor(centre + span - extent));
-            }
-        }
         return [...new Set(values)].filter((value) => Math.abs(value - point[axis]) <= threshold);
     };
     const results: Array<{ point: Point; axes: number }> = [];

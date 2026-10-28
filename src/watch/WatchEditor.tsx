@@ -177,7 +177,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         onMoveElement={(id, desired) => setScene((current) => ({
                             ...current,
                             elements: current.elements.map((element) => element.id === id
-                                ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, showCircumference, grid }) }
+                                ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, grid }) }
                                 : element),
                         }))}
                     />

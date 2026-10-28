@@ -124,7 +124,6 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             snapToElements,
             night,
             showGuideLines,
-            showCircumference,
             grid,
         });
         drag.current = { ...currentDrag, position };
@@ -263,7 +262,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                         onMoveElement(element.id, moveElement(scene, element, {
                                             x: element.x + direction[0] * step,
                                             y: element.y + direction[1] * step,
-                                        }, { enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, showCircumference, grid }));
+                                        }, { enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, grid }));
                                     }
                                     if (event.key === "Escape" && drag.current) {
                                         drag.current = undefined;
