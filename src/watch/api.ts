@@ -1,4 +1,4 @@
-import type { ClockSource, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ClockSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 
 async function post<T>(
     path: string,
@@ -102,3 +102,12 @@ export const setTextPresets = (scene: Scene, presets: TextPreset[], defaultPrese
 
 export const applyTextPreset = (scene: Scene, elementId: string, presetId: string | null, signal?: AbortSignal) =>
     post<WatchMapping>("apply-text-preset", { scene, elementId, presetId }, signal);
+
+export const setColourPresets = (scene: Scene, presets: ColourPreset[], signal?: AbortSignal) =>
+    post<WatchMapping>("colour-presets", { scene, presets }, signal);
+
+export const setElementColour = (scene: Scene, elementId: string, channel: "day" | "night", colour: number, signal?: AbortSignal) =>
+    post<WatchMapping>("element-colour", { scene, elementId, channel, colour }, signal);
+
+export const setElementColourPreset = (scene: Scene, elementId: string, channel: "day" | "night", presetId: string | null, signal?: AbortSignal) =>
+    post<WatchMapping>("element-colour-preset", { scene, elementId, channel, presetId }, signal);

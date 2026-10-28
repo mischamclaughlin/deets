@@ -6,6 +6,8 @@ import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
+import { ColourPresetsPanel } from "./ColourPresetsPanel.tsx";
+import { ElementColourPanel } from "./ElementColourPanel.tsx";
 import { ElementActionsPanel } from "./ElementActionsPanel.tsx";
 import { TextPresetsPanel } from "./TextPresetsPanel.tsx";
 import { WatchFontPanel } from "./WatchFontPanel.tsx";
@@ -38,6 +40,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
                 <TextPresetsPanel scene={scene} onSceneChange={setScene} />
+                <ColourPresetsPanel scene={scene} onSceneChange={setScene} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -192,6 +195,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                     onSceneChange={setScene} onSelect={setSelectedId} />}
+                {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {scene.elements.some((element) => element.id === selectedId && (isClockSource(element.source) || element.source === "divider")) && (
                     <>
                         {selected?.source === "divider"

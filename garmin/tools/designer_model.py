@@ -202,7 +202,7 @@ def _integer(value, label, minimum, maximum):
 
 def validate_scene(payload):
     fields = {"version", "name", "device", "background", "elements"}
-    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily", "textDefaults", "textPresets", "defaultTextPresetId"}:
+    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily", "textDefaults", "textPresets", "defaultTextPresetId", "colourPresets"}:
         raise ValueError("Expected a version-2 watch-face scene.")
     if type(payload["version"]) is not int or payload["version"] != 2:
         raise ValueError("This scene version is unsupported.")
@@ -227,11 +227,14 @@ def validate_scene(payload):
     if "textPresets" in payload or "defaultTextPresetId" in payload:
         from designer_typography import text_presets
         presets = text_presets(payload.get("textPresets"), payload.get("defaultTextPresetId"))
+    from designer_colours import colour_presets
+    colours = colour_presets(payload.get("colourPresets", []))
+    colour_registry = {preset["id"]: preset["colour"] for preset in colours}
     pack = scene_font_pack(payload)
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -321,9 +324,19 @@ def validate_scene(payload):
             raise ValueError("Choose day, night or both for element visibility.")
         colour = _integer(original["colour"], "Element colour", 0, 0xFFFFFF)
         night_colour = _integer(original["nightColour"], "Night colour", 0, 0xFFFFFF)
+        for value_key, link_key in (("colour", "colourPresetId"), ("nightColour", "nightColourPresetId")):
+            if link_key in original:
+                preset_id = original[link_key]
+                if not isinstance(preset_id, str) or preset_id not in colour_registry:
+                    raise ValueError("Choose an existing named colour preset.")
+                if original[value_key] != colour_registry[preset_id]:
+                    raise ValueError("The element colour does not match its linked colour preset.")
         result = {"id": identity, "source": source, "font": font, "x": x, "y": y,
                   "width": width, "height": height, "align": original["align"], "colour": colour,
                   "nightColour": night_colour, "visible": original["visible"]}
+        for link_key in ("colourPresetId", "nightColourPresetId"):
+            if link_key in original:
+                result[link_key] = original[link_key]
         if "typography" in original:
             result["typography"] = typography
         if "textPresetId" in original:
@@ -350,6 +363,8 @@ def validate_scene(payload):
              "background": background, "elements": elements}
     if edge_inset is not None:
         scene["edgeInset"] = edge_inset
+    if "colourPresets" in payload:
+        scene["colourPresets"] = colours
     if "fontFamily" in payload:
         scene["fontFamily"] = family
     if "textDefaults" in payload:

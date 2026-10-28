@@ -440,3 +440,46 @@ test("preset links update every user automatically and custom detachment preserv
     assert.ok(current.elements.every((element) => element.textPresetId === undefined));
     assert.deepEqual(current.elements.map((element) => element.height), [30, 40]);
 });
+
+test("element day and night colours can be custom or linked to live colour presets", async () => {
+    const headers = { "content-type": "application/json" };
+    async function post(path: string, payload: unknown) {
+        const result = await requestApi(`/api/garmin/${path}`, [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        return (result.body as unknown as WatchMapping).scene;
+    }
+    let current = await post("element-colour", { scene, elementId: "time", channel: "day", colour: 0x123456 });
+    assert.equal(current.elements[0].colour, 0x123456);
+    assert.equal(current.elements[0].nightColour, scene.elements[0].nightColour);
+    const presets = [{ id: "accent", name: "Accent", colour: 0xff5500 }];
+    current = await post("colour-presets", { scene: current, presets });
+    for (const channel of ["day", "night"]) {
+        current = await post("element-colour-preset", { scene: current, elementId: "time", channel, presetId: "accent" });
+    }
+    current = await post("copy-element", { scene: current, elementId: "time" });
+    current = await post("colour-presets", { scene: current, presets: [{ ...presets[0], colour: 0x445566 }] });
+    assert.ok(current.elements.every((element) => element.colour === 0x445566 && element.nightColour === 0x445566));
+    current = await post("element-colour", { scene: current, elementId: "time", channel: "day", colour: 0xffffff });
+    assert.equal(current.elements[0].colourPresetId, undefined);
+    assert.equal(current.elements[0].nightColourPresetId, "accent");
+    current = await post("colour-presets", { scene: current, presets: [{ ...presets[0], colour: 0xabcdef }] });
+    assert.equal(current.elements[0].colour, 0xffffff);
+    assert.equal(current.elements[0].nightColour, 0xabcdef);
+    assert.equal(current.elements[1].colour, 0xabcdef);
+    current = await post("colour-presets", { scene: current, presets: [] });
+    assert.ok(current.elements.every((element) => !element.colourPresetId && !element.nightColourPresetId));
+    assert.equal(current.elements[1].colour, 0xabcdef);
+});
+
+test("colour APIs reject invalid RGB, links and origins", async () => {
+    const headers = { "content-type": "application/json" };
+    for (const colour of [-1, 0x1000000, true, "#ffffff"]) {
+        const result = await requestApi("/api/garmin/element-colour", [Buffer.from(JSON.stringify({ scene, elementId: "time", channel: "day", colour }))], headers);
+        assert.equal(result.status, 400);
+    }
+    const missing = await requestApi("/api/garmin/element-colour-preset", [Buffer.from(JSON.stringify({ scene, elementId: "time", channel: "day", presetId: "missing" }))], headers);
+    assert.equal(missing.status, 400);
+    for (const path of ["colour-presets", "element-colour", "element-colour-preset"]) {
+        assert.equal((await requestApi(`/api/garmin/${path}`, [], { origin: "https://attacker.example" })).status, 403);
+    }
+});

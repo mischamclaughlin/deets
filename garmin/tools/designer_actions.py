@@ -107,3 +107,53 @@ def apply_text_preset(scene, element_id, preset_id):
     edited = apply(edited, element_id, value)
     _target(edited, element_id)[1]["textPresetId"] = preset_id
     return validate_scene(edited)
+
+
+def set_colour_presets(scene, presets):
+    from designer_colours import colour_presets
+    scene = validate_scene(scene)
+    checked = colour_presets(presets)
+    registry = {preset["id"]: preset["colour"] for preset in checked}
+    edited = copy.deepcopy(scene)
+    edited["colourPresets"] = checked
+    for element in edited["elements"]:
+        for value_key, link_key in (("colour", "colourPresetId"), ("nightColour", "nightColourPresetId")):
+            if link_key not in element:
+                continue
+            preset_id = element[link_key]
+            if preset_id in registry:
+                element[value_key] = registry[preset_id]
+            else:
+                element.pop(link_key)
+    return validate_scene(edited)
+
+
+def set_element_colour(scene, element_id, channel, colour):
+    from designer_colours import colour_value, colour_channel
+    scene = validate_scene(scene)
+    value_key, link_key = colour_channel(channel)
+    checked = colour_value(colour)
+    edited = copy.deepcopy(scene)
+    _, target = _target(edited, element_id)
+    target.pop(link_key, None)
+    target[value_key] = checked
+    return validate_scene(edited)
+
+
+def set_element_colour_preset(scene, element_id, channel, preset_id):
+    from designer_colours import colour_channel
+    scene = validate_scene(scene)
+    value_key, link_key = colour_channel(channel)
+    edited = copy.deepcopy(scene)
+    _, target = _target(edited, element_id)
+    if preset_id is None:
+        target.pop(link_key, None)
+    else:
+        if not isinstance(preset_id, str):
+            raise ValueError("Choose an existing named colour preset.")
+        preset = next((preset for preset in scene.get("colourPresets", []) if preset["id"] == preset_id), None)
+        if preset is None:
+            raise ValueError("Choose an existing named colour preset.")
+        target[link_key] = preset_id
+        target[value_key] = preset["colour"]
+    return validate_scene(edited)

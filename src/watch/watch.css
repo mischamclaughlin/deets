@@ -492,3 +492,35 @@ body,
 .clock-modes button:nth-child(-n+2) {
     grid-column: span 3;
 }
+
+.colour-control {
+    margin-top: 12px;
+    font-size: 12px;
+}
+.colour-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+.colour-inputs input[type="color"] {
+    width: 40px;
+    height: 34px;
+    padding: 2px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+}
+.colour-inputs input[type="text"] {
+    min-width: 0;
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #46513e;
+    border-radius: 4px;
+    background: #111410;
+    color: #dceccf;
+    font: inherit;
+}
+.colour-inputs input:disabled {
+    opacity: 0.6;
+}

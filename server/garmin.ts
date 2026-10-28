@@ -144,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset", "/api/garmin/colour-presets", "/api/garmin/element-colour", "/api/garmin/element-colour-preset"].includes(
                         request.url ?? "",
                     )
                 )
@@ -179,6 +179,9 @@ export function garmin(): Plugin {
                         "A JSON scene is required.",
                     );
                 const payload = await body(request);
+                const colourPresets = request.url === "/api/garmin/colour-presets";
+                const elementColour = request.url === "/api/garmin/element-colour";
+                const elementColourPreset = request.url === "/api/garmin/element-colour-preset";
                 const exporting = request.url === "/api/garmin/export";
                 const presets = request.url === "/api/garmin/text-presets";
                 const applyPreset = request.url === "/api/garmin/apply-text-preset";
@@ -195,7 +198,10 @@ export function garmin(): Plugin {
                 const inheritFont = request.url === "/api/garmin/inherit-font";
                 const allowed = exporting
                     ? ["scene", "mapping"]
-                    : presets ? ["scene", "presets", "defaultPresetId"]
+                    : colourPresets ? ["scene", "presets"]
+                        : elementColour ? ["scene", "elementId", "channel", "colour"]
+                        : elementColourPreset ? ["scene", "elementId", "channel", "presetId"]
+                        : presets ? ["scene", "presets", "defaultPresetId"]
                         : applyPreset ? ["scene", "elementId", "presetId"]
                         : defaults ? ["scene", "defaults"]
                         : action ? ["scene", "elementId"]
@@ -211,6 +217,9 @@ export function garmin(): Plugin {
                         (key) => !allowed.includes(key),
                     ) ||
                     !("scene" in payload) ||
+                    (colourPresets && !("presets" in payload)) ||
+                    (elementColour && (!("elementId" in payload) || !("channel" in payload) || !("colour" in payload))) ||
+                    (elementColourPreset && (!("elementId" in payload) || !("channel" in payload) || !("presetId" in payload))) ||
                     (presets && (!("presets" in payload) || !("defaultPresetId" in payload))) ||
                     (applyPreset && (!("elementId" in payload) || !("presetId" in payload))) ||
                     (defaults && !("defaults" in payload)) ||
@@ -230,7 +239,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        action ?? (presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : clock ? "clock" : adding ? "add"
+                        action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : clock ? "clock" : adding ? "add"
                             : watchFont ? "watch-font" : inheritFont ? "inherit-font" : "layout"),
                         payload,
                     );

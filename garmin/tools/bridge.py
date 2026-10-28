@@ -22,7 +22,7 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
     pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
@@ -126,6 +126,21 @@ def dispatch(request):
         action = {"copy-element": copy_element, "delete-element": delete_element,
                   "apply-text-defaults": apply_text_defaults}[operation]
         return layout({"scene": action(payload["scene"], payload["elementId"])})
+    if operation == "colour-presets":
+        from designer_actions import set_colour_presets
+        if set(payload) != {"scene", "presets"}:
+            raise ValueError("Choose a scene and named colour presets.")
+        return layout({"scene": set_colour_presets(payload["scene"], payload["presets"])})
+    if operation == "element-colour":
+        from designer_actions import set_element_colour
+        if set(payload) != {"scene", "elementId", "channel", "colour"}:
+            raise ValueError("Choose a scene, element, colour channel and RGB colour.")
+        return layout({"scene": set_element_colour(payload["scene"], payload["elementId"], payload["channel"], payload["colour"])})
+    if operation == "element-colour-preset":
+        from designer_actions import set_element_colour_preset
+        if set(payload) != {"scene", "elementId", "channel", "presetId"}:
+            raise ValueError("Choose a scene, element, colour channel and named colour preset.")
+        return layout({"scene": set_element_colour_preset(payload["scene"], payload["elementId"], payload["channel"], payload["presetId"])})
     if operation == "text-presets":
         from designer_actions import set_text_presets
         if set(payload) != {"scene", "presets", "defaultPresetId"}:

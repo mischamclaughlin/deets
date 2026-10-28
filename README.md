@@ -88,6 +88,16 @@ The selected element’s right-hand **Copy** button creates an identical duplica
 immediately above it in the layer order and selects it. **Delete** removes the
 selected element; deleting the final element leaves a blank canvas.
 
+## Colours
+
+Each selected element has independent **Day colour** and **Night colour**
+controls, with a colour picker and RGB hex input. Build named **Colour presets**
+in the left sidebar; the list starts empty and edits save automatically.
+Choose a preset separately for either channel to link it. Preset edits update
+all linked elements and copies. **Custom** detaches just that channel and keeps
+its current colour. Deleting a preset detaches its users without changing their
+colours. The seconds ring uses the chosen colour for its existing tick shades.
+
 ## Typography
 
 Build your own named numeric typography presets in **Text presets**. The list

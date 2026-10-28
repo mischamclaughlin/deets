@@ -22,6 +22,11 @@ export interface TextPreset extends TextDefaults {
     id: string;
     name: string;
 }
+export interface ColourPreset {
+    id: string;
+    name: string;
+    colour: number;
+}
 export interface SceneElement {
     id: string;
     source: string;
@@ -33,6 +38,8 @@ export interface SceneElement {
     align: "left" | "centre" | "right";
     colour: number;
     nightColour: number;
+    colourPresetId?: string;
+    nightColourPresetId?: string;
     visible: "both" | "day" | "night";
     text?: string;
     /** Live link to a named numeric typography preset. */
@@ -62,6 +69,7 @@ export interface Scene {
     textDefaults?: TextDefaults;
     /** Named numeric typography snapshots and the default for newly added text. */
     textPresets?: TextPreset[];
+    colourPresets?: ColourPreset[];
     defaultTextPresetId?: string | null;
     /** Minimum radial clearance in native pixels; omitted for legacy scenes. */
     edgeInset?: number;

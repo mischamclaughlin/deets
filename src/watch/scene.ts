@@ -8,6 +8,7 @@ export const scene: Scene = {
     background: 0,
     edgeInset: 16,
     textPresets: [],
+    colourPresets: [],
     defaultTextPresetId: null,
     elements: [
         {
