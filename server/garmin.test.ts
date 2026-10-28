@@ -483,3 +483,28 @@ test("colour APIs reject invalid RGB, links and origins", async () => {
         assert.equal((await requestApi(`/api/garmin/${path}`, [], { origin: "https://attacker.example" })).status, 403);
     }
 });
+
+test("date API adds independent dates, changes formats and retains strict request validation", async () => {
+    const headers = { "content-type": "application/json" };
+    const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "numericDate" }))], headers);
+    assert.equal(added.status, 200, JSON.stringify(added.body));
+    const mapped = added.body as unknown as WatchMapping;
+    const date = mapped.scene.elements.at(-1)!;
+    assert.equal(date.source, "numericDate");
+    assert.deepEqual(mapped.scene.elements.slice(0, -1), scene.elements);
+    const changed = await requestApi("/api/garmin/date", [Buffer.from(JSON.stringify({
+        scene: mapped.scene, elementId: date.id, source: "date",
+    }))], headers);
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.equal((changed.body as unknown as WatchMapping).scene.elements.at(-1)?.source, "date");
+    for (const payload of [
+        { scene: mapped.scene, elementId: date.id },
+        { scene: mapped.scene, elementId: date.id, source: "date", extra: true },
+        { scene: mapped.scene, elementId: date.id, source: "time" },
+        { scene: mapped.scene, elementId: "time", source: "date" },
+    ]) {
+        const rejected = await requestApi("/api/garmin/date", [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(rejected.status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/date", [], { origin: "https://attacker.example" })).status, 403);
+});

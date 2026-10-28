@@ -13,6 +13,12 @@ CACHE = Path(tempfile.gettempdir()) / "deets-fonts-v1"
 CODES = "0123456789:-?"
 DIVIDER_CODES = CODES + "./|"
 DIVIDER_SYMBOLS = {":", ".", "-", "/", "|"}
+DATE_SOURCES = {"date", "numericDate", "weekday", "day", "month", "year"}
+CLOCK_SOURCES = {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
+TEXT_SOURCES = CLOCK_SOURCES | DATE_SOURCES
+DATE_CODES = "0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZ?"
+WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
+MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
 
 def family_setting(family):
@@ -22,7 +28,7 @@ def family_setting(family):
 
 
 def inherits(element):
-    return element.get("inheritFont", "typography" not in element)
+    return element.get("inheritFont", element.get("source") not in DATE_SOURCES and "typography" not in element)
 
 
 def element_settings(element, device):
@@ -115,6 +121,15 @@ def _resize(rows, width, height):
              for x in range(width)] for y in range(height)]
 
 
+def _resize_date(rows, width, height):
+    """Keep thin alphabet strokes when reducing date glyphs to small native sizes."""
+    old_height, old_width = len(rows), len(rows[0])
+    return [[any(rows[yy][xx]
+                 for yy in range(y * old_height // height, max(y * old_height // height + 1, (y + 1) * old_height // height))
+                 for xx in range(x * old_width // width, max(x * old_width // width + 1, (x + 1) * old_width // width)))
+             for x in range(width)] for y in range(height)]
+
+
 def _morph(rows, amount):
     if not amount:
         return rows
@@ -127,10 +142,11 @@ def _morph(rows, amount):
              for x in range(width)] for y in range(height)]
 
 
-def generate(device, value, *, divider=False):
+def generate(device, value, *, divider=False, date=False):
     from designer_model import font_pack, _png_rgba
     value = settings(value)
-    codes = DIVIDER_CODES if divider else CODES
+    codes = DATE_CODES if date else DIVIDER_CODES if divider else CODES
+    resize = _resize_date if date else _resize
     family = value["family"]
     cells = {}
     if family in {"time", "widget"}:
@@ -151,7 +167,7 @@ def generate(device, value, *, divider=False):
                 for x in range(glyph["width"]):
                     cell[y + glyph["yoffset"]][x] = source_raw[(glyph["y"] + y) * source_width + glyph["x"] + x] >= 128
             if source_height != native_height:
-                cell = _resize(cell, max(1, round(glyph["width"] * native_height/source_height)), native_height)
+                cell = resize(cell, max(1, round(glyph["width"] * native_height/source_height)), native_height)
             cells[char] = cell
     else:
         identity = family.split(":")[1]
@@ -174,7 +190,7 @@ def generate(device, value, *, divider=False):
     transformed = {}
     for char, rows in cells.items():
         target_width = max(1, round(len(rows[0]) * value["size"] / native_height * value["width"] / 100))
-        rows = _resize(rows, target_width, value["size"])
+        rows = resize(rows, target_width, value["size"])
         if pad:
             rows = [[False] * (target_width + 2*pad) for _ in range(pad)] + [[False]*pad + row + [False]*pad for row in rows] + [[False]*(target_width + 2*pad) for _ in range(pad)]
         transformed[char] = _morph(rows, value["thickness"])
@@ -184,10 +200,10 @@ def generate(device, value, *, divider=False):
     top, bottom = min(y for y, _ in points), max(y for y, _ in points) + 1
     glyph_rows = {}
     for char, rows in transformed.items():
-        rows = _resize(rows[top:bottom], len(rows[0]), value["size"])
+        rows = resize(rows[top:bottom], len(rows[0]), value["size"])
         ink = [(x, y) for y, row in enumerate(rows) for x, on in enumerate(row) if on]
         if not ink:
-            raise ValueError("These settings remove a required clock character; increase thickness or size.")
+            raise ValueError("These settings remove a required text character; increase thickness or size.")
         left, right = min(x for x, _ in ink), max(x for x, _ in ink) + 1
         upper, lower = min(y for _, y in ink), max(y for _, y in ink) + 1
         glyph_rows[char] = (upper, [row[left:right] for row in rows[upper:lower]])
@@ -205,6 +221,9 @@ def generate(device, value, *, divider=False):
                     start = ((y + offset) * atlas_width + cursor + x) * 4
                     pixels[start:start+4] = b"\xff\xff\xff\xff"
         cursor += width + 1
+    if date:
+        glyphs["32"] = {"x": 0, "y": 0, "width": 0, "height": 0, "xoffset": 0, "yoffset": 0,
+                        "xadvance": max(1, round(value["size"] / 3) + value["letterSpacing"])}
     font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom clock", "inkBounds": True}
     image = _png_rgba(atlas_width, value["size"], pixels)
     record = {"font": font, "image": base64.b64encode(image).decode(), "typography": value, "device": device}
@@ -247,8 +266,38 @@ def _clock_values(source, symbol=":"):
     return (f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60))
 
 
+def _date_width(font, source):
+    """Reserve every live date, with bounded component choices rather than years of dates."""
+    days = tuple(str(day) for day in range(1, 32))
+    padded_days = tuple(f"{day:02d}" for day in range(1, 32))
+    months = tuple(f"{month:02d}" for month in range(1, 13))
+    digits = tuple("0123456789")
+    choices = {
+        "numericDate": (padded_days, ("/",), months, ("/",), digits, digits),
+        "date": (WEEKDAYS, (" ",), days, (" ",), MONTHS, (" ",), digits, digits, digits, digits),
+        "weekday": (WEEKDAYS,), "day": (days,), "month": (MONTHS,),
+        "year": (digits, digits, digits, digits),
+    }[source]
+    advance, right = 0, 0
+    for alternatives in choices:
+        max_advance, max_right = 0, 0
+        for text in alternatives:
+            pen, edge = 0, 0
+            for char in text:
+                glyph = font["glyphs"][str(ord(char))]
+                edge = max(edge, pen + glyph["width"])
+                pen += glyph["xadvance"]
+            max_advance = max(max_advance, pen)
+            max_right = max(max_right, edge)
+        right = max(right, advance + max_right)
+        advance += max_advance
+    return right if font.get("inkBounds", False) else max(0, advance - 1)
+
+
 def _clock_width(font, source, symbol=":", seconds_size="full"):
     """Reserve the widest live value using the renderer's exact measurement rule."""
+    if source in DATE_SOURCES:
+        return _date_width(font, source)
     def text_width(text):
         glyphs = [font["glyphs"][str(ord(char))] for char in text]
         if not font.get("inkBounds", False):
@@ -285,8 +334,8 @@ def _clock_width(font, source, symbol=":", seconds_size="full"):
 
 def _clock_target(scene, element_id):
     target = next((element for element in scene["elements"] if element["id"] == element_id), None)
-    if not target or target["source"] not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}:
-        raise ValueError("Select a time element to edit its clock settings.")
+    if not target or target["source"] not in TEXT_SOURCES:
+        raise ValueError("Select a time element or date element to edit its text settings.")
     return target
 
 
@@ -331,7 +380,7 @@ def set_clock_source(scene, element_id, source):
         raise ValueError("Choose HH:MM, HH:MM:SS, hours only, minutes only, seconds or an outer ring.")
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
-    if target["source"] == "divider":
+    if target["source"] not in CLOCK_SOURCES - {"divider"}:
         raise ValueError("Choose a time element; dividers are independent Library elements.")
     font = scene_font_pack(scene)["fonts"][target["font"]]
     return _fit_clock(scene, element_id, font, source=source)
@@ -347,11 +396,11 @@ def apply(scene, element_id, value, *, cache=None):
         value["family"] = scene.get("fontFamily", "time")
     if "textPresetId" in target and preset_settings(value) != preset_settings(target["typography"]):
         target.pop("textPresetId")
-    signature = (target["source"] == "divider", tuple(sorted(value.items())))
+    signature = (target["source"] == "divider", target["source"] in DATE_SOURCES, tuple(sorted(value.items())))
     if cache is not None and signature in cache:
         key, record = cache[signature]
     else:
-        key, record = generate(scene["device"], value, divider=target["source"] == "divider")
+        key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES)
         if cache is not None:
             cache[signature] = key, record
     return _fit_clock(scene, element_id, record["font"], font=key, typography=value, inheritFont=inherited)
@@ -401,14 +450,14 @@ def set_watch_font(scene, family):
     if family.startswith("upload:"):
         # Validate even a watch with no inheritors before accepting its default.
         value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
-        generated[(False, tuple(sorted(value.items())))] = generate(scene["device"], value)
+        generated[(False, False, tuple(sorted(value.items())))] = generate(scene["device"], value)
     for element in scene["elements"]:
-        if element["source"] not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} or not inherits(element):
+        if element["source"] not in TEXT_SOURCES or not inherits(element):
             continue
         value = {**element_settings(element, scene["device"]), "family": family}
-        signature = (element["source"] == "divider", tuple(sorted(value.items())))
+        signature = (element["source"] == "divider", element["source"] in DATE_SOURCES, tuple(sorted(value.items())))
         if signature not in generated:
-            generated[signature] = generate(scene["device"], value, divider=element["source"] == "divider")
+            generated[signature] = generate(scene["device"], value, divider=element["source"] == "divider", date=element["source"] in DATE_SOURCES)
         key, record = generated[signature]
         edited = _fit_clock(edited, element["id"], record["font"], validate=False,
                             font=key, typography=value, inheritFont=True)
@@ -429,7 +478,7 @@ def set_inheritance(scene, element_id, inherit):
     if not inherit:
         return validate_scene(edited)
     value = {**element_settings(target, scene["device"]), "family": scene.get("fontFamily", "time")}
-    key, record = generate(scene["device"], value, divider=target["source"] == "divider")
+    key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES)
     return _fit_clock(edited, element_id, record["font"], font=key, typography=value, inheritFont=True)
 
 
@@ -486,3 +535,49 @@ def set_seconds_size(scene, element_id, size):
         raise ValueError("Select an HH:MM:SS element to change its seconds size.")
     metrics = scene_font_pack(scene)["fonts"][target["font"]]
     return _fit_clock(scene, element_id, metrics, preserve_parity=True, secondsSize=size)
+
+
+def add_date(scene):
+    """Create a small independent numeric date with all format glyphs available."""
+    from designer_model import validate_scene, DEVICES
+    scene = validate_scene(scene)
+    if len(scene["elements"]) >= 40:
+        raise ValueError("A design can contain at most 40 elements.")
+    value = {"family": "widget", "size": 24, "thickness": 0, "width": 100, "letterSpacing": 1}
+    key, record = generate(scene["device"], value, date=True)
+    size = DEVICES[scene["device"]]
+    width, height = _date_width(record["font"], "numericDate"), record["font"]["height"]
+    identities = {element["id"] for element in scene["elements"]}
+    identity, suffix = "date", 2
+    while identity in identities:
+        identity = f"date-{suffix}"
+        suffix += 1
+    edited = copy.deepcopy(scene)
+    edited["elements"].append({"id": identity, "source": "numericDate", "font": key,
+        "typography": value, "inheritFont": False,
+        "x": (size-width)//2, "y": (size-height)//2, "width": width, "height": height,
+        "align": "centre", "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both"})
+    try:
+        return validate_scene(edited)
+    except ValueError as error:
+        raise ValueError("A new date element cannot fit inside this boundary. Reduce the edge clearance first.") from error
+
+
+def set_date_source(scene, element_id, source):
+    from designer_model import validate_scene, scene_font_pack
+    if not isinstance(source, str) or source not in DATE_SOURCES:
+        raise ValueError("Choose a numeric date, full date, weekday, day, month or year.")
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    if target["source"] not in DATE_SOURCES:
+        raise ValueError("Select a date element to change its format.")
+    font = scene_font_pack(scene)["fonts"][target["font"]]
+    changes = {"source": source}
+    if any(str(ord(char)) not in font["glyphs"] for char in DATE_CODES + " "):
+        value = element_settings(target, scene["device"])
+        if inherits(target):
+            value["family"] = scene.get("fontFamily", "time")
+        key, record = generate(scene["device"], value, date=True)
+        font = record["font"]
+        changes.update(font=key, typography=value, inheritFont=inherits(target))
+    return _fit_clock(scene, element_id, font, **changes)

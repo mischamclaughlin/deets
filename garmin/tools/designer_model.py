@@ -218,7 +218,7 @@ def validate_scene(payload):
     background = _integer(payload["background"], "Background colour", 0, 0xFFFFFF)
     if not isinstance(payload["elements"], list) or len(payload["elements"]) > 40:
         raise ValueError("A design can contain at most 40 elements.")
-    from designer_typography import family_setting, inherits
+    from designer_typography import family_setting, inherits, TEXT_SOURCES, DATE_SOURCES
     family = family_setting(payload.get("fontFamily", "time"))
     if "textDefaults" in payload:
         from designer_typography import text_defaults
@@ -247,9 +247,13 @@ def validate_scene(payload):
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
-                (generated and (source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} or font not in pack["fonts"])) or
+                (generated and (source not in TEXT_SOURCES or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
+        if generated and source in DATE_SOURCES:
+            from designer_typography import DATE_CODES
+            if any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in DATE_CODES + " "):
+                raise ValueError("The selected font does not contain every date character; apply its typography again.")
         if "typography" in original:
             from designer_typography import settings, load
             typography = settings(original["typography"])
@@ -259,13 +263,13 @@ def validate_scene(payload):
             from designer_typography import preset_settings
             preset_id = original["textPresetId"]
             preset = next((item for item in presets if item["id"] == preset_id), None) if isinstance(preset_id, str) else None
-            if source not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider", "secondsRing"} or preset is None:
+            if source not in TEXT_SOURCES or preset is None:
                 raise ValueError("Choose an existing text preset for the element.")
             if "typography" not in original or any(typography[key] != value for key, value in preset_settings(preset).items()):
                 raise ValueError("The linked element must match its text preset.")
-        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}):
-            raise ValueError("Only clock elements can choose whether to inherit the watch font.")
-        if source in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
+        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in TEXT_SOURCES):
+            raise ValueError("Only time and date elements can choose whether to inherit the watch font.")
+        if source in TEXT_SOURCES and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")

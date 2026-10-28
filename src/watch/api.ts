@@ -1,4 +1,4 @@
-import type { ClockSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ClockSource, DateSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 
 async function post<T>(
     path: string,
@@ -111,3 +111,9 @@ export const setElementColour = (scene: Scene, elementId: string, channel: "day"
 
 export const setElementColourPreset = (scene: Scene, elementId: string, channel: "day" | "night", presetId: string | null, signal?: AbortSignal) =>
     post<WatchMapping>("element-colour-preset", { scene, elementId, channel, presetId }, signal);
+
+export const addDate = (scene: Scene, signal?: AbortSignal) =>
+    post<WatchMapping>("add", { scene, source: "numericDate" }, signal);
+
+export const setDateSource = (scene: Scene, elementId: string, source: DateSource, signal?: AbortSignal) =>
+    post<WatchMapping>("date", { scene, elementId, source }, signal);

@@ -538,6 +538,22 @@ class DesignerView extends WatchUi.WatchFace {
         return operations;
     }
 
+    private function dateFor(source as String) as String {
+        var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
+        var weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+        var months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        var weekday = weekdays[info.day_of_week - 1];
+        var month = months[info.month - 1];
+        switch (source) {
+            case "numericDate": return info.day.format("%02d") + "/" + info.month.format("%02d") + "/" + (info.year % 100).format("%02d");
+            case "weekday": return weekday;
+            case "day": return info.day.format("%d");
+            case "month": return month;
+            case "year": return info.year.format("%d");
+        }
+        return weekday + " " + info.day.format("%d") + " " + month + " " + info.year.format("%d");
+    }
+
     private function textFor(source as String, literal as String) as String {
         if (source.equals("label") || source.equals("divider")) { return literal; }
         if (_proof && _samples.hasKey(source)) { return _samples[source].toString(); }
@@ -547,12 +563,12 @@ class DesignerView extends WatchUi.WatchFace {
             case "hours": return _values.hourText;
             case "minutes": return _values.minuteText;
             case "seconds": return _values.seconds.format("%02d");
-            case "date": return _values.dateLeftText + " " + _values.dateCentreText + " " + _values.dateRightText;
-            case "numericDate": return _values.numericDateText;
-            case "weekday": return _values.dateLeftText;
-            case "year": return _values.dateRightText;
-            case "day": return Gregorian.info(Time.now(), Time.FORMAT_SHORT).day.format("%d");
-            case "month": return Gregorian.info(Time.now(), Time.FORMAT_LONG).month.toString().substring(0, 3).toUpper();
+            case "date":
+            case "numericDate":
+            case "weekday":
+            case "year":
+            case "day":
+            case "month": return dateFor(source);
             case "battery":
                 try { return System.getSystemStats().battery.format("%.0f") + "%"; } catch (exception) { return "--"; }
             case "alarms": return _provider.designerAlarm();

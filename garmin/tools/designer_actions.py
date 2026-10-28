@@ -2,7 +2,7 @@
 import copy
 
 from designer_model import validate_scene
-from designer_typography import apply, element_settings, scene_text_defaults, scene_text_presets, text_defaults, text_presets, preset_settings
+from designer_typography import apply, element_settings, scene_text_defaults, scene_text_presets, text_defaults, text_presets, preset_settings, DATE_SOURCES, TEXT_SOURCES
 
 
 def _target(scene, element_id):
@@ -58,7 +58,7 @@ def set_text_defaults(scene, defaults):
 def apply_text_defaults(scene, element_id):
     scene = validate_scene(scene)
     _, target = _target(scene, element_id)
-    if target["source"] not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider"}:
+    if target["source"] not in TEXT_SOURCES - {"secondsRing"}:
         raise ValueError("Choose a text element to apply the text defaults.")
     value = {**element_settings(target, scene["device"]), **scene_text_defaults(scene)}
     return apply(scene, element_id, value)
@@ -90,7 +90,7 @@ def set_text_presets(scene, presets, default_id):
 def apply_text_preset(scene, element_id, preset_id):
     scene = validate_scene(scene)
     _, target = _target(scene, element_id)
-    if target["source"] not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider", "secondsRing"}:
+    if target["source"] not in TEXT_SOURCES:
         raise ValueError("Choose a text element to select a text preset.")
     if preset_id is None:
         edited = copy.deepcopy(scene)

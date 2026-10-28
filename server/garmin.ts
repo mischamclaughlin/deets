@@ -144,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset", "/api/garmin/colour-presets", "/api/garmin/element-colour", "/api/garmin/element-colour-preset"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/date", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset", "/api/garmin/colour-presets", "/api/garmin/element-colour", "/api/garmin/element-colour-preset"].includes(
                         request.url ?? "",
                     )
                 )
@@ -191,6 +191,7 @@ export function garmin(): Plugin {
                         : request.url === "/api/garmin/apply-text-defaults" ? "apply-text-defaults" : undefined;
                 const typography = request.url === "/api/garmin/typography";
                 const clock = request.url === "/api/garmin/clock";
+                const date = request.url === "/api/garmin/date";
                 const secondsSize = request.url === "/api/garmin/seconds-size";
                 const divider = request.url === "/api/garmin/divider";
                 const adding = request.url === "/api/garmin/add";
@@ -208,7 +209,7 @@ export function garmin(): Plugin {
                         : typography ? ["scene", "elementId", "typography"]
                         : secondsSize ? ["scene", "elementId", "size"]
                         : divider ? ["scene", "elementId", "symbol"]
-                        : clock ? ["scene", "elementId", "source"]
+                        : clock || date ? ["scene", "elementId", "source"]
                             : adding ? ["scene", "source"]
                                 : watchFont ? ["scene", "family"]
                                     : inheritFont ? ["scene", "elementId", "inherit"] : ["scene", "night"];
@@ -225,7 +226,7 @@ export function garmin(): Plugin {
                     (defaults && !("defaults" in payload)) ||
                     (action && !("elementId" in payload)) ||
                     (typography && (!("elementId" in payload) || !("typography" in payload))) ||
-                    (clock && (!("elementId" in payload) || !("source" in payload))) ||
+                    ((clock || date) && (!("elementId" in payload) || !("source" in payload))) ||
                     (secondsSize && (!("elementId" in payload) || !("size" in payload))) ||
                     (divider && (!("elementId" in payload) || !("symbol" in payload))) ||
                     (adding && !("source" in payload)) ||
@@ -239,7 +240,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : clock ? "clock" : adding ? "add"
+                        action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : date ? "date" : clock ? "clock" : adding ? "add"
                             : watchFont ? "watch-font" : inheritFont ? "inherit-font" : "layout"),
                         payload,
                     );

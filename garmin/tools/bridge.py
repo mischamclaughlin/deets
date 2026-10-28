@@ -157,10 +157,10 @@ def dispatch(request):
             raise ValueError("Choose a scene and text defaults.")
         return layout({"scene": set_text_defaults(payload["scene"], payload["defaults"])})
     if operation == "add":
-        from designer_typography import add_time, add_divider
-        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider"}:
+        from designer_typography import add_time, add_divider, add_date
+        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"}:
             raise ValueError("Choose a scene and a supported element to add.")
-        return layout({"scene": (add_divider if payload["source"] == "divider" else add_time)(payload["scene"])})
+        return layout({"scene": {"divider": add_divider, "time": add_time, "numericDate": add_date}[payload["source"]](payload["scene"])})
     if operation == "divider":
         from designer_typography import set_divider_symbol
         if set(payload) != {"scene", "elementId", "symbol"}:
@@ -171,6 +171,11 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "size"}:
             raise ValueError("Choose a scene, element and seconds size.")
         return layout({"scene": set_seconds_size(payload["scene"], payload["elementId"], payload["size"])})
+    if operation == "date":
+        from designer_typography import set_date_source
+        if set(payload) != {"scene", "elementId", "source"}:
+            raise ValueError("Choose a scene, element and date display.")
+        return layout({"scene": set_date_source(payload["scene"], payload["elementId"], payload["source"])})
     if operation == "clock":
         from designer_typography import set_clock_source
         if set(payload) != {"scene", "elementId", "source"}:

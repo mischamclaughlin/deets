@@ -9,6 +9,12 @@ export type ClockSource = "time" | "timeSeconds" | "hours" | "minutes" | "second
 export const isClockSource = (source: string): source is ClockSource =>
     source === "time" || source === "timeSeconds" || source === "hours" || source === "minutes" ||
     source === "seconds" || source === "secondsRing";
+export type DateSource = "numericDate" | "date" | "weekday" | "day" | "month" | "year";
+export const isDateSource = (source: string): source is DateSource =>
+    source === "numericDate" || source === "date" || source === "weekday" ||
+    source === "day" || source === "month" || source === "year";
+export const isEditableTextSource = (source: string): boolean =>
+    isClockSource(source) || isDateSource(source) || source === "divider";
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {
     family: string;
@@ -47,7 +53,7 @@ export interface SceneElement {
     typography?: Typography;
     /** Size of the trailing :SS in HH:MM:SS; defaults to full. */
     secondsSize?: "full" | "half";
-    /** When omitted, clocks with legacy typography stay custom; others inherit. */
+    /** When omitted, legacy dates and text with typography stay custom; other text inherits. */
     inheritFont?: boolean;
     /** Character drawn by an independent divider element. Defaults to colon. */
     dividerSymbol?: DividerSymbol;
@@ -58,12 +64,16 @@ export interface SceneElement {
     /** Keep outer tips fixed and stretch all tick inner ends to edge clearance. */
     ringTicksStretchToCircumference?: boolean;
 }
+/** Preserve legacy date fonts unless inheritance is explicitly selected. */
+export const inheritsFont = (element: Pick<SceneElement, "source" | "inheritFont" | "typography">): boolean =>
+    element.inheritFont ?? (!isDateSource(element.source) && !element.typography);
+
 export interface Scene {
     version: 2;
     name: string;
     device: Device;
     background: number;
-    /** Font family inherited by clock elements; defaults to time. */
+    /** Font family inherited by editable text elements; defaults to time. */
     fontFamily?: string;
     /** Numeric typography used by new text elements and explicit default application. */
     textDefaults?: TextDefaults;
