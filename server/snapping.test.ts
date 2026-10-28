@@ -152,3 +152,39 @@ test("element snapping keeps native integer bounds valid near the circumference"
         }
     }
 });
+
+test("Grid, Guide and Elements categories work independently under the master switch", () => {
+    const probes = [
+        { category: "grid", desired: { x: 250, y: 115 }, snapped: { x: 250, y: 112 } },
+        { category: "guide", desired: { x: 201, y: 250 }, snapped: { x: 198, y: 250 } },
+        { category: "elements", desired: { x: 123, y: 250 }, snapped: { x: 120, y: 250 } },
+    ] as const;
+    for (const gridEnabled of [false, true]) {
+        for (const guideEnabled of [false, true]) {
+            for (const elementsEnabled of [false, true]) {
+                const selected = { grid: gridEnabled, guide: guideEnabled, elements: elementsEnabled };
+                const options: SnapOptions = {
+                    ...guides,
+                    snapToGrid: gridEnabled,
+                    snapToGuides: guideEnabled,
+                    snapToElements: elementsEnabled,
+                    grid: { ...defaultGrid, visible: true, rows: 4, columns: 1 },
+                };
+                for (const { category, desired, snapped } of probes) {
+                    assert.deepEqual(moveElement(neighbouringScene, element, desired, options), selected[category] ? snapped : desired,
+                        `${category}: ${JSON.stringify(selected)}`);
+                    assert.deepEqual(moveElement(neighbouringScene, element, desired, { ...options, enabled: false }), desired,
+                        `master off: ${category}: ${JSON.stringify(selected)}`);
+                }
+            }
+        }
+    }
+});
+
+test("Guide controls circumference snapping as well as centre guides", () => {
+    const desired = { x: 22, y: 198 };
+    const options: SnapOptions = { ...none, enabled: true, showCircumference: true, snapToGuides: true };
+    assert.deepEqual(moveElement(scene, element, desired, options), { x: 17, y: 198 });
+    assert.deepEqual(moveElement(scene, element, desired, { ...options, snapToGuides: false }), desired);
+    assert.deepEqual(moveElement(scene, element, desired, { ...options, enabled: false }), desired);
+});

@@ -18,6 +18,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [showGuideLines, setShowGuideLines] = useState(false);
     const [selectedId, setSelectedId] = useState(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
+    const [snapToGrid, setSnapToGrid] = useState(true);
+    const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [uploads, setUploads] = useState<UploadedFont[]>([]);
@@ -88,11 +90,17 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     >
                         Snap {snapEnabled ? "on" : "off"}
                     </button>
-                    <label className="guide-toggle">
-                        <input type="checkbox" checked={snapToElements}
-                            onChange={(event) => setSnapToElements(event.target.checked)} />
-                        Snap to elements
-                    </label>
+                    {[
+                        { label: "Grid", checked: snapToGrid, change: setSnapToGrid },
+                        { label: "Guide", checked: snapToGuides, change: setSnapToGuides },
+                        { label: "Elements", checked: snapToElements, change: setSnapToElements },
+                    ].map(({ label, checked, change }) => (
+                        <label key={label} className="guide-toggle">
+                            <input type="checkbox" checked={checked}
+                                onChange={(event) => change(event.target.checked)} />
+                            {label}
+                        </label>
+                    ))}
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
@@ -161,6 +169,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         showGuideLines={showGuideLines}
                         grid={grid}
                         snapEnabled={snapEnabled}
+                        snapToGrid={snapToGrid}
+                        snapToGuides={snapToGuides}
                         snapToElements={snapToElements}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}

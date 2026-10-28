@@ -13,6 +13,8 @@ interface Props {
     showGuideLines?: boolean;
     grid?: GridSettings;
     snapEnabled?: boolean;
+    snapToGrid?: boolean;
+    snapToGuides?: boolean;
     snapToElements?: boolean;
     selectedElementId?: string;
     onSelectElement?: (id: string) => void;
@@ -41,7 +43,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, snapToElements = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -117,6 +119,8 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             y: currentDrag.element.y + point.y - currentDrag.start.y,
         }, {
             enabled: snapEnabled && !event.altKey,
+            snapToGrid,
+            snapToGuides,
             snapToElements,
             night,
             showGuideLines,
@@ -259,7 +263,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                         onMoveElement(element.id, moveElement(scene, element, {
                                             x: element.x + direction[0] * step,
                                             y: element.y + direction[1] * step,
-                                        }, { enabled: snapEnabled && !event.altKey, snapToElements, night, showGuideLines, showCircumference, grid }));
+                                        }, { enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, showCircumference, grid }));
                                     }
                                     if (event.key === "Escape" && drag.current) {
                                         drag.current = undefined;

@@ -6,6 +6,8 @@ export interface SnapOptions {
     enabled: boolean;
     showGuideLines: boolean;
     showCircumference: boolean;
+    snapToGrid?: boolean;
+    snapToGuides?: boolean;
     snapToElements?: boolean;
     night?: boolean;
     grid?: GridSettings;
@@ -56,7 +58,7 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
         const vertical = axis === "x";
         const perpendicular = vertical ? location.y + height / 2 : location.x + width / 2;
         const cross = perpendicular - centre;
-        const result = options.showGuideLines ? [centre] : [];
+        const result = options.snapToGuides !== false && options.showGuideLines ? [centre] : [];
         if (options.snapToElements) {
             for (const other of scene.elements) {
                 if (other.id === element.id || other.source === "secondsRing" ||
@@ -66,7 +68,7 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
                 result.push(start, start + extent / 2, start + extent);
             }
         }
-        if (grid?.visible) {
+        if (options.snapToGrid !== false && grid?.visible) {
             const count = vertical ? grid.columns : grid.rows;
             const curved = vertical ? grid.curvedColumns : grid.curvedRows;
             if (Math.abs(cross) <= radius) {
@@ -89,7 +91,7 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
         const extent = axis === "x" ? width : height;
         const values = targets(axis, location).flatMap((target) => [0, extent / 2, extent]
             .flatMap((anchor) => [Math.floor(target - anchor), Math.ceil(target - anchor)]));
-        if (options.showCircumference) {
+        if (options.snapToGuides !== false && options.showCircumference) {
             // Use the farthest box corner to make boundary snaps safe for the whole box.
             const perpendicular = axis === "x" ? location.y : location.x;
             const otherExtent = axis === "x" ? height : width;
