@@ -3,11 +3,18 @@ import base64
 import copy
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
 import tempfile
 import struct
+
+INCLUDED_FONTS = {
+    "time": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMono-Regular.ttf",
+    "widget": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMonoNL-Thin.ttf",
+}
+RASTER_VERSION = "vector-native-v1"
 
 CACHE = Path(tempfile.gettempdir()) / "deets-fonts-v1"
 CODES = "0123456789:-?"
@@ -37,7 +44,7 @@ def element_settings(element, device):
     from designer_model import font_pack
     height = (font_pack(device)["fonts"][element["font"]]["height"]
               if element["source"] == "secondsRing" else element["height"])
-    return {"family": "widget" if element["font"] == "widget" else "time",
+    return {"family": "widget" if element["font"] in {"widget", "date"} else "time",
         "size": height, "thickness": 0, "width": 100, "letterSpacing": 1}
 
 
@@ -121,15 +128,6 @@ def _resize(rows, width, height):
              for x in range(width)] for y in range(height)]
 
 
-def _resize_date(rows, width, height):
-    """Keep thin alphabet strokes when reducing date glyphs to small native sizes."""
-    old_height, old_width = len(rows), len(rows[0])
-    return [[any(rows[yy][xx]
-                 for yy in range(y * old_height // height, max(y * old_height // height + 1, (y + 1) * old_height // height))
-                 for xx in range(x * old_width // width, max(x * old_width // width + 1, (x + 1) * old_width // width)))
-             for x in range(width)] for y in range(height)]
-
-
 def _morph(rows, amount):
     if not amount:
         return rows
@@ -142,65 +140,108 @@ def _morph(rows, amount):
              for x in range(width)] for y in range(height)]
 
 
+def _source_font(family):
+    path = INCLUDED_FONTS.get(family) if family in INCLUDED_FONTS else CACHE / f"{family.split(':')[1]}.font"
+    if not path.is_file() or path.stat().st_size > 5 * 1024 * 1024:
+        raise ValueError("This font is unavailable; restore the included font or upload it again.")
+    data = path.read_bytes()
+    identity = hashlib.sha256(data).hexdigest()
+    if data[:4] not in (b"\x00\x01\x00\x00", b"OTTO") or (family.startswith("upload:") and identity != family.split(":")[1]):
+        raise ValueError("The uploaded font is invalid or has changed.")
+    return path, identity
+
+
+def _vector_cells(path, codes, pointsize):
+    """Render every character on a shared baseline, without resizing its pixels."""
+    extent = pointsize * 2 + 8
+    x, baseline = pointsize // 4 + 2, pointsize * 3 // 2 + 2
+    arguments = []
+    for char in codes:
+        arguments.extend(["(", "-size", f"{extent}x{extent}", "xc:none", "-font", str(path),
+                          "-pointsize", str(pointsize), "+antialias", "-fill", "white",
+                          "-annotate", f"+{x}+{baseline}", char, ")"])
+    raw = _magick([*arguments, "-alpha", "extract", "-depth", "8", "gray:-"])
+    stride = extent * extent
+    if len(raw) != stride * len(codes):
+        raise ValueError("The font raster has unexpected dimensions.")
+    cells, top, bottom = {}, extent, 0
+    for index, char in enumerate(codes):
+        frame = raw[index * stride:(index + 1) * stride]
+        points = [(offset % extent, offset // extent) for offset, alpha in enumerate(frame) if alpha >= 128]
+        if not points:
+            raise ValueError("This font has no visible ink for a required character; increase its size.")
+        left, right = min(xx for xx, _ in points), max(xx for xx, _ in points) + 1
+        upper, lower = min(yy for _, yy in points), max(yy for _, yy in points) + 1
+        if left == 0 or right == extent or upper == 0 or lower == extent:
+            raise ValueError("This font exceeds the local glyph bounds.")
+        cells[char] = [[frame[yy * extent + xx] >= 128 for xx in range(left, right)] for yy in range(extent)]
+        top, bottom = min(top, upper), max(bottom, lower)
+    return {char: rows[top:bottom] for char, rows in cells.items()}, bottom - top
+
+
+def _native_cells(path, codes, height):
+    """Choose a vector point size that fits the requested shared native ink height."""
+    pointsize, tried, best = max(1, height), set(), None
+    for _ in range(16):
+        if pointsize in tried or not 1 <= pointsize <= 640:
+            break
+        tried.add(pointsize)
+        cells, actual = _vector_cells(path, codes, pointsize)
+        if actual <= height and (best is None or actual > best[0]):
+            best = actual, cells
+        if actual == height:
+            return cells
+        step = max(1, math.ceil(abs(height - actual) * pointsize / actual))
+        pointsize += step if actual < height else -step
+    if best is None:
+        raise ValueError("This font cannot fit the requested native size.")
+    return best[1]
+
+
 def generate(device, value, *, divider=False, date=False):
-    from designer_model import font_pack, _png_rgba
+    from designer_model import DEVICES, _png_rgba
+    if device not in DEVICES:
+        raise ValueError("Choose a supported epix Pro device.")
     value = settings(value)
     codes = DATE_CODES if date else DIVIDER_CODES if divider else CODES
-    resize = _resize_date if date else _resize
-    family = value["family"]
-    cells = {}
-    if family in {"time", "widget"}:
-        pack = font_pack(device)
-        font = pack["fonts"][family]
-        width, _, raw = _raw(pack["images"][family])
-        native_height = font["height"]
-        for char in codes:
-            glyph = font["glyphs"].get(str(ord(char)))
-            source_width, source_raw, source_height = width, raw, native_height
-            if not glyph or not glyph["width"]:
-                fallback = pack["fonts"]["widget"]
-                glyph = fallback["glyphs"][str(ord(char))]
-                source_width, _, source_raw = _raw(pack["images"]["widget"])
-                source_height = fallback["height"]
-            cell = [[False] * glyph["width"] for _ in range(source_height)]
-            for y in range(glyph["height"]):
-                for x in range(glyph["width"]):
-                    cell[y + glyph["yoffset"]][x] = source_raw[(glyph["y"] + y) * source_width + glyph["x"] + x] >= 128
-            if source_height != native_height:
-                cell = resize(cell, max(1, round(glyph["width"] * native_height/source_height)), native_height)
-            cells[char] = cell
-    else:
-        identity = family.split(":")[1]
-        path = CACHE / f"{identity}.font"
-        if not path.is_file() or path.stat().st_size > 5 * 1024 * 1024:
-            raise ValueError("Upload this font again; its local font file is unavailable.")
-        data = path.read_bytes()
-        if hashlib.sha256(data).hexdigest() != identity or data[:4] not in (b"\x00\x01\x00\x00", b"OTTO"):
-            raise ValueError("The uploaded font is invalid or has changed.")
-        for char in codes:
-            # Explicit paths prevent font names, filenames and label text becoming commands.
-            image = _magick(["-background", "none", "-fill", "white", "-font", str(path), "-pointsize", str(value["size"]), f"label:{char}", "png:-"])
-            width, height, raw = _raw(image)
-            cells[char] = [[raw[y * width + x] >= 128 for x in range(width)] for y in range(height)]
-        native_height = max(len(cell) for cell in cells.values())
-        for char, cell in cells.items():
-            cell.extend([[False] * len(cell[0]) for _ in range(native_height - len(cell))])
-    # Resize common-height cells together so punctuation retains its baseline.
+    path, source_hash = _source_font(value["family"])
+    signature = {"rasteriser": RASTER_VERSION, "sourceHash": source_hash, "device": device,
+                 "typography": value, "codes": codes}
+    lookup = CACHE / (hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest() + ".lookup")
+    if lookup.is_file() and lookup.stat().st_size <= 80:
+        key = lookup.read_text()
+        try:
+            cached = load(key, device)
+            if all(cached.get(field) == signature[field] for field in ("rasteriser", "sourceHash", "typography", "codes")):
+                cached["image"] = base64.b64encode(cached["image"]).decode()
+                return key, cached
+        except (ValueError, OSError, KeyError):
+            pass
+    # Synthetic thickness gets its own native pixels; no vertical bitmap scaling.
+    ink_height = value["size"] - 2 * value["thickness"]
+    if ink_height < 1:
+        raise ValueError("These settings remove every font stroke; increase size or reduce thickness.")
+    cells = _native_cells(path, codes, ink_height)
     pad = max(0, value["thickness"])
     transformed = {}
     for char, rows in cells.items():
-        target_width = max(1, round(len(rows[0]) * value["size"] / native_height * value["width"] / 100))
-        rows = resize(rows, target_width, value["size"])
+        if value["width"] != 100:
+            rows = _resize(rows, max(1, round(len(rows[0]) * value["width"] / 100)), len(rows))
         if pad:
-            rows = [[False] * (target_width + 2*pad) for _ in range(pad)] + [[False]*pad + row + [False]*pad for row in rows] + [[False]*(target_width + 2*pad) for _ in range(pad)]
+            width = len(rows[0])
+            rows = [[False] * (width + 2 * pad) for _ in range(pad)] + [
+                [False] * pad + row + [False] * pad for row in rows] + [
+                [False] * (width + 2 * pad) for _ in range(pad)]
         transformed[char] = _morph(rows, value["thickness"])
     points = [(y, x) for rows in transformed.values() for y, row in enumerate(rows) for x, ink in enumerate(row) if ink]
     if not points:
         raise ValueError("These settings remove every font stroke; increase thickness or size.")
     top, bottom = min(y for y, _ in points), max(y for y, _ in points) + 1
+    if bottom - top > value["size"]:
+        raise ValueError("This font cannot fit the requested native size.")
     glyph_rows = {}
     for char, rows in transformed.items():
-        rows = resize(rows[top:bottom], len(rows[0]), value["size"])
+        rows = rows[top:bottom]
         ink = [(x, y) for y, row in enumerate(rows) for x, on in enumerate(row) if on]
         if not ink:
             raise ValueError("These settings remove a required text character; increase thickness or size.")
@@ -224,9 +265,10 @@ def generate(device, value, *, divider=False, date=False):
     if date:
         glyphs["32"] = {"x": 0, "y": 0, "width": 0, "height": 0, "xoffset": 0, "yoffset": 0,
                         "xadvance": max(1, round(value["size"] / 3) + value["letterSpacing"])}
-    font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom clock", "inkBounds": True}
+    font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom text", "inkBounds": True}
     image = _png_rgba(atlas_width, value["size"], pixels)
-    record = {"font": font, "image": base64.b64encode(image).decode(), "typography": value, "device": device}
+    record = {"font": font, "image": base64.b64encode(image).decode(), "typography": value, "device": device,
+              "rasteriser": RASTER_VERSION, "sourceHash": source_hash, "codes": codes}
     content = json.dumps(record, sort_keys=True, separators=(",", ":")).encode()
     identity = hashlib.sha256(content).hexdigest()
     CACHE.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -234,7 +276,12 @@ def generate(device, value, *, divider=False, date=False):
         temporary.write(content)
         temporary_path = Path(temporary.name)
     temporary_path.replace(CACHE / f"{identity}.json")
-    return f"generated:{identity}", record
+    key = f"generated:{identity}"
+    with tempfile.NamedTemporaryFile(dir=CACHE, mode="w", delete=False) as temporary:
+        temporary.write(key)
+        temporary_path = Path(temporary.name)
+    temporary_path.replace(lookup)
+    return key, record
 
 
 def load(key, device):
@@ -581,3 +628,14 @@ def set_date_source(scene, element_id, source):
         font = record["font"]
         changes.update(font=key, typography=value, inheritFont=inherits(target))
     return _fit_clock(scene, element_id, font, **changes)
+
+
+def refresh_fonts(scene):
+    """Upgrade editable text atomically while preserving its settings and centre."""
+    from designer_model import validate_scene
+    scene = validate_scene(scene)
+    edited, cache = copy.deepcopy(scene), {}
+    for element in scene["elements"]:
+        if element["source"] in TEXT_SOURCES:
+            edited = apply(edited, element["id"], element_settings(element, scene["device"]), cache=cache)
+    return edited

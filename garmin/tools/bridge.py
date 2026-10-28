@@ -104,6 +104,11 @@ def dispatch(request):
     operation, payload = request["operation"], request["payload"]
     if operation == "layout":
         return layout(payload)
+    if operation == "refresh-fonts":
+        from designer_typography import refresh_fonts
+        if set(payload) != {"scene"}:
+            raise ValueError("Choose a scene to refresh its fonts.")
+        return layout({"scene": refresh_fonts(payload["scene"])})
     if operation == "typography":
         from designer_typography import apply
         if set(payload) != {"scene", "elementId", "typography"}:

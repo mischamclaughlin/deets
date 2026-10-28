@@ -117,3 +117,7 @@ export const addDate = (scene: Scene, signal?: AbortSignal) =>
 
 export const setDateSource = (scene: Scene, elementId: string, source: DateSource, signal?: AbortSignal) =>
     post<WatchMapping>("date", { scene, elementId, source }, signal);
+
+/** Rebuild editable text from source fonts before editing or exporting it. */
+export const refreshFonts = (scene: Scene, signal?: AbortSignal) =>
+    post<WatchMapping>("refresh-fonts", { scene }, signal);

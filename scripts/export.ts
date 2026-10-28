@@ -29,7 +29,7 @@ const output = resolve(
     outIndex >= 0 ? args[outIndex + 1] : "exports/Deets.prg",
 );
 const snapshot = structuredClone(scene);
-const mapped = await callBridge<WatchMapping>("layout", { scene: snapshot });
+const mapped = await callBridge<WatchMapping>("refresh-fonts", { scene: snapshot });
 const result = await callBridge<{ application: string }>("export", {
     scene: mapped.scene,
     mapping: mapped.mapping,

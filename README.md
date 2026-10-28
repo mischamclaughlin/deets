@@ -117,15 +117,23 @@ custom clocks keep their family when the watch font changes. Size, thickness,
 width and spacing remain independent for every element. A watch-wide change
 updates all inheriting clocks together, or leaves the scene intact if any cannot fit.
 
-Select a time element to edit its visible height (12–160 native pixels),
+Select a time element to edit its native text height (12–160 pixels),
 thickness (−2 to +6 pixels), width (50–200%) and letter spacing (−4 to +24 pixels).
 Choose the included JetBrains Mono Regular or NL Thin glyphs, or upload a TTF/OTF
 font up to 5 MB. Thickness applies synthetic pixel erosion/dilation; width scales
 glyphs horizontally. These controls do not select variable-font weight or width
 axes. Uploaded fonts use their default face.
 
-The local Python pipeline uses the existing ImageMagick runtime to rasterise
-clock characters and produces one binary atlas and exact glyph metrics. Edits
+The local Python pipeline uses the existing ImageMagick/FreeType runtime to
+rasterise the source TTF/OTF directly at the requested native size, using a shared
+baseline. It chooses a vector point size to fit the native height, then crops and
+pads the masks without vertical bitmap resizing. The width control deliberately
+scales the resulting glyphs horizontally. Binary masks keep preview and Garmin
+output identical; enlarging the preview still exposes individual native pixels.
+The included JetBrains Mono Regular and NL Thin source fonts and their licence
+are bundled in `garmin/fonts/`. Generated assets are cached by source-font content,
+renderer version, character set, device and typography settings. The editor
+prepares its editable text on startup; CLI export uses the same preparation. Edits
 preserve the element's centre to the nearest native pixel and reserve enough
 width for every live value in the selected display mode. A change that cannot fit inside the current boundary
 shows an error and leaves the last accepted scene intact. No browser text

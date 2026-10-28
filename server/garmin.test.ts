@@ -508,3 +508,19 @@ test("date API adds independent dates, changes formats and retains strict reques
     }
     assert.equal((await requestApi("/api/garmin/date", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+
+test("font refresh upgrades the initial scene and keeps strict scene-only request validation", async () => {
+    const headers = { "content-type": "application/json" };
+    const refreshed = await requestApi("/api/garmin/refresh-fonts", [Buffer.from(JSON.stringify({ scene }))], headers);
+    assert.equal(refreshed.status, 200, JSON.stringify(refreshed.body));
+    const mapped = refreshed.body as unknown as WatchMapping;
+    assert.deepEqual(mapped.scene.elements.map((element) => element.id), scene.elements.map((element) => element.id));
+    assert.ok(mapped.scene.elements.every((element) => element.font.startsWith("generated:")));
+    assert.equal(mapped.scene.elements[0].height, scene.elements[0].height);
+    for (const payload of [{}, { scene, night: false }, { scene, elementId: "time" }]) {
+        const rejected = await requestApi("/api/garmin/refresh-fonts", [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(rejected.status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/refresh-fonts", [], { origin: "https://attacker.example" })).status, 403);
+});

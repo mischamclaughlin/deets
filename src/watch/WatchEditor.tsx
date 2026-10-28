@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
+import { refreshFonts } from "./api.ts";
 import { defaultGrid } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
 import { DividerPanel } from "./DividerPanel.tsx";
@@ -18,6 +19,22 @@ import { WatchCanvas } from "./WatchCanvas.tsx";
 /** Keep scene constraints separate from browser-only guide visibility. */
 export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
+    const [fontsReady, setFontsReady] = useState(false);
+    const [fontError, setFontError] = useState<string>();
+    useEffect(() => {
+        if (fontsReady) return;
+        const controller = new AbortController();
+        void refreshFonts(scene, controller.signal).then((mapped) => {
+            if (controller.signal.aborted) return;
+            setScene(mapped.scene);
+            setFontsReady(true);
+        }).catch((failure) => {
+            if (controller.signal.aborted) return;
+            setFontError(failure instanceof Error ? failure.message : "The fonts could not be prepared.");
+            setFontsReady(true);
+        });
+        return () => controller.abort();
+    }, [scene, fontsReady]);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
     const [selectedId, setSelectedId] = useState<string | undefined>(initialScene.elements[0]?.id);
@@ -36,6 +53,14 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         <div className="watch-editor">
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
+                {!fontsReady && <p className="typography-status" role="status">Preparing fonts…</p>}
+                {fontError && <>
+                    <p className="typography-status" role="alert">{fontError}</p>
+                    <button type="button" className="font-upload" onClick={() => {
+                        setFontError(undefined);
+                        setFontsReady(false);
+                    }}>Retry fonts</button>
+                </>}
                 <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
