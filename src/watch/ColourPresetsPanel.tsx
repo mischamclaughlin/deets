@@ -55,7 +55,7 @@ export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onS
             setSelectedId(id);
             setDirty(true);
             setError(undefined);
-        }}>New colour preset</button>
+        }}>New preset</button>
         <button type="button" className="add-element" disabled={!selected} onClick={() => {
             const remaining = presets.filter((preset) => preset.id !== selectedId);
             setPresets(remaining);
