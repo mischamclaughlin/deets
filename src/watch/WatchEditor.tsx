@@ -7,7 +7,7 @@ import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
 import { ElementActionsPanel } from "./ElementActionsPanel.tsx";
-import { TextDefaultsPanel } from "./TextDefaultsPanel.tsx";
+import { TextPresetsPanel } from "./TextPresetsPanel.tsx";
 import { WatchFontPanel } from "./WatchFontPanel.tsx";
 import type { UploadedFont } from "./FontPicker.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
@@ -37,7 +37,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
-                <TextDefaultsPanel scene={scene} onSceneChange={setScene} />
+                <TextPresetsPanel scene={scene} onSceneChange={setScene} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">

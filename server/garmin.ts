@@ -144,7 +144,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element"].includes(
+                    !["/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset"].includes(
                         request.url ?? "",
                     )
                 )
@@ -180,6 +180,8 @@ export function garmin(): Plugin {
                     );
                 const payload = await body(request);
                 const exporting = request.url === "/api/garmin/export";
+                const presets = request.url === "/api/garmin/text-presets";
+                const applyPreset = request.url === "/api/garmin/apply-text-preset";
                 const defaults = request.url === "/api/garmin/text-defaults";
                 const action = request.url === "/api/garmin/copy-element" ? "copy-element"
                     : request.url === "/api/garmin/delete-element" ? "delete-element"
@@ -193,7 +195,9 @@ export function garmin(): Plugin {
                 const inheritFont = request.url === "/api/garmin/inherit-font";
                 const allowed = exporting
                     ? ["scene", "mapping"]
-                    : defaults ? ["scene", "defaults"]
+                    : presets ? ["scene", "presets", "defaultPresetId"]
+                        : applyPreset ? ["scene", "elementId", "presetId"]
+                        : defaults ? ["scene", "defaults"]
                         : action ? ["scene", "elementId"]
                         : typography ? ["scene", "elementId", "typography"]
                         : secondsSize ? ["scene", "elementId", "size"]
@@ -207,6 +211,8 @@ export function garmin(): Plugin {
                         (key) => !allowed.includes(key),
                     ) ||
                     !("scene" in payload) ||
+                    (presets && (!("presets" in payload) || !("defaultPresetId" in payload))) ||
+                    (applyPreset && (!("elementId" in payload) || !("presetId" in payload))) ||
                     (defaults && !("defaults" in payload)) ||
                     (action && !("elementId" in payload)) ||
                     (typography && (!("elementId" in payload) || !("typography" in payload))) ||
@@ -224,7 +230,7 @@ export function garmin(): Plugin {
                     );
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        action ?? (defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : clock ? "clock" : adding ? "add"
+                        action ?? (presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : clock ? "clock" : adding ? "add"
                             : watchFont ? "watch-font" : inheritFont ? "inherit-font" : "layout"),
                         payload,
                     );

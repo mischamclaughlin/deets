@@ -349,7 +349,8 @@ body,
     display: block;
     font-size: 12px;
 }
-.font-choice select {
+.font-choice select,
+.font-choice input[type="text"] {
     display: block;
     width: 100%;
     margin-top: 8px;

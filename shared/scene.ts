@@ -18,6 +18,10 @@ export interface Typography {
     letterSpacing: number;
 }
 export type TextDefaults = Omit<Typography, "family">;
+export interface TextPreset extends TextDefaults {
+    id: string;
+    name: string;
+}
 export interface SceneElement {
     id: string;
     source: string;
@@ -54,6 +58,9 @@ export interface Scene {
     fontFamily?: string;
     /** Numeric typography used by new text elements and explicit default application. */
     textDefaults?: TextDefaults;
+    /** Named numeric typography snapshots and the default for newly added text. */
+    textPresets?: TextPreset[];
+    defaultTextPresetId?: string;
     /** Minimum radial clearance in native pixels; omitted for legacy scenes. */
     edgeInset?: number;
     elements: SceneElement[];

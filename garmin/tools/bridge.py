@@ -126,6 +126,16 @@ def dispatch(request):
         action = {"copy-element": copy_element, "delete-element": delete_element,
                   "apply-text-defaults": apply_text_defaults}[operation]
         return layout({"scene": action(payload["scene"], payload["elementId"])})
+    if operation == "text-presets":
+        from designer_actions import set_text_presets
+        if set(payload) != {"scene", "presets", "defaultPresetId"}:
+            raise ValueError("Choose a scene, named text presets and a default preset.")
+        return layout({"scene": set_text_presets(payload["scene"], payload["presets"], payload["defaultPresetId"])})
+    if operation == "apply-text-preset":
+        from designer_actions import apply_text_preset
+        if set(payload) != {"scene", "elementId", "presetId"}:
+            raise ValueError("Choose a scene, text element and named preset.")
+        return layout({"scene": apply_text_preset(payload["scene"], payload["elementId"], payload["presetId"])})
     if operation == "text-defaults":
         from designer_actions import set_text_defaults
         if set(payload) != {"scene", "defaults"}:

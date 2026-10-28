@@ -90,11 +90,17 @@ selected element; deleting the final element leaves a blank canvas.
 
 ## Typography
 
-Set watch-wide size, thickness, width and letter spacing in **Text defaults**.
-New Time and Divider elements use those values. Existing elements keep their
-settings until **Apply text defaults** is used in their Typography section.
-Applying defaults preserves the element’s font inheritance or custom family,
-clock mode, seconds sizing, divider symbol and position.
+Build named numeric typography presets in **Text presets**, starting with
+**Time** and **Widgets**. Select a preset, edit its name, size, thickness, width
+and letter spacing, then **Save presets**. **New preset** copies the selected
+settings; **Delete preset** removes it from the saved collection after saving.
+At least one preset remains. **Use for new text** selects the preset used by
+new Time and Divider elements once saved.
+
+Each text element offers a **Text preset** picker and **Apply preset** button.
+Application copies the preset’s values once and preserves the element’s font
+inheritance or custom family, clock mode, seconds sizing, divider symbol and
+position. Editing or deleting a preset does not resize existing elements.
 
 Set the default family in **Watch font** on the left. Each clock offers
 **Inherit watch font** or **Custom font** on the right. New clocks inherit;

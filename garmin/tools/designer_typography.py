@@ -52,12 +52,48 @@ def text_defaults(value):
     return {key: checked[key] for key in value}
 
 
+def text_presets(value, default_id):
+    if not isinstance(value, list) or not 1 <= len(value) <= 20:
+        raise ValueError("Keep from 1 to 20 named text presets.")
+    presets, identities, names = [], set(), set()
+    for original in value:
+        if not isinstance(original, dict) or set(original) != {"id", "name", "size", "thickness", "width", "letterSpacing"}:
+            raise ValueError("Each text preset needs an identifier, name and numeric typography settings.")
+        identity, name = original["id"], original["name"]
+        if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identities:
+            raise ValueError("Each text preset needs a unique valid identifier.")
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 40 or name.strip().casefold() in names:
+            raise ValueError("Give each text preset a unique name from 1 to 40 characters.")
+        identities.add(identity)
+        names.add(name.strip().casefold())
+        presets.append({"id": identity, "name": name.strip(), **text_defaults({key: original[key] for key in ("size", "thickness", "width", "letterSpacing")})})
+    if not isinstance(default_id, str) or default_id not in identities:
+        raise ValueError("Choose an existing text preset as the default for new text.")
+    return presets
+
+
+def preset_settings(preset):
+    return {key: preset[key] for key in ("size", "thickness", "width", "letterSpacing")}
+
+
 def scene_text_defaults(scene):
+    if "textPresets" in scene:
+        presets = text_presets(scene["textPresets"], scene.get("defaultTextPresetId"))
+        return preset_settings(next(preset for preset in presets if preset["id"] == scene["defaultTextPresetId"]))
     if "textDefaults" in scene:
         return text_defaults(scene["textDefaults"])
     from designer_model import font_pack
     return {"size": font_pack(scene["device"])["fonts"]["time"]["height"],
             "thickness": 0, "width": 100, "letterSpacing": 1}
+
+
+def scene_text_presets(scene):
+    if "textPresets" in scene:
+        return text_presets(scene["textPresets"], scene.get("defaultTextPresetId"))
+    from designer_model import font_pack
+    return [{"id": "time", "name": "Time", **scene_text_defaults(scene)},
+            {"id": "widgets", "name": "Widgets", "size": font_pack(scene["device"])["fonts"]["widget"]["height"],
+             "thickness": 0, "width": 100, "letterSpacing": 1}]
 
 
 def _magick(arguments, data=None):
@@ -323,7 +359,7 @@ def add_time(scene):
         raise ValueError("A design can contain at most 40 elements.")
     font = font_pack(scene["device"])["fonts"]["time"]
     key, value = "time", None
-    if "textDefaults" in scene or scene.get("fontFamily", "time") != "time":
+    if "textDefaults" in scene or "textPresets" in scene or scene.get("fontFamily", "time") != "time":
         value = {"family": scene.get("fontFamily", "time"), **scene_text_defaults(scene)}
         key, record = generate(scene["device"], value)
         font = record["font"]

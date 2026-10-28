@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scene, Typography } from "../../shared/scene.ts";
-import { applyTextDefaults, setFontInheritance, setTypography } from "./api.ts";
+import { applyTextPreset, setFontInheritance, setTypography } from "./api.ts";
+import { defaultTextPresetId, textPresets } from "./text-presets.ts";
 import { typographyControls } from "./typography.ts";
 import { FontPicker, type UploadedFont } from "./FontPicker.tsx";
 
@@ -24,6 +25,10 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
         width: 100,
         letterSpacing: 1,
     });
+    const presets = textPresets(scene);
+    const [presetId, setPresetId] = useState(() => presets.find((preset) =>
+        typographyControls.every(({ key }) => preset[key] === (element.typography?.[key] ?? (key === "size" ? element.height : key === "width" ? 100 : key === "letterSpacing" ? 1 : 0))))?.id ?? defaultTextPresetId(scene));
+    const chosenPreset = presets.find((preset) => preset.id === presetId) ?? presets.find((preset) => preset.id === defaultTextPresetId(scene))!;
     const [applyingDefaults, setApplyingDefaults] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -73,7 +78,7 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     useEffect(() => {
         if (!applyingDefaults) return;
         const controller = new AbortController();
-        void applyTextDefaults(scene, elementId, controller.signal).then((layout) => {
+        void applyTextPreset(scene, elementId, chosenPreset.id, controller.signal).then((layout) => {
             if (controller.signal.aborted) return;
             onSceneChange(layout.scene);
             const changed = layout.scene.elements.find((item) => item.id === elementId)!;
@@ -84,10 +89,10 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
         }).catch((failure) => {
             if (controller.signal.aborted) return;
             setApplyingDefaults(false);
-            setError(failure instanceof Error ? failure.message : "The text defaults could not be applied.");
+            setError(failure instanceof Error ? failure.message : "The text preset could not be applied.");
         });
         return () => controller.abort();
-    }, [applyingDefaults, scene, elementId, onSceneChange]);
+    }, [applyingDefaults, scene, elementId, chosenPreset.id, onSceneChange]);
 
     function change(next: Typography) {
         setDraft(next);
@@ -98,9 +103,16 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     return (
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
+            <label className="font-choice">
+                Text preset
+                <select value={chosenPreset.id} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
+                    onChange={(event) => { setPresetId(event.target.value); setError(undefined); }}>
+                    {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
+                </select>
+            </label>
             <button type="button" className="font-upload" disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
                 onClick={() => { setError(undefined); setApplyingDefaults(true); }}>
-                {applyingDefaults ? "Applying…" : "Apply text defaults"}
+                {applyingDefaults ? "Applying…" : "Apply preset"}
             </button>
             <label className="font-choice">
                 Font source
@@ -125,7 +137,7 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
             ))}
             {(busy || applyingDefaults || pendingInheritance !== undefined || error) && (
                 <p className="typography-status" role={error ? "alert" : "status"}>
-                    {error ?? (applyingDefaults ? "Applying text defaults…" : pendingInheritance !== undefined ? "Updating font choice…" : "Generating glyphs…")}
+                    {error ?? (applyingDefaults ? "Applying text preset…" : pendingInheritance !== undefined ? "Updating font choice…" : "Generating glyphs…")}
                 </p>
             )}
         </section>

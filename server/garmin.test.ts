@@ -375,3 +375,30 @@ test("copy and delete APIs preserve originals and allow an empty canvas", async 
     assert.equal((await requestApi("/api/garmin/copy-element", [], { host: "attacker.example" })).status, 403);
     assert.equal((await requestApi("/api/garmin/delete-element", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+test("named text presets save independently and apply by id", async () => {
+    const headers = { "content-type": "application/json" };
+    const presets = [
+        { id: "time", name: "Time", size: 60, thickness: 0, width: 100, letterSpacing: 1 },
+        { id: "widgets", name: "Widgets", size: 26, thickness: 1, width: 105, letterSpacing: 2 },
+    ];
+    const saved = await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets, defaultPresetId: "widgets" }))], headers);
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    const current = (saved.body as unknown as WatchMapping).scene;
+    assert.deepEqual(current.textPresets, presets);
+    assert.equal(current.defaultTextPresetId, "widgets");
+    assert.deepEqual(current.elements, scene.elements);
+    for (const presetId of ["time", "widgets"]) {
+        const applied = await requestApi("/api/garmin/apply-text-preset", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", presetId }))], headers);
+        assert.equal(applied.status, 200, JSON.stringify(applied.body));
+        const element = (applied.body as unknown as WatchMapping).scene.elements[0];
+        assert.equal(element.height, presets.find((preset) => preset.id === presetId)!.size);
+        assert.equal(element.source, "time");
+    }
+    const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source: "divider" }))], headers);
+    assert.equal(added.status, 200, JSON.stringify(added.body));
+    assert.equal((added.body as unknown as WatchMapping).scene.elements.at(-1)!.height, 26);
+    assert.equal((await requestApi("/api/garmin/apply-text-preset", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", presetId: "missing" }))], headers)).status, 400);
+    assert.equal((await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets: [...presets, { ...presets[0], id: "other", name: "time" }], defaultPresetId: "time" }))], headers)).status, 400);
+    assert.equal((await requestApi("/api/garmin/text-presets", [], { origin: "https://attacker.example" })).status, 403);
+});

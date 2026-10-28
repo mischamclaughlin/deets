@@ -2,7 +2,7 @@
 import copy
 
 from designer_model import validate_scene
-from designer_typography import apply, element_settings, scene_text_defaults, text_defaults
+from designer_typography import apply, element_settings, scene_text_defaults, scene_text_presets, text_defaults, text_presets, preset_settings
 
 
 def _target(scene, element_id):
@@ -45,6 +45,10 @@ def set_text_defaults(scene, defaults):
     scene = validate_scene(scene)
     edited = copy.deepcopy(scene)
     edited["textDefaults"] = text_defaults(defaults)
+    if "textPresets" in edited:
+        for preset in edited["textPresets"]:
+            if preset["id"] == edited["defaultTextPresetId"]:
+                preset.update(edited["textDefaults"])
     return validate_scene(edited)
 
 
@@ -54,4 +58,27 @@ def apply_text_defaults(scene, element_id):
     if target["source"] not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider"}:
         raise ValueError("Choose a text element to apply the text defaults.")
     value = {**element_settings(target, scene["device"]), **scene_text_defaults(scene)}
+    return apply(scene, element_id, value)
+
+
+def set_text_presets(scene, presets, default_id):
+    scene = validate_scene(scene)
+    checked = text_presets(presets, default_id)
+    edited = copy.deepcopy(scene)
+    edited.pop("textDefaults", None)
+    edited.update(textPresets=checked, defaultTextPresetId=default_id)
+    return validate_scene(edited)
+
+
+def apply_text_preset(scene, element_id, preset_id):
+    scene = validate_scene(scene)
+    _, target = _target(scene, element_id)
+    if target["source"] not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider"}:
+        raise ValueError("Choose a text element to apply a text preset.")
+    if not isinstance(preset_id, str):
+        raise ValueError("Choose an existing named text preset.")
+    preset = next((preset for preset in scene_text_presets(scene) if preset["id"] == preset_id), None)
+    if preset is None:
+        raise ValueError("Choose an existing named text preset.")
+    value = {**element_settings(target, scene["device"]), **preset_settings(preset)}
     return apply(scene, element_id, value)

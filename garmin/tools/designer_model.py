@@ -202,7 +202,7 @@ def _integer(value, label, minimum, maximum):
 
 def validate_scene(payload):
     fields = {"version", "name", "device", "background", "elements"}
-    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily", "textDefaults"}:
+    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily", "textDefaults", "textPresets", "defaultTextPresetId"}:
         raise ValueError("Expected a version-2 watch-face scene.")
     if type(payload["version"]) is not int or payload["version"] != 2:
         raise ValueError("This scene version is unsupported.")
@@ -223,6 +223,9 @@ def validate_scene(payload):
     if "textDefaults" in payload:
         from designer_typography import text_defaults
         defaults = text_defaults(payload["textDefaults"])
+    if "textPresets" in payload or "defaultTextPresetId" in payload:
+        from designer_typography import text_presets
+        presets = text_presets(payload.get("textPresets"), payload.get("defaultTextPresetId"))
     pack = scene_font_pack(payload)
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
@@ -340,6 +343,9 @@ def validate_scene(payload):
         scene["fontFamily"] = family
     if "textDefaults" in payload:
         scene["textDefaults"] = defaults
+    if "textPresets" in payload:
+        scene["textPresets"] = presets
+        scene["defaultTextPresetId"] = payload["defaultTextPresetId"]
     return scene
 
 
