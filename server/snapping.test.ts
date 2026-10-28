@@ -89,3 +89,66 @@ test("the outer seconds ring stays anchored to the physical watch circumference"
     const design: Scene = { version: 2, name: "Ring", device: "epix2pro47mm", background: 0, edgeInset: 16, elements: [ring] };
     assert.deepEqual(moveElement(design, ring, { x: 20, y: -20 }, { enabled: false, showGuideLines: false, showCircumference: false }), { x: 0, y: 0 });
 });
+
+const neighbour: SceneElement = { ...element, id: "neighbour", x: 140, y: 150, width: 40, height: 30 };
+const elementSnaps: SnapOptions = { ...none, enabled: true, snapToElements: true };
+const neighbouringScene: Scene = { ...scene, elements: [element, neighbour] };
+
+test("other element edges and centres supply independent horizontal and vertical axes", () => {
+    for (const target of [140, 160, 180]) {
+        for (const anchor of [0, 10, 20]) {
+            const expected = target - anchor;
+            assert.equal(moveElement(neighbouringScene, element, { x: expected + 1, y: 250 }, elementSnaps).x, expected);
+        }
+    }
+    for (const target of [150, 165, 180]) {
+        for (const anchor of [0, 10, 20]) {
+            const expected = target - anchor;
+            assert.equal(moveElement(neighbouringScene, element, { x: 250, y: expected + 1 }, elementSnaps).y, expected);
+        }
+    }
+});
+
+test("touching edges snap on either side and combine with shared axes", () => {
+    assert.deepEqual(moveElement(neighbouringScene, element, { x: 123, y: 156 }, elementSnaps), { x: 120, y: 155 });
+    assert.deepEqual(moveElement(neighbouringScene, element, { x: 183, y: 156 }, elementSnaps), { x: 180, y: 155 });
+    assert.deepEqual(moveElement(neighbouringScene, element, { x: 151, y: 132 }, elementSnaps), { x: 150, y: 130 });
+    assert.deepEqual(moveElement(neighbouringScene, element, { x: 151, y: 182 }, elementSnaps), { x: 150, y: 180 });
+});
+
+test("element snapping respects its toggle, the master switch, tolerance and self exclusion", () => {
+    const desired = { x: 123, y: 250 };
+    assert.deepEqual(moveElement(neighbouringScene, element, desired, { ...elementSnaps, snapToElements: false }), desired);
+    assert.deepEqual(moveElement(neighbouringScene, element, desired, { ...elementSnaps, enabled: false }), desired);
+    assert.deepEqual(moveElement(neighbouringScene, element, desired, { ...elementSnaps, threshold: 2 }), desired);
+    assert.deepEqual(moveElement(scene, element, { x: 181, y: 181 }, elementSnaps), { x: 181, y: 181 });
+    // Turning off element targets must leave guide snapping available.
+    assert.deepEqual(moveElement(neighbouringScene, element, { x: 201, y: 201 }, { ...guides, snapToElements: false }), { x: 198, y: 198 });
+});
+
+test("hidden elements and seconds-ring bounds do not supply snap targets", () => {
+    const desired = { x: 123, y: 250 };
+    const nightScene = { ...scene, elements: [element, { ...neighbour, visible: "night" as const }] };
+    assert.deepEqual(moveElement(nightScene, element, desired, elementSnaps), desired);
+    assert.equal(moveElement(nightScene, element, desired, { ...elementSnaps, night: true }).x, 120);
+    const dayScene = { ...scene, elements: [element, { ...neighbour, visible: "day" as const }] };
+    assert.deepEqual(moveElement(dayScene, element, desired, { ...elementSnaps, night: true }), desired);
+    const ringScene = { ...scene, elements: [element, { ...neighbour, source: "secondsRing", x: 0, y: 0, width: 416, height: 416 }] };
+    assert.deepEqual(moveElement(ringScene, element, { x: 201, y: 201 }, elementSnaps), { x: 201, y: 201 });
+});
+
+test("element snapping keeps native integer bounds valid near the circumference", () => {
+    for (const device of Object.keys(devices) as Scene["device"][]) {
+        const local: Scene = { ...neighbouringScene, device };
+        for (const desired of [{ x: 17, y: 140 }, { x: 120, y: 18 }, { x: 350, y: 160 }, { x: 160, y: 350 }]) {
+            const result = moveElement(local, { ...element, width: 21 }, desired, elementSnaps);
+            assert.ok(Number.isInteger(result.x) && Number.isInteger(result.y));
+            const radius = devices[device] / 2 - 16;
+            for (const x of [result.x, result.x + 21]) {
+                for (const y of [result.y, result.y + element.height]) {
+                    assert.ok((x - devices[device] / 2) ** 2 + (y - devices[device] / 2) ** 2 <= radius ** 2);
+                }
+            }
+        }
+    }
+});

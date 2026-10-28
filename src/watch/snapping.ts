@@ -6,6 +6,8 @@ export interface SnapOptions {
     enabled: boolean;
     showGuideLines: boolean;
     showCircumference: boolean;
+    snapToElements?: boolean;
+    night?: boolean;
     grid?: GridSettings;
     threshold?: number;
 }
@@ -55,6 +57,15 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
         const perpendicular = vertical ? location.y + height / 2 : location.x + width / 2;
         const cross = perpendicular - centre;
         const result = options.showGuideLines ? [centre] : [];
+        if (options.snapToElements) {
+            for (const other of scene.elements) {
+                if (other.id === element.id || other.source === "secondsRing" ||
+                    other.visible === (options.night ? "day" : "night")) continue;
+                const start = vertical ? other.x : other.y;
+                const extent = vertical ? other.width : other.height;
+                result.push(start, start + extent / 2, start + extent);
+            }
+        }
         if (grid?.visible) {
             const count = vertical ? grid.columns : grid.rows;
             const curved = vertical ? grid.curvedColumns : grid.curvedRows;

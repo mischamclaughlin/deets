@@ -30,7 +30,10 @@ The Snap button enables alignment of element edges and centre axes to visible
 centre guides, grid dividers, rings and the circumference. Drag a mapped element
 to preview its bounding box; release to commit its integer native-pixel position
 and remap its ink. Arrow keys move by one pixel, Shift by ten; Alt temporarily
-bypasses snapping. Escape or pointer cancellation discards a drag. The full box
+bypasses snapping. **Snap to elements** independently controls whether other
+visible elements supply edge and centre-axis targets, including touching edges.
+It is enabled by default and follows the main Snap switch. The seconds ring’s
+full-screen bounds are excluded from these targets. Escape or pointer cancellation discards a drag. The full box
 remains inside the content boundary even with snapping off. The initial time element
 uses the native bitmap font, with a fixed 10:08 design preview and live time in
 the Garmin export (following the watch’s 12/24-hour setting).

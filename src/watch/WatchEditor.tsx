@@ -18,6 +18,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [showGuideLines, setShowGuideLines] = useState(false);
     const [selectedId, setSelectedId] = useState(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
+    const [snapToElements, setSnapToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [uploads, setUploads] = useState<UploadedFont[]>([]);
     const rememberFont = (font: UploadedFont) => setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
@@ -87,6 +88,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     >
                         Snap {snapEnabled ? "on" : "off"}
                     </button>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={snapToElements}
+                            onChange={(event) => setSnapToElements(event.target.checked)} />
+                        Snap to elements
+                    </label>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
@@ -155,6 +161,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         showGuideLines={showGuideLines}
                         grid={grid}
                         snapEnabled={snapEnabled}
+                        snapToElements={snapToElements}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({
