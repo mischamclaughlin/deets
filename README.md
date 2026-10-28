@@ -90,17 +90,16 @@ selected element; deleting the final element leaves a blank canvas.
 
 ## Typography
 
-Build your own named numeric typography presets in **Text presets**.
-The preset list starts empty; use **New preset** to create the first one. Select a preset, edit its name, size, thickness, width
-and letter spacing, then **Save presets**. **New preset** copies the selected
-settings; **Delete preset** removes it from the saved collection after saving.
-You can delete every preset. **Use for new text** selects the preset used by
-new Time and Divider elements once saved.
+Build your own named numeric typography presets in **Text presets**. The list
+starts empty; **New preset** creates the first one. Preset names, size,
+thickness, width and spacing save automatically and update all linked elements.
+**Delete preset** detaches its elements, preserving their last appearance.
 
-Each text element offers a **Text preset** picker and **Apply preset** button.
-Application copies the preset’s values once and preserves the element’s font
-inheritance or custom family, clock mode, seconds sizing, divider symbol and
-position. Editing or deleting a preset does not resize existing elements.
+Choose a **Text preset** on an element to link it immediately. Choose **Custom**
+to detach it and edit its numeric typography independently. Font inheritance or
+custom family, clock mode, seconds sizing, divider symbol and position remain
+independent of the numeric preset. New elements start custom. A preset change
+that cannot fit every linked element is rejected as a whole.
 
 Set the default family in **Watch font** on the left. Each clock offers
 **Inherit watch font** or **Custom font** on the right. New clocks inherit;

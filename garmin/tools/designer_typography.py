@@ -79,10 +79,6 @@ def preset_settings(preset):
 
 
 def scene_text_defaults(scene):
-    if "textPresets" in scene:
-        presets = text_presets(scene["textPresets"], scene.get("defaultTextPresetId"))
-        if presets:
-            return preset_settings(next(preset for preset in presets if preset["id"] == scene["defaultTextPresetId"]))
     if "textDefaults" in scene:
         return text_defaults(scene["textDefaults"])
     from designer_model import font_pack
@@ -315,8 +311,10 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
         width, height = _clock_width(metrics, source, changes.get("dividerSymbol", element.get("dividerSymbol", ":")), seconds_size), metrics["height"]
         if preserve_parity and (width - element["width"]) % 2:
             width += 1
-        element.update(x=(2*element["x"] + element["width"] - width)//2,
-                       y=(2*element["y"] + element["height"] - height)//2,
+        # Keep the same integer centre anchor across odd/even size changes.
+        # Repeated refits must not accumulate half-pixel rounding in one direction.
+        element.update(x=element["x"] + element["width"]//2 - width//2,
+                       y=element["y"] + element["height"]//2 - height//2,
                        width=width, height=height, **changes)
     if not validate:
         return edited
@@ -339,7 +337,7 @@ def set_clock_source(scene, element_id, source):
     return _fit_clock(scene, element_id, font, source=source)
 
 
-def apply(scene, element_id, value):
+def apply(scene, element_id, value, *, cache=None):
     from designer_model import validate_scene
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
@@ -347,7 +345,15 @@ def apply(scene, element_id, value):
     inherited = inherits(target)
     if inherited:
         value["family"] = scene.get("fontFamily", "time")
-    key, record = generate(scene["device"], value, divider=target["source"] == "divider")
+    if "textPresetId" in target and preset_settings(value) != preset_settings(target["typography"]):
+        target.pop("textPresetId")
+    signature = (target["source"] == "divider", tuple(sorted(value.items())))
+    if cache is not None and signature in cache:
+        key, record = cache[signature]
+    else:
+        key, record = generate(scene["device"], value, divider=target["source"] == "divider")
+        if cache is not None:
+            cache[signature] = key, record
     return _fit_clock(scene, element_id, record["font"], font=key, typography=value, inheritFont=inherited)
 
 
@@ -359,7 +365,7 @@ def add_time(scene):
         raise ValueError("A design can contain at most 40 elements.")
     font = font_pack(scene["device"])["fonts"]["time"]
     key, value = "time", None
-    if "textDefaults" in scene or bool(scene.get("textPresets")) or scene.get("fontFamily", "time") != "time":
+    if "textDefaults" in scene or scene.get("fontFamily", "time") != "time":
         value = {"family": scene.get("fontFamily", "time"), **scene_text_defaults(scene)}
         key, record = generate(scene["device"], value)
         font = record["font"]

@@ -397,7 +397,7 @@ test("named text presets save independently and apply by id", async () => {
     }
     const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source: "divider" }))], headers);
     assert.equal(added.status, 200, JSON.stringify(added.body));
-    assert.equal((added.body as unknown as WatchMapping).scene.elements.at(-1)!.height, 26);
+    assert.equal((added.body as unknown as WatchMapping).scene.elements.at(-1)!.height, scene.elements[0].height);
     assert.equal((await requestApi("/api/garmin/apply-text-preset", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", presetId: "missing" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets: [...presets, { ...presets[0], id: "other", name: "time" }], defaultPresetId: "time" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/text-presets", [], { origin: "https://attacker.example" })).status, 403);
@@ -414,4 +414,29 @@ test("text presets start empty and the last preset can be removed without changi
     assert.deepEqual(cleared.elements, scene.elements);
     const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: cleared, source: "time" }))], headers);
     assert.equal(added.status, 200, JSON.stringify(added.body));
+});
+
+test("preset links update every user automatically and custom detachment preserves appearance", async () => {
+    const headers = { "content-type": "application/json" };
+    const preset = { id: "display", name: "Display", size: 50, thickness: 0, width: 100, letterSpacing: 1 };
+    async function post(path: string, payload: unknown) {
+        const result = await requestApi(`/api/garmin/${path}`, [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        return (result.body as unknown as WatchMapping).scene;
+    }
+    let current = await post("text-presets", { scene, presets: [preset], defaultPresetId: "display" });
+    current = await post("apply-text-preset", { scene: current, elementId: "time", presetId: "display" });
+    current = await post("copy-element", { scene: current, elementId: "time" });
+    const copiedId = current.elements[1].id;
+    assert.ok(current.elements.every((element) => element.textPresetId === "display"));
+    current = await post("text-presets", { scene: current, presets: [{ ...preset, size: 40 }], defaultPresetId: "display" });
+    assert.ok(current.elements.every((element) => element.height === 40));
+    current = await post("apply-text-preset", { scene: current, elementId: copiedId, presetId: null });
+    assert.equal(current.elements[1].textPresetId, undefined);
+    current = await post("text-presets", { scene: current, presets: [{ ...preset, size: 30 }], defaultPresetId: "display" });
+    assert.equal(current.elements[0].height, 30);
+    assert.equal(current.elements[1].height, 40);
+    current = await post("text-presets", { scene: current, presets: [], defaultPresetId: null });
+    assert.ok(current.elements.every((element) => element.textPresetId === undefined));
+    assert.deepEqual(current.elements.map((element) => element.height), [30, 40]);
 });

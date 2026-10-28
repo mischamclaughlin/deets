@@ -35,6 +35,8 @@ export interface SceneElement {
     nightColour: number;
     visible: "both" | "day" | "night";
     text?: string;
+    /** Live link to a named numeric typography preset. */
+    textPresetId?: string;
     typography?: Typography;
     /** Size of the trailing :SS in HH:MM:SS; defaults to full. */
     secondsSize?: "full" | "half";

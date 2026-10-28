@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scene, Typography } from "../../shared/scene.ts";
 import { applyTextPreset, setFontInheritance, setTypography } from "./api.ts";
-import { defaultTextPresetId, textPresets } from "./text-presets.ts";
+import { textPresets } from "./text-presets.ts";
 import { typographyControls } from "./typography.ts";
 import { FontPicker, type UploadedFont } from "./FontPicker.tsx";
 
@@ -26,11 +26,9 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
         letterSpacing: 1,
     });
     const presets = textPresets(scene);
-    const [presetId, setPresetId] = useState(() => presets.find((preset) =>
-        typographyControls.every(({ key }) => preset[key] === (element.typography?.[key] ?? (key === "size" ? element.height : key === "width" ? 100 : key === "letterSpacing" ? 1 : 0))))?.id ?? defaultTextPresetId(scene));
-    const chosenPreset = presets.find((preset) => preset.id === presetId) ?? presets.find((preset) => preset.id === defaultTextPresetId(scene));
-    const [applyingPresetId, setApplyingPresetId] = useState<string>();
-    const applyingDefaults = applyingPresetId !== undefined;
+    const [pendingPreset, setPendingPreset] = useState<{ id: string | null }>();
+    const applyingDefaults = pendingPreset !== undefined;
+    const displayed = element.textPresetId ? element.typography! : draft;
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
@@ -77,23 +75,23 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     }, [draft, dirty, scene, elementId, onSceneChange]);
 
     useEffect(() => {
-        if (applyingPresetId === undefined) return;
+        if (pendingPreset === undefined) return;
         const controller = new AbortController();
-        void applyTextPreset(scene, elementId, applyingPresetId, controller.signal).then((layout) => {
+        void applyTextPreset(scene, elementId, pendingPreset.id, controller.signal).then((layout) => {
             if (controller.signal.aborted) return;
             onSceneChange(layout.scene);
             const changed = layout.scene.elements.find((item) => item.id === elementId)!;
             setDraft(changed.typography!);
             setDirty(false);
-            setApplyingPresetId(undefined);
+            setPendingPreset(undefined);
             setError(undefined);
         }).catch((failure) => {
             if (controller.signal.aborted) return;
-            setApplyingPresetId(undefined);
+            setPendingPreset(undefined);
             setError(failure instanceof Error ? failure.message : "The text preset could not be applied.");
         });
         return () => controller.abort();
-    }, [applyingPresetId, scene, elementId, onSceneChange]);
+    }, [pendingPreset, scene, elementId, onSceneChange]);
 
     function change(next: Typography) {
         setDraft(next);
@@ -104,19 +102,15 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     return (
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
-            {chosenPreset && <>
-            <label className="font-choice">
+            {presets.length > 0 && <label className="font-choice">
                 Text preset
-                <select value={chosenPreset.id} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
-                    onChange={(event) => { setPresetId(event.target.value); setError(undefined); }}>
+                <select value={pendingPreset !== undefined ? pendingPreset.id ?? "" : element.textPresetId ?? ""}
+                    disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
+                    onChange={(event) => { setPendingPreset({ id: event.target.value || null }); setError(undefined); }}>
+                    <option value="">Custom</option>
                     {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
                 </select>
-            </label>
-            <button type="button" className="font-upload" disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
-                onClick={() => { setError(undefined); setApplyingPresetId(chosenPreset.id); }}>
-                {applyingDefaults ? "Applying…" : "Apply preset"}
-            </button>
-            </>}
+            </label>}
             <label className="font-choice">
                 Font source
                 <select value={inherits ? "inherit" : "custom"} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
@@ -125,17 +119,17 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
                     <option value="custom">Custom font</option>
                 </select>
             </label>
-            <FontPicker family={inherits ? scene.fontFamily ?? "time" : draft.family}
+            <FontPicker family={inherits ? scene.fontFamily ?? "time" : displayed.family}
                 uploads={uploads} onUpload={onUpload} disabled={applyingDefaults || inherits || pendingInheritance !== undefined}
-                onChange={(family) => change({ ...draft, family })} />
+                onChange={(family) => change({ ...displayed, family })} />
             {typographyControls.map(({ key, label, min, max, unit }) => (
                 <div className="typography-control" key={key}>
                     <div className="control-heading">
                         <label htmlFor={`type-${key}`}>{label}</label>
-                        <output htmlFor={`type-${key}`}>{draft[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
+                        <output htmlFor={`type-${key}`}>{displayed[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
                     </div>
-                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={draft[key]} disabled={applyingDefaults || pendingInheritance !== undefined}
-                        onChange={(event) => change({ ...draft, [key]: Number(event.target.value) })} />
+                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={displayed[key]} disabled={!!element.textPresetId || applyingDefaults || pendingInheritance !== undefined}
+                        onChange={(event) => change({ ...displayed, [key]: Number(event.target.value) })} />
                 </div>
             ))}
             {(busy || applyingDefaults || pendingInheritance !== undefined || error) && (

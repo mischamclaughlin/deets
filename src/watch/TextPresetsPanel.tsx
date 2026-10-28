@@ -13,22 +13,25 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
     const selected = draft.presets.find((preset) => preset.id === selectedId);
 
     useEffect(() => {
-        if (!saving) return;
+        if (!dirty) return;
         const controller = new AbortController();
-        void setTextPresets(scene, draft.presets, draft.defaultPresetId, controller.signal).then((layout) => {
-            if (controller.signal.aborted) return;
-            onSceneChange(layout.scene);
-            setDraft({ presets: textPresets(layout.scene), defaultPresetId: defaultTextPresetId(layout.scene) });
-            setDirty(false);
-            setSaving(false);
-            setError(undefined);
-        }).catch((failure) => {
-            if (controller.signal.aborted) return;
-            setSaving(false);
-            setError(failure instanceof Error ? failure.message : "The text presets could not be saved.");
-        });
-        return () => controller.abort();
-    }, [draft, saving, scene, onSceneChange]);
+        const timer = setTimeout(() => {
+            setSaving(true);
+            void setTextPresets(scene, draft.presets, draft.defaultPresetId, controller.signal).then((layout) => {
+                if (controller.signal.aborted) return;
+                onSceneChange(layout.scene);
+                setDirty(false);
+                setSaving(false);
+                setError(undefined);
+            }).catch((failure) => {
+                if (controller.signal.aborted) return;
+                setDirty(false);
+                setSaving(false);
+                setError(failure instanceof Error ? failure.message : "The text preset could not be updated.");
+            });
+        }, 200);
+        return () => { clearTimeout(timer); controller.abort(); };
+    }, [draft, dirty, scene, onSceneChange]);
 
     function edit(changes: Partial<TextPreset>) {
         setDraft({ ...draft, presets: draft.presets.map((preset) => preset.id === selectedId ? { ...preset, ...changes } : preset) });
@@ -41,13 +44,13 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
         {selected && <>
         <label className="font-choice">
             Preset
-            <select value={selected.id} disabled={saving} onChange={(event) => setSelectedId(event.target.value)}>
+            <select value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>
                 {draft.presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
             </select>
         </label>
         <label className="font-choice">
             Name
-            <input type="text" value={selected.name} maxLength={40} disabled={saving}
+            <input type="text" value={selected.name} maxLength={40}
                 onChange={(event) => edit({ name: event.target.value })} />
         </label>
         {typographyControls.map(({ key, label, min, max, unit }) => <div className="typography-control" key={key}>
@@ -55,15 +58,11 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
                 <label htmlFor={`default-type-${key}`}>{label}</label>
                 <output htmlFor={`default-type-${key}`}>{selected[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
             </div>
-            <input id={`default-type-${key}`} type="range" min={min} max={max} step={1} value={selected[key]} disabled={saving}
+            <input id={`default-type-${key}`} type="range" min={min} max={max} step={1} value={selected[key]}
                 onChange={(event) => edit({ [key]: Number(event.target.value) })} />
         </div>)}
-        <button type="button" className="snap-button" disabled={saving} aria-pressed={selectedId === draft.defaultPresetId}
-            onClick={() => { setDraft({ ...draft, defaultPresetId: selectedId }); setDirty(true); setError(undefined); }}>
-            Use for new text
-        </button>
         </>}
-        <button type="button" className="add-element" disabled={saving || draft.presets.length >= 20} onClick={() => {
+        <button type="button" className="add-element" disabled={draft.presets.length >= 20} onClick={() => {
             let index = 1;
             while (draft.presets.some((preset) => preset.id === `preset-${index}`)) index++;
             const id = `preset-${index}`;
@@ -75,16 +74,14 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             setDirty(true);
             setError(undefined);
         }}>New preset</button>
-        <button type="button" className="add-element" disabled={saving || !selected} onClick={() => {
+        <button type="button" className="add-element" disabled={!selected} onClick={() => {
             const presets = draft.presets.filter((preset) => preset.id !== selectedId);
             setDraft({ presets, defaultPresetId: draft.defaultPresetId === selectedId ? presets[0]?.id ?? null : draft.defaultPresetId });
             setSelectedId(presets[0]?.id ?? null);
             setDirty(true);
             setError(undefined);
         }}>Delete preset</button>
-        <button type="button" className="add-element" disabled={!dirty || saving} onClick={() => setSaving(true)}>
-            {saving ? "Saving…" : "Save presets"}
-        </button>
+        {saving && !error && <p className="typography-status" role="status">Updating preset…</p>}
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;
 }

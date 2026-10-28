@@ -223,6 +223,7 @@ def validate_scene(payload):
     if "textDefaults" in payload:
         from designer_typography import text_defaults
         defaults = text_defaults(payload["textDefaults"])
+    presets = []
     if "textPresets" in payload or "defaultTextPresetId" in payload:
         from designer_typography import text_presets
         presets = text_presets(payload.get("textPresets"), payload.get("defaultTextPresetId"))
@@ -230,7 +231,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -251,6 +252,14 @@ def validate_scene(payload):
             typography = settings(original["typography"])
             if not generated or load(font, device)["typography"] != typography:
                 raise ValueError("The typography settings do not match the generated font.")
+        if "textPresetId" in original:
+            from designer_typography import preset_settings
+            preset_id = original["textPresetId"]
+            preset = next((item for item in presets if item["id"] == preset_id), None) if isinstance(preset_id, str) else None
+            if source not in {"time", "timeSeconds", "hours", "minutes", "seconds", "divider", "secondsRing"} or preset is None:
+                raise ValueError("Choose an existing text preset for the element.")
+            if "typography" not in original or any(typography[key] != value for key, value in preset_settings(preset).items()):
+                raise ValueError("The linked element must match its text preset.")
         if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}):
             raise ValueError("Only clock elements can choose whether to inherit the watch font.")
         if source in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
@@ -317,6 +326,8 @@ def validate_scene(payload):
                   "nightColour": night_colour, "visible": original["visible"]}
         if "typography" in original:
             result["typography"] = typography
+        if "textPresetId" in original:
+            result["textPresetId"] = original["textPresetId"]
         if "secondsSize" in original:
             result["secondsSize"] = original["secondsSize"]
         if "inheritFont" in original:
