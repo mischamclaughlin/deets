@@ -1,4 +1,4 @@
-import type { ClockSource, DividerSymbol, Scene, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ClockSource, DividerSymbol, Scene, TextDefaults, Typography, WatchMapping } from "../../shared/scene.ts";
 
 async function post<T>(
     path: string,
@@ -84,3 +84,15 @@ export const setDividerSymbol = (scene: Scene, elementId: string, symbol: Divide
 
 export const setSecondsSize = (scene: Scene, elementId: string, size: "full" | "half", signal?: AbortSignal) =>
     post<WatchMapping>("seconds-size", { scene, elementId, size }, signal);
+
+export const copyElement = (scene: Scene, elementId: string, signal?: AbortSignal) =>
+    post<WatchMapping>("copy-element", { scene, elementId }, signal);
+
+export const deleteElement = (scene: Scene, elementId: string, signal?: AbortSignal) =>
+    post<WatchMapping>("delete-element", { scene, elementId }, signal);
+
+export const setTextDefaults = (scene: Scene, defaults: TextDefaults, signal?: AbortSignal) =>
+    post<WatchMapping>("text-defaults", { scene, defaults }, signal);
+
+export const applyTextDefaults = (scene: Scene, elementId: string, signal?: AbortSignal) =>
+    post<WatchMapping>("apply-text-defaults", { scene, elementId }, signal);

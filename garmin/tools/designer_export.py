@@ -31,7 +31,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     for key in used_fonts:
         digest.update(key.encode())

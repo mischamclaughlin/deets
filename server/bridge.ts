@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-export type Operation = "layout" | "export" | "health" | "typography" | "clock" | "add" | "watch-font" | "inherit-font" | "divider" | "seconds-size";
+export type Operation = "layout" | "export" | "health" | "typography" | "clock" | "add" | "watch-font" | "inherit-font" | "divider" | "seconds-size" | "text-defaults" | "apply-text-defaults" | "copy-element" | "delete-element";
 export class GarminError extends Error {}
 
 /** Python owns the proven raster/compiler boundary; no shell or key contents cross it. */

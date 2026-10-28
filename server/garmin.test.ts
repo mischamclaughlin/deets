@@ -330,3 +330,48 @@ test("HH:MM:SS uses native full-size or half-size seconds and preserves clock id
     }
     assert.equal((await requestApi("/api/garmin/seconds-size", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+test("text defaults save without resizing existing elements and apply to new or selected text", async () => {
+    const headers = { "content-type": "application/json" };
+    const defaults = { size: 50, thickness: 1, width: 105, letterSpacing: 2 };
+    const saved = await requestApi("/api/garmin/text-defaults", [Buffer.from(JSON.stringify({ scene, defaults }))], headers);
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    const current = (saved.body as unknown as WatchMapping).scene;
+    assert.deepEqual(current.textDefaults, defaults);
+    assert.deepEqual(current.elements, scene.elements);
+    for (const source of ["time", "divider"]) {
+        const result = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source }))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const added = (result.body as unknown as WatchMapping).scene.elements.at(-1)!;
+        assert.equal(added.height, defaults.size);
+        assert.deepEqual(added.typography, { ...defaults, family: "time" });
+    }
+    const applied = await requestApi("/api/garmin/apply-text-defaults", [Buffer.from(JSON.stringify({ scene: current, elementId: "time" }))], headers);
+    assert.equal(applied.status, 200, JSON.stringify(applied.body));
+    assert.equal((applied.body as unknown as WatchMapping).scene.elements[0].height, defaults.size);
+    assert.equal((await requestApi("/api/garmin/text-defaults", [Buffer.from(JSON.stringify({ scene, defaults: { ...defaults, size: true } }))], headers)).status, 400);
+    assert.equal((await requestApi("/api/garmin/apply-text-defaults", [], { origin: "https://attacker.example" })).status, 403);
+});
+
+test("copy and delete APIs preserve originals and allow an empty canvas", async () => {
+    const headers = { "content-type": "application/json" };
+    const copied = await requestApi("/api/garmin/copy-element", [Buffer.from(JSON.stringify({ scene, elementId: "time" }))], headers);
+    assert.equal(copied.status, 200, JSON.stringify(copied.body));
+    let current = (copied.body as unknown as WatchMapping).scene;
+    assert.equal(current.elements.length, 2);
+    assert.deepEqual(current.elements[0], scene.elements[0]);
+    assert.notEqual(current.elements[1].id, "time");
+    assert.deepEqual({ ...current.elements[1], id: "time" }, scene.elements[0]);
+    for (const elementId of current.elements.map((element) => element.id)) {
+        const deleted = await requestApi("/api/garmin/delete-element", [Buffer.from(JSON.stringify({ scene: current, elementId }))], headers);
+        assert.equal(deleted.status, 200, JSON.stringify(deleted.body));
+        current = (deleted.body as unknown as WatchMapping).scene;
+    }
+    assert.deepEqual(current.elements, []);
+    for (const operation of ["copy-element", "delete-element", "apply-text-defaults"]) {
+        assert.equal((await requestApi(`/api/garmin/${operation}`, [Buffer.from(JSON.stringify({ scene, elementId: "missing" }))], headers)).status, 400);
+        assert.equal((await requestApi(`/api/garmin/${operation}`, [Buffer.from(JSON.stringify({ scene }))], headers)).status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/copy-element", [], { host: "attacker.example" })).status, 403);
+    assert.equal((await requestApi("/api/garmin/delete-element", [], { origin: "https://attacker.example" })).status, 403);
+});

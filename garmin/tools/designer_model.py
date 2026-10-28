@@ -202,7 +202,7 @@ def _integer(value, label, minimum, maximum):
 
 def validate_scene(payload):
     fields = {"version", "name", "device", "background", "elements"}
-    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily"}:
+    if not isinstance(payload, dict) or not fields <= set(payload) or set(payload) - fields - {"edgeInset", "fontFamily", "textDefaults"}:
         raise ValueError("Expected a version-2 watch-face scene.")
     if type(payload["version"]) is not int or payload["version"] != 2:
         raise ValueError("This scene version is unsupported.")
@@ -220,6 +220,9 @@ def validate_scene(payload):
         raise ValueError("A design can contain at most 40 elements.")
     from designer_typography import family_setting, inherits
     family = family_setting(payload.get("fontFamily", "time"))
+    if "textDefaults" in payload:
+        from designer_typography import text_defaults
+        defaults = text_defaults(payload["textDefaults"])
     pack = scene_font_pack(payload)
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
@@ -335,6 +338,8 @@ def validate_scene(payload):
         scene["edgeInset"] = edge_inset
     if "fontFamily" in payload:
         scene["fontFamily"] = family
+    if "textDefaults" in payload:
+        scene["textDefaults"] = defaults
     return scene
 
 

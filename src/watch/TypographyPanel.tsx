@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scene, Typography } from "../../shared/scene.ts";
-import { setFontInheritance, setTypography } from "./api.ts";
+import { applyTextDefaults, setFontInheritance, setTypography } from "./api.ts";
+import { typographyControls } from "./typography.ts";
 import { FontPicker, type UploadedFont } from "./FontPicker.tsx";
 
 interface Props {
@@ -10,13 +11,6 @@ interface Props {
     uploads: UploadedFont[];
     onUpload: (font: UploadedFont) => void;
 }
-
-const controls = [
-    { key: "size", label: "Size", min: 12, max: 160, unit: "px" },
-    { key: "thickness", label: "Thickness", min: -2, max: 6, unit: "px" },
-    { key: "width", label: "Width", min: 50, max: 200, unit: "%" },
-    { key: "letterSpacing", label: "Letter spacing", min: -4, max: 24, unit: "px" },
-] as const;
 
 /** Every accepted edit comes back through the native glyph and layout validator. */
 export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUpload }: Props) {
@@ -30,6 +24,7 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
         width: 100,
         letterSpacing: 1,
     });
+    const [applyingDefaults, setApplyingDefaults] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
@@ -75,6 +70,25 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
         };
     }, [draft, dirty, scene, elementId, onSceneChange]);
 
+    useEffect(() => {
+        if (!applyingDefaults) return;
+        const controller = new AbortController();
+        void applyTextDefaults(scene, elementId, controller.signal).then((layout) => {
+            if (controller.signal.aborted) return;
+            onSceneChange(layout.scene);
+            const changed = layout.scene.elements.find((item) => item.id === elementId)!;
+            setDraft(changed.typography!);
+            setDirty(false);
+            setApplyingDefaults(false);
+            setError(undefined);
+        }).catch((failure) => {
+            if (controller.signal.aborted) return;
+            setApplyingDefaults(false);
+            setError(failure instanceof Error ? failure.message : "The text defaults could not be applied.");
+        });
+        return () => controller.abort();
+    }, [applyingDefaults, scene, elementId, onSceneChange]);
+
     function change(next: Typography) {
         setDraft(next);
         setDirty(true);
@@ -84,30 +98,34 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     return (
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
+            <button type="button" className="font-upload" disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
+                onClick={() => { setError(undefined); setApplyingDefaults(true); }}>
+                {applyingDefaults ? "Applying…" : "Apply text defaults"}
+            </button>
             <label className="font-choice">
                 Font source
-                <select value={inherits ? "inherit" : "custom"} disabled={busy || dirty || pendingInheritance !== undefined}
+                <select value={inherits ? "inherit" : "custom"} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
                     onChange={(event) => { setError(undefined); setPendingInheritance(event.target.value === "inherit"); }}>
                     <option value="inherit">Inherit watch font</option>
                     <option value="custom">Custom font</option>
                 </select>
             </label>
             <FontPicker family={inherits ? scene.fontFamily ?? "time" : draft.family}
-                uploads={uploads} onUpload={onUpload} disabled={inherits || pendingInheritance !== undefined}
+                uploads={uploads} onUpload={onUpload} disabled={applyingDefaults || inherits || pendingInheritance !== undefined}
                 onChange={(family) => change({ ...draft, family })} />
-            {controls.map(({ key, label, min, max, unit }) => (
+            {typographyControls.map(({ key, label, min, max, unit }) => (
                 <div className="typography-control" key={key}>
                     <div className="control-heading">
                         <label htmlFor={`type-${key}`}>{label}</label>
                         <output htmlFor={`type-${key}`}>{draft[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
                     </div>
-                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={draft[key]} disabled={pendingInheritance !== undefined}
+                    <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={draft[key]} disabled={applyingDefaults || pendingInheritance !== undefined}
                         onChange={(event) => change({ ...draft, [key]: Number(event.target.value) })} />
                 </div>
             ))}
-            {(busy || pendingInheritance !== undefined || error) && (
+            {(busy || applyingDefaults || pendingInheritance !== undefined || error) && (
                 <p className="typography-status" role={error ? "alert" : "status"}>
-                    {error ?? (pendingInheritance !== undefined ? "Updating font choice…" : "Generating glyphs…")}
+                    {error ?? (applyingDefaults ? "Applying text defaults…" : pendingInheritance !== undefined ? "Updating font choice…" : "Generating glyphs…")}
                 </p>
             )}
         </section>

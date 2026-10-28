@@ -17,6 +17,7 @@ export interface Typography {
     width: number;
     letterSpacing: number;
 }
+export type TextDefaults = Omit<Typography, "family">;
 export interface SceneElement {
     id: string;
     source: string;
@@ -51,6 +52,8 @@ export interface Scene {
     background: number;
     /** Font family inherited by clock elements; defaults to time. */
     fontFamily?: string;
+    /** Numeric typography used by new text elements and explicit default application. */
+    textDefaults?: TextDefaults;
     /** Minimum radial clearance in native pixels; omitted for legacy scenes. */
     edgeInset?: number;
     elements: SceneElement[];

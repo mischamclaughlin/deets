@@ -6,6 +6,8 @@ import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
+import { ElementActionsPanel } from "./ElementActionsPanel.tsx";
+import { TextDefaultsPanel } from "./TextDefaultsPanel.tsx";
 import { WatchFontPanel } from "./WatchFontPanel.tsx";
 import type { UploadedFont } from "./FontPicker.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
@@ -16,7 +18,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [scene, setScene] = useState(initialScene);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
-    const [selectedId, setSelectedId] = useState(initialScene.elements[0]?.id);
+    const [selectedId, setSelectedId] = useState<string | undefined>(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [snapToGuides, setSnapToGuides] = useState(true);
@@ -35,6 +37,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
+                <TextDefaultsPanel scene={scene} onSceneChange={setScene} />
                 <section aria-labelledby="circumference-heading">
                     <h2 id="circumference-heading">Circumference</h2>
                     <div className="control-heading">
@@ -187,6 +190,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </p>
             </main>
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
+                {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
+                    onSceneChange={setScene} onSelect={setSelectedId} />}
                 {scene.elements.some((element) => element.id === selectedId && (isClockSource(element.source) || element.source === "divider")) && (
                     <>
                         {selected?.source === "divider"

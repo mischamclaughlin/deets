@@ -22,7 +22,7 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
     pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
@@ -119,6 +119,18 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "inherit"}:
             raise ValueError("Choose a scene, element and font inheritance.")
         return layout({"scene": set_inheritance(payload["scene"], payload["elementId"], payload["inherit"])})
+    if operation in {"copy-element", "delete-element", "apply-text-defaults"}:
+        from designer_actions import copy_element, delete_element, apply_text_defaults
+        if set(payload) != {"scene", "elementId"}:
+            raise ValueError("Choose a scene and element.")
+        action = {"copy-element": copy_element, "delete-element": delete_element,
+                  "apply-text-defaults": apply_text_defaults}[operation]
+        return layout({"scene": action(payload["scene"], payload["elementId"])})
+    if operation == "text-defaults":
+        from designer_actions import set_text_defaults
+        if set(payload) != {"scene", "defaults"}:
+            raise ValueError("Choose a scene and text defaults.")
+        return layout({"scene": set_text_defaults(payload["scene"], payload["defaults"])})
     if operation == "add":
         from designer_typography import add_time, add_divider
         if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider"}:

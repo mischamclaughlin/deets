@@ -45,6 +45,21 @@ def settings(value):
     return dict(value)
 
 
+def text_defaults(value):
+    if not isinstance(value, dict) or set(value) != {"size", "thickness", "width", "letterSpacing"}:
+        raise ValueError("Choose default size, thickness, width and letter spacing.")
+    checked = settings({"family": "time", **value})
+    return {key: checked[key] for key in value}
+
+
+def scene_text_defaults(scene):
+    if "textDefaults" in scene:
+        return text_defaults(scene["textDefaults"])
+    from designer_model import font_pack
+    return {"size": font_pack(scene["device"])["fonts"]["time"]["height"],
+            "thickness": 0, "width": 100, "letterSpacing": 1}
+
+
 def _magick(arguments, data=None):
     try:
         return subprocess.check_output(["magick", "-limit", "memory", "64MiB", "-limit", "map", "64MiB", "-limit", "disk", "64MiB", "-limit", "width", "4096", "-limit", "height", "2048", *arguments], input=data, stderr=subprocess.DEVNULL, timeout=8)
@@ -308,8 +323,8 @@ def add_time(scene):
         raise ValueError("A design can contain at most 40 elements.")
     font = font_pack(scene["device"])["fonts"]["time"]
     key, value = "time", None
-    if scene.get("fontFamily", "time") != "time":
-        value = {"family": scene["fontFamily"], "size": font["height"], "thickness": 0, "width": 100, "letterSpacing": 1}
+    if "textDefaults" in scene or scene.get("fontFamily", "time") != "time":
+        value = {"family": scene.get("fontFamily", "time"), **scene_text_defaults(scene)}
         key, record = generate(scene["device"], value)
         font = record["font"]
     width, height = _clock_width(font, "time"), font["height"]
@@ -378,12 +393,11 @@ def set_inheritance(scene, element_id, inherit):
 
 def add_divider(scene):
     """Create a separate centred divider with the watch's current family."""
-    from designer_model import validate_scene, DEVICES, font_pack
+    from designer_model import validate_scene, DEVICES
     scene = validate_scene(scene)
     if len(scene["elements"]) >= 40:
         raise ValueError("A design can contain at most 40 elements.")
-    value = {"family": scene.get("fontFamily", "time"), "size": font_pack(scene["device"])["fonts"]["time"]["height"],
-             "thickness": 0, "width": 100, "letterSpacing": 1}
+    value = {"family": scene.get("fontFamily", "time"), **scene_text_defaults(scene)}
     key, record = generate(scene["device"], value, divider=True)
     width, height = _clock_width(record["font"], "divider"), record["font"]["height"]
     size = DEVICES[scene["device"]]

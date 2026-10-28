@@ -7,6 +7,7 @@ export const scene: Scene = {
     device: "epix2pro47mm",
     background: 0,
     edgeInset: 16,
+    textDefaults: { size: 88, thickness: 0, width: 100, letterSpacing: 1 },
     elements: [
         {
             id: "time",

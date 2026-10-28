@@ -84,7 +84,17 @@ outside positions and extends every tick inwards to the clearance circle. The
 quarter-minute, five-second and ordinary tick widths stay distinct. The two
 buttons are mutually exclusive; toggle the active one off for default geometry.
 
+The selected element’s right-hand **Copy** button creates an identical duplicate
+immediately above it in the layer order and selects it. **Delete** removes the
+selected element; deleting the final element leaves a blank canvas.
+
 ## Typography
+
+Set watch-wide size, thickness, width and letter spacing in **Text defaults**.
+New Time and Divider elements use those values. Existing elements keep their
+settings until **Apply text defaults** is used in their Typography section.
+Applying defaults preserves the element’s font inheritance or custom family,
+clock mode, seconds sizing, divider symbol and position.
 
 Set the default family in **Watch font** on the left. Each clock offers
 **Inherit watch font** or **Custom font** on the right. New clocks inherit;
