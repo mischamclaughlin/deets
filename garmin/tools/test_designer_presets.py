@@ -64,12 +64,10 @@ class TextPresetTests(unittest.TestCase):
 
     def test_legacy_defaults_and_named_defaults_remain_compatible(self):
         scene = actions.set_text_defaults(self.scene(), {"size": 45, "thickness": 0, "width": 100, "letterSpacing": 1})
-        presets = typography.scene_text_presets(scene)
-        self.assertEqual(presets[0]["size"], 45)
-        self.assertEqual(presets[1]["size"], model.font_pack(scene["device"])["fonts"]["widget"]["height"])
-        legacy = typography.add_time(scene)
-        applied = actions.apply_text_preset(legacy, "time", "widgets")
-        self.assertEqual(applied["elements"][0]["height"], presets[1]["size"])
+        self.assertEqual(typography.scene_text_presets(scene), [])
+        self.assertEqual(typography.add_time(scene)["elements"][0]["height"], 45)
+        presets = self.presets()
+        presets[0]["size"] = 45
         named = actions.set_text_presets(scene, presets, "time")
         self.assertNotIn("textDefaults", named)
         defaults = {"size": 40, "thickness": 1, "width": 110, "letterSpacing": 2}
@@ -111,3 +109,19 @@ class TextPresetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             actions.apply_text_preset(ring, "time", "time")
         self.assertEqual(scene, before)
+
+    def test_empty_registry_has_no_examples_and_can_be_created_then_cleared(self):
+        original = self.scene()
+        self.assertEqual(typography.scene_text_presets(original), [])
+        empty = actions.set_text_presets(original, [], None)
+        self.assertEqual(empty["textPresets"], [])
+        self.assertIsNone(empty["defaultTextPresetId"])
+        populated = actions.set_text_presets(empty, self.presets(), "time")
+        text = typography.add_time(populated)
+        cleared = actions.set_text_presets(text, [], None)
+        self.assertEqual(cleared["elements"], text["elements"])
+        self.assertEqual(typography.scene_text_presets(cleared), [])
+        added = typography.add_time(cleared)
+        self.assertEqual(added["elements"][-1]["height"], model.font_pack(cleared["device"])["fonts"]["time"]["height"])
+        with self.assertRaises(ValueError):
+            actions.apply_text_preset(cleared, "time", "time")

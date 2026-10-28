@@ -345,7 +345,7 @@ def validate_scene(payload):
         scene["textDefaults"] = defaults
     if "textPresets" in payload:
         scene["textPresets"] = presets
-        scene["defaultTextPresetId"] = payload["defaultTextPresetId"]
+        scene["defaultTextPresetId"] = payload.get("defaultTextPresetId")
     return scene
 
 

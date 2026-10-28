@@ -90,11 +90,11 @@ selected element; deleting the final element leaves a blank canvas.
 
 ## Typography
 
-Build named numeric typography presets in **Text presets**, starting with
-**Time** and **Widgets**. Select a preset, edit its name, size, thickness, width
+Build your own named numeric typography presets in **Text presets**.
+The preset list starts empty; use **New preset** to create the first one. Select a preset, edit its name, size, thickness, width
 and letter spacing, then **Save presets**. **New preset** copies the selected
 settings; **Delete preset** removes it from the saved collection after saving.
-At least one preset remains. **Use for new text** selects the preset used by
+You can delete every preset. **Use for new text** selects the preset used by
 new Time and Divider elements once saved.
 
 Each text element offers a **Text preset** picker and **Apply preset** button.

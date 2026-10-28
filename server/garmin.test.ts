@@ -402,3 +402,16 @@ test("named text presets save independently and apply by id", async () => {
     assert.equal((await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets: [...presets, { ...presets[0], id: "other", name: "time" }], defaultPresetId: "time" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/text-presets", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+test("text presets start empty and the last preset can be removed without changing text", async () => {
+    assert.deepEqual(scene.textPresets, []);
+    assert.equal(scene.defaultTextPresetId, null);
+    const headers = { "content-type": "application/json" };
+    const result = await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets: [], defaultPresetId: null }))], headers);
+    assert.equal(result.status, 200, JSON.stringify(result.body));
+    const cleared = (result.body as unknown as WatchMapping).scene;
+    assert.deepEqual(cleared.textPresets, []);
+    assert.deepEqual(cleared.elements, scene.elements);
+    const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: cleared, source: "time" }))], headers);
+    assert.equal(added.status, 200, JSON.stringify(added.body));
+});

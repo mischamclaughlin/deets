@@ -97,7 +97,7 @@ export const setTextDefaults = (scene: Scene, defaults: TextDefaults, signal?: A
 export const applyTextDefaults = (scene: Scene, elementId: string, signal?: AbortSignal) =>
     post<WatchMapping>("apply-text-defaults", { scene, elementId }, signal);
 
-export const setTextPresets = (scene: Scene, presets: TextPreset[], defaultPresetId: string, signal?: AbortSignal) =>
+export const setTextPresets = (scene: Scene, presets: TextPreset[], defaultPresetId: string | null, signal?: AbortSignal) =>
     post<WatchMapping>("text-presets", { scene, presets, defaultPresetId }, signal);
 
 export const applyTextPreset = (scene: Scene, elementId: string, presetId: string, signal?: AbortSignal) =>

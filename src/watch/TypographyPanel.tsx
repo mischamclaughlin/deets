@@ -28,8 +28,9 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     const presets = textPresets(scene);
     const [presetId, setPresetId] = useState(() => presets.find((preset) =>
         typographyControls.every(({ key }) => preset[key] === (element.typography?.[key] ?? (key === "size" ? element.height : key === "width" ? 100 : key === "letterSpacing" ? 1 : 0))))?.id ?? defaultTextPresetId(scene));
-    const chosenPreset = presets.find((preset) => preset.id === presetId) ?? presets.find((preset) => preset.id === defaultTextPresetId(scene))!;
-    const [applyingDefaults, setApplyingDefaults] = useState(false);
+    const chosenPreset = presets.find((preset) => preset.id === presetId) ?? presets.find((preset) => preset.id === defaultTextPresetId(scene));
+    const [applyingPresetId, setApplyingPresetId] = useState<string>();
+    const applyingDefaults = applyingPresetId !== undefined;
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
@@ -76,23 +77,23 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     }, [draft, dirty, scene, elementId, onSceneChange]);
 
     useEffect(() => {
-        if (!applyingDefaults) return;
+        if (applyingPresetId === undefined) return;
         const controller = new AbortController();
-        void applyTextPreset(scene, elementId, chosenPreset.id, controller.signal).then((layout) => {
+        void applyTextPreset(scene, elementId, applyingPresetId, controller.signal).then((layout) => {
             if (controller.signal.aborted) return;
             onSceneChange(layout.scene);
             const changed = layout.scene.elements.find((item) => item.id === elementId)!;
             setDraft(changed.typography!);
             setDirty(false);
-            setApplyingDefaults(false);
+            setApplyingPresetId(undefined);
             setError(undefined);
         }).catch((failure) => {
             if (controller.signal.aborted) return;
-            setApplyingDefaults(false);
+            setApplyingPresetId(undefined);
             setError(failure instanceof Error ? failure.message : "The text preset could not be applied.");
         });
         return () => controller.abort();
-    }, [applyingDefaults, scene, elementId, chosenPreset.id, onSceneChange]);
+    }, [applyingPresetId, scene, elementId, onSceneChange]);
 
     function change(next: Typography) {
         setDraft(next);
@@ -103,6 +104,7 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     return (
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
+            {chosenPreset && <>
             <label className="font-choice">
                 Text preset
                 <select value={chosenPreset.id} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
@@ -111,9 +113,10 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
                 </select>
             </label>
             <button type="button" className="font-upload" disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}
-                onClick={() => { setError(undefined); setApplyingDefaults(true); }}>
+                onClick={() => { setError(undefined); setApplyingPresetId(chosenPreset.id); }}>
                 {applyingDefaults ? "Applying…" : "Apply preset"}
             </button>
+            </>}
             <label className="font-choice">
                 Font source
                 <select value={inherits ? "inherit" : "custom"} disabled={applyingDefaults || busy || dirty || pendingInheritance !== undefined}

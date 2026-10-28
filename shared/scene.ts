@@ -60,7 +60,7 @@ export interface Scene {
     textDefaults?: TextDefaults;
     /** Named numeric typography snapshots and the default for newly added text. */
     textPresets?: TextPreset[];
-    defaultTextPresetId?: string;
+    defaultTextPresetId?: string | null;
     /** Minimum radial clearance in native pixels; omitted for legacy scenes. */
     edgeInset?: number;
     elements: SceneElement[];

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Scene } from "../../shared/scene.ts";
+import type { Scene, TextPreset } from "../../shared/scene.ts";
 import { setTextPresets } from "./api.ts";
 import { typographyControls } from "./typography.ts";
 import { defaultTextPresetId, textPresets } from "./text-presets.ts";
@@ -10,7 +10,7 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string>();
-    const selected = draft.presets.find((preset) => preset.id === selectedId)!;
+    const selected = draft.presets.find((preset) => preset.id === selectedId);
 
     useEffect(() => {
         if (!saving) return;
@@ -30,7 +30,7 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
         return () => controller.abort();
     }, [draft, saving, scene, onSceneChange]);
 
-    function edit(changes: Partial<typeof selected>) {
+    function edit(changes: Partial<TextPreset>) {
         setDraft({ ...draft, presets: draft.presets.map((preset) => preset.id === selectedId ? { ...preset, ...changes } : preset) });
         setDirty(true);
         setError(undefined);
@@ -38,9 +38,10 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
 
     return <section className="typography-panel" aria-labelledby="text-defaults-heading">
         <h2 id="text-defaults-heading">Text presets</h2>
+        {selected && <>
         <label className="font-choice">
             Preset
-            <select value={selectedId} disabled={saving} onChange={(event) => setSelectedId(event.target.value)}>
+            <select value={selected.id} disabled={saving} onChange={(event) => setSelectedId(event.target.value)}>
                 {draft.presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
             </select>
         </label>
@@ -61,6 +62,7 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             onClick={() => { setDraft({ ...draft, defaultPresetId: selectedId }); setDirty(true); setError(undefined); }}>
             Use for new text
         </button>
+        </>}
         <button type="button" className="add-element" disabled={saving || draft.presets.length >= 20} onClick={() => {
             let index = 1;
             while (draft.presets.some((preset) => preset.id === `preset-${index}`)) index++;
@@ -68,15 +70,15 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             let name = "New preset";
             let suffix = 2;
             while (draft.presets.some((preset) => preset.name.trim().toLowerCase() === name.toLowerCase())) name = `New preset ${suffix++}`;
-            setDraft({ ...draft, presets: [...draft.presets, { ...selected, id, name }] });
+            setDraft({ ...draft, presets: [...draft.presets, { ...(selected ?? scene.textDefaults ?? { size: 88, thickness: 0, width: 100, letterSpacing: 1 }), id, name }], defaultPresetId: draft.defaultPresetId ?? id });
             setSelectedId(id);
             setDirty(true);
             setError(undefined);
         }}>New preset</button>
-        <button type="button" className="add-element" disabled={saving || draft.presets.length <= 1} onClick={() => {
+        <button type="button" className="add-element" disabled={saving || !selected} onClick={() => {
             const presets = draft.presets.filter((preset) => preset.id !== selectedId);
-            setDraft({ presets, defaultPresetId: draft.defaultPresetId === selectedId ? presets[0].id : draft.defaultPresetId });
-            setSelectedId(presets[0].id);
+            setDraft({ presets, defaultPresetId: draft.defaultPresetId === selectedId ? presets[0]?.id ?? null : draft.defaultPresetId });
+            setSelectedId(presets[0]?.id ?? null);
             setDirty(true);
             setError(undefined);
         }}>Delete preset</button>
