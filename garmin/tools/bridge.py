@@ -22,7 +22,7 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
     pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
@@ -129,6 +129,11 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "symbol"}:
             raise ValueError("Choose a scene, divider element and symbol.")
         return layout({"scene": set_divider_symbol(payload["scene"], payload["elementId"], payload["symbol"])})
+    if operation == "seconds-size":
+        from designer_typography import set_seconds_size
+        if set(payload) != {"scene", "elementId", "size"}:
+            raise ValueError("Choose a scene, element and seconds size.")
+        return layout({"scene": set_seconds_size(payload["scene"], payload["elementId"], payload["size"])})
     if operation == "clock":
         from designer_typography import set_clock_source
         if set(payload) != {"scene", "elementId", "source"}:

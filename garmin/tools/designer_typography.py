@@ -191,6 +191,8 @@ def load(key, device):
 def _clock_values(source, symbol=":"):
     if source == "divider":
         return (symbol,)
+    if source == "timeSeconds":
+        return (f"{hour:02d}:{minute:02d}:{second:02d}" for hour in range(24) for minute in range(60) for second in range(60))
     if source == "hours":
         return (f"{hour:02d}" for hour in range(24))
     if source in {"minutes", "seconds"}:
@@ -198,7 +200,7 @@ def _clock_values(source, symbol=":"):
     return (f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in range(60))
 
 
-def _clock_width(font, source, symbol=":"):
+def _clock_width(font, source, symbol=":", seconds_size="full"):
     """Reserve the widest live value using the renderer's exact measurement rule."""
     def text_width(text):
         glyphs = [font["glyphs"][str(ord(char))] for char in text]
@@ -209,17 +211,39 @@ def _clock_width(font, source, symbol=":"):
             right = max(right, pen + glyph["width"])
             pen += glyph["xadvance"]
         return right
+    if source == "timeSeconds":
+        from designer_seconds import HALF_CODE_OFFSET
+        def tail(text):
+            return "".join(chr(ord(char) + HALF_CODE_OFFSET) for char in text) if seconds_size == "half" else text
+        components = ([f"{hour:02d}" for hour in range(24)], [":"],
+                      [f"{minute:02d}" for minute in range(60)], [tail(":")],
+                      [tail(f"{second:02d}") for second in range(60)])
+        advance, right = 0, 0
+        for choices in components:
+            maximum_advance = 0
+            maximum_right = 0
+            for text in choices:
+                pen, edge = 0, 0
+                for char in text:
+                    glyph = font["glyphs"][str(ord(char))]
+                    edge = max(edge, pen + glyph["width"])
+                    pen += glyph["xadvance"]
+                maximum_advance = max(maximum_advance, pen)
+                maximum_right = max(maximum_right, edge)
+            right = max(right, advance + maximum_right)
+            advance += maximum_advance
+        return right if font.get("inkBounds", False) else max(0, advance - 1)
     return max(text_width(text) for text in _clock_values(source, symbol))
 
 
 def _clock_target(scene, element_id):
     target = next((element for element in scene["elements"] if element["id"] == element_id), None)
-    if not target or target["source"] not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}:
+    if not target or target["source"] not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}:
         raise ValueError("Select a time element to edit its clock settings.")
     return target
 
 
-def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
+def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=False, **changes):
     from designer_model import validate_scene
     edited = copy.deepcopy(scene)
     element = _clock_target(edited, element_id)
@@ -231,7 +255,15 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
             element.update(x=0, y=0, width=size, height=size)
         element.update(**changes)
     else:
-        width, height = _clock_width(metrics, source, changes.get("dividerSymbol", element.get("dividerSymbol", ":"))), metrics["height"]
+        seconds_size = changes.get("secondsSize", element.get("secondsSize", "full"))
+        if source == "timeSeconds" and seconds_size == "half":
+            from designer_model import scene_font_pack
+            future = copy.deepcopy(edited)
+            _clock_target(future, element_id).update(**changes)
+            metrics = scene_font_pack(future)["fonts"][changes.get("font", element["font"])]
+        width, height = _clock_width(metrics, source, changes.get("dividerSymbol", element.get("dividerSymbol", ":")), seconds_size), metrics["height"]
+        if preserve_parity and (width - element["width"]) % 2:
+            width += 1
         element.update(x=(2*element["x"] + element["width"] - width)//2,
                        y=(2*element["y"] + element["height"] - height)//2,
                        width=width, height=height, **changes)
@@ -246,8 +278,8 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
 def set_clock_source(scene, element_id, source):
     """Change the shown clock component while preserving its font and centre."""
     from designer_model import validate_scene, scene_font_pack
-    if not isinstance(source, str) or source not in {"time", "hours", "minutes", "seconds", "secondsRing"}:
-        raise ValueError("Choose HH:MM, hours only, minutes only, seconds or an outer ring.")
+    if not isinstance(source, str) or source not in {"time", "timeSeconds", "hours", "minutes", "seconds", "secondsRing"}:
+        raise ValueError("Choose HH:MM, HH:MM:SS, hours only, minutes only, seconds or an outer ring.")
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
     if target["source"] == "divider":
@@ -314,7 +346,7 @@ def set_watch_font(scene, family):
         value = {"family": family, "size": 88, "thickness": 0, "width": 100, "letterSpacing": 1}
         generated[(False, tuple(sorted(value.items())))] = generate(scene["device"], value)
     for element in scene["elements"]:
-        if element["source"] not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} or not inherits(element):
+        if element["source"] not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} or not inherits(element):
             continue
         value = {**element_settings(element, scene["device"]), "family": family}
         signature = (element["source"] == "divider", tuple(sorted(value.items())))
@@ -386,3 +418,15 @@ def set_divider_symbol(scene, element_id, symbol):
         font = record["font"]
         changes.update(font=key, typography=value, inheritFont=inherits(target))
     return _fit_clock(scene, element_id, font, **changes)
+
+
+def set_seconds_size(scene, element_id, size):
+    from designer_model import validate_scene, scene_font_pack
+    if not isinstance(size, str) or size not in {"full", "half"}:
+        raise ValueError("Choose full or half size for seconds.")
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    if target["source"] != "timeSeconds":
+        raise ValueError("Select an HH:MM:SS element to change its seconds size.")
+    metrics = scene_font_pack(scene)["fonts"][target["font"]]
+    return _fit_clock(scene, element_id, metrics, preserve_parity=True, secondsSize=size)

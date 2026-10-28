@@ -5,9 +5,9 @@ export const devices = {
 } as const;
 export type Device = keyof typeof devices;
 export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;
-export type ClockSource = "time" | "hours" | "minutes" | "seconds" | "secondsRing";
+export type ClockSource = "time" | "timeSeconds" | "hours" | "minutes" | "seconds" | "secondsRing";
 export const isClockSource = (source: string): source is ClockSource =>
-    source === "time" || source === "hours" || source === "minutes" ||
+    source === "time" || source === "timeSeconds" || source === "hours" || source === "minutes" ||
     source === "seconds" || source === "secondsRing";
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {
@@ -31,6 +31,8 @@ export interface SceneElement {
     visible: "both" | "day" | "night";
     text?: string;
     typography?: Typography;
+    /** Size of the trailing :SS in HH:MM:SS; defaults to full. */
+    secondsSize?: "full" | "half";
     /** When omitted, clocks with legacy typography stay custom; others inherit. */
     inheritFont?: boolean;
     /** Character drawn by an independent divider element. Defaults to colon. */

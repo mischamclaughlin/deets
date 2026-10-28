@@ -428,11 +428,12 @@ body,
 }
 .clock-modes {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 4px;
     margin-top: 12px;
 }
 .clock-modes button {
+    grid-column: span 2;
     padding: 8px 4px;
     border: 1px solid #46513e;
     border-radius: 4px;
@@ -485,4 +486,8 @@ body,
 
 .add-element + .add-element {
     margin-top: 8px;
+}
+
+.clock-modes button:nth-child(-n+2) {
+    grid-column: span 3;
 }

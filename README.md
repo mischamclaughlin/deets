@@ -54,12 +54,14 @@ The left sidebar lists existing elements at the top. The Library section below
 has + Time and + Divider buttons that create and select independent, centred elements.
 Existing clocks remain listed as Time 1, Time 2 and so on, with
 independent display modes and typography. Select a clock in the list or on the canvas
-to reveal its controls on the right, including HH:MM, hours only (HH), minutes
+to reveal its controls on the right, including HH:MM, HH:MM:SS, hours only (HH), minutes
 only (MM) or seconds (SS). Changes preserve the
 same element, its typography and its centre to the nearest native pixel. Native
 metrics determine the new width and snapping bounds. The preview shows 10:08,
-10, 08 or 23; Garmin exports use live hours/minutes/seconds and the watch's clock settings.
-Typography remains in the right sidebar for all four time display modes.
+10, 08, 23 or 10:08:23; Garmin exports use live hours/minutes/seconds and the watch's clock settings.
+Typography remains in the right sidebar for all five time display modes. HH:MM:SS offers full-size or half-size seconds;
+the final :SS group is bottom-aligned and uses native glyph masks.
+Divider entries show only their symbol in the element list.
 Dividers have their own right-hand controls for colon (:), dot (.), dash (-),
 slash (/) and vertical bar (|). Their visible symbol can sit at the top, middle
 (default) or bottom of the native element box, with independent typography and

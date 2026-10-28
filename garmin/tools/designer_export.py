@@ -31,7 +31,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     for key in used_fonts:
         digest.update(key.encode())
@@ -134,7 +134,7 @@ def _element_codes(element, catalogue, proof):
         text = str(catalogue[source].get("sample", "--"))
     elif source in {"hours", "minutes", "seconds", "day", "year"}:
         text = "0123456789"
-    elif source == "time":
+    elif source in {"time", "timeSeconds"}:
         text = "0123456789:"
     elif source == "numericDate":
         text = "0123456789/"
@@ -144,7 +144,11 @@ def _element_codes(element, catalogue, proof):
         text = "0123456789%--"
     else:
         text = "0123456789-./:"
-    return {ord(character) for character in text} | {63}
+    codes = {ord(character) for character in text} | {63}
+    if source == "timeSeconds" and element.get("secondsSize", "full") == "half":
+        from designer_seconds import HALF_CODE_OFFSET
+        codes.update(ord(char) + HALF_CODE_OFFSET for char in "0123456789:")
+    return codes
 
 
 RESOURCE_BUDGET = 32 * 1024
@@ -282,6 +286,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             atlas_indices.get((element["font"], element["nightColour"]), -1),
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
             ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
+            source == "timeSeconds" and element.get("secondsSize", "full") == "half",
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -482,7 +487,9 @@ class DesignerView extends WatchUi.WatchFace {
         var total = 0;
         var advance = 0;
         for (var i = 0; i < characters.size(); i += 1) {
-            var glyph = glyphFor(font, characters[i].toNumber());
+            var measuredCode = characters[i].toNumber();
+            if (element[18] && i >= 5) { measuredCode += 57344; }
+            var glyph = glyphFor(font, measuredCode);
             if (glyph != null) {
                 if (_fontInkBounds[element[1]]) {
                     total = Math.max(total, advance + glyph[2]);
@@ -502,6 +509,7 @@ class DesignerView extends WatchUi.WatchFace {
         var bottom = top + _fontHeights[element[1]];
         for (var i = 0; i < characters.size(); i += 1) {
             var code = characters[i].toNumber();
+            if (element[18] && i >= 5) { code += 57344; }
             if (!font.hasKey(code)) { code = 63; }
             var glyph = glyphFor(font, code);
             if (glyph == null) { continue; }
@@ -535,6 +543,7 @@ class DesignerView extends WatchUi.WatchFace {
         if (_proof && _samples.hasKey(source)) { return _samples[source].toString(); }
         switch (source) {
             case "time": return _values.timeText;
+            case "timeSeconds": return _values.timeText + ":" + _values.seconds.format("%02d");
             case "hours": return _values.hourText;
             case "minutes": return _values.minuteText;
             case "seconds": return _values.seconds.format("%02d");

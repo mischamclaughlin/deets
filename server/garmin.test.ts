@@ -134,14 +134,14 @@ test("typography API generates canonical clock pixels from an included or upload
 
 test("clock display API switches between combined time, hours, minutes and seconds", async () => {
     let current = scene;
-    for (const source of ["hours", "minutes", "seconds", "time"]) {
+    for (const source of ["hours", "minutes", "seconds", "timeSeconds", "time"]) {
         const payload = { scene: current, elementId: "time", source };
         const result = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify(payload))], { "content-type": "application/json" });
         assert.equal(result.status, 200, JSON.stringify(result.body));
         const mapped = result.body as unknown as WatchMapping;
         current = mapped.scene;
         assert.equal(current.elements[0].source, source);
-        assert.equal(mapped.ops.length, source === "time" ? 5 : 2);
+        assert.equal(mapped.ops.length, source === "time" ? 5 : source === "timeSeconds" ? 8 : 2);
         assert.ok(Math.abs(current.elements[0].x + current.elements[0].width / 2 - 208) <= 0.5);
     }
     const invalid = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "date" }))], { "content-type": "application/json" });
@@ -225,7 +225,7 @@ test("seconds switch between digits and the full outer ring without replacing cl
             assert.ok(mapped.ops.length > 60);
             assert.ok(mapped.ops.every((op) => op.kind === "rect"));
         } else {
-            assert.equal(mapped.ops.length, source === "time" ? 5 : 2);
+            assert.equal(mapped.ops.length, source === "time" ? 5 : source === "timeSeconds" ? 8 : 2);
         }
         current = mapped.scene;
     }
@@ -300,4 +300,33 @@ test("library dividers are independent elements with native symbol choices", asy
     }
     assert.equal((await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", source: "divider" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/divider", [], { origin: "https://attacker.example" })).status, 403);
+});
+
+test("HH:MM:SS uses native full-size or half-size seconds and preserves clock identity", async () => {
+    const headers = { "content-type": "application/json" };
+    const response = await requestApi("/api/garmin/clock", [Buffer.from(JSON.stringify({ scene, elementId: "time", source: "timeSeconds" }))], headers);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    let current = (response.body as unknown as WatchMapping).scene;
+    for (const size of ["half", "full", "half"]) {
+        const result = await requestApi("/api/garmin/seconds-size", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", size }))], headers);
+        assert.equal(result.status, 200, JSON.stringify(result.body));
+        const mapped = result.body as unknown as WatchMapping;
+        const element = mapped.scene.elements[0];
+        assert.equal(element.id, "time");
+        assert.equal(element.source, "timeSeconds");
+        assert.equal(element.secondsSize, size);
+        assert.equal(mapped.ops.length, 8);
+        const digits = mapped.ops.filter((op) => op.kind === "bitmap");
+        if (size === "half") {
+            assert.ok(digits.slice(-2).every((op) => op.height <= Math.floor(element.height / 2)));
+            assert.ok(digits.slice(0, 2).every((op) => op.height > element.height / 2));
+        }
+        assert.ok(Math.abs(element.x + element.width / 2 - 208) <= 1);
+        current = mapped.scene;
+    }
+    for (const size of ["tiny", 0, null]) {
+        const invalid = await requestApi("/api/garmin/seconds-size", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", size }))], headers);
+        assert.equal(invalid.status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/seconds-size", [], { origin: "https://attacker.example" })).status, 403);
 });

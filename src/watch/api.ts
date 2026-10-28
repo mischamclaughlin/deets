@@ -81,3 +81,6 @@ export const addDivider = (scene: Scene, signal?: AbortSignal) =>
 
 export const setDividerSymbol = (scene: Scene, elementId: string, symbol: DividerSymbol, signal?: AbortSignal) =>
     post<WatchMapping>("divider", { scene, elementId, symbol }, signal);
+
+export const setSecondsSize = (scene: Scene, elementId: string, size: "full" | "half", signal?: AbortSignal) =>
+    post<WatchMapping>("seconds-size", { scene, elementId, size }, signal);

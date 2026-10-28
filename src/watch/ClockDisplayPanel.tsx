@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ClockSource, Scene } from "../../shared/scene.ts";
-import { setClockSource } from "./api.ts";
+import { setClockSource, setSecondsSize } from "./api.ts";
 import { clockModes } from "./clock.ts";
 
 interface Props {
@@ -12,32 +12,47 @@ interface Props {
 export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
     const selected = scene.elements.find((element) => element.id === elementId);
     const [requested, setRequested] = useState<ClockSource>();
+    const [requestedSecondsSize, setRequestedSecondsSize] = useState<"full" | "half">();
     const [error, setError] = useState<string>();
 
     useEffect(() => {
         if (!requested) return;
         const controller = new AbortController();
-        void setClockSource(scene, elementId, requested, controller.signal)
-            .then((layout) => {
-                if (controller.signal.aborted) return;
-                onSceneChange(layout.scene);
-                setRequested(undefined);
-                setError(undefined);
-            })
-            .catch((failure) => {
-                if (controller.signal.aborted) return;
-                setError(failure instanceof Error ? failure.message : "The time display could not change.");
-                setRequested(undefined);
-            });
+        void setClockSource(scene, elementId, requested, controller.signal).then((layout) => {
+            if (controller.signal.aborted) return;
+            onSceneChange(layout.scene);
+            setRequested(undefined);
+            setError(undefined);
+        }).catch((failure) => {
+            if (controller.signal.aborted) return;
+            setRequested(undefined);
+            setError(failure instanceof Error ? failure.message : "The time display could not change.");
+        });
         return () => controller.abort();
     }, [scene, elementId, requested, onSceneChange]);
+
+    useEffect(() => {
+        if (requestedSecondsSize === undefined) return;
+        const controller = new AbortController();
+        void setSecondsSize(scene, elementId, requestedSecondsSize, controller.signal).then((layout) => {
+            if (controller.signal.aborted) return;
+            onSceneChange(layout.scene);
+            setRequestedSecondsSize(undefined);
+            setError(undefined);
+        }).catch((failure) => {
+            if (controller.signal.aborted) return;
+            setRequestedSecondsSize(undefined);
+            setError(failure instanceof Error ? failure.message : "The seconds size could not change.");
+        });
+        return () => controller.abort();
+    }, [requestedSecondsSize, scene, elementId, onSceneChange]);
 
     return (
         <section aria-labelledby="clock-display-heading">
             <h2 id="clock-display-heading">Time</h2>
             <div className="clock-modes" role="group" aria-label="Time display">
                 {clockModes.map((mode) => (
-                    <button key={mode.source} type="button" aria-label={mode.name}
+                    <button key={mode.source} type="button" aria-label={mode.name} disabled={requestedSecondsSize !== undefined}
                         aria-pressed={(requested ?? selected?.source) === mode.source || (mode.source === "seconds" && (requested ?? selected?.source) === "secondsRing")}
                         onClick={() => {
                             if (!requested && (selected?.source === mode.source || (mode.source === "seconds" && selected?.source === "secondsRing"))) return;
@@ -48,6 +63,20 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                     </button>
                 ))}
             </div>
+            {selected?.source === "timeSeconds" && (
+                <label className="font-choice">
+                    Seconds size
+                    <select value={requestedSecondsSize ?? selected.secondsSize ?? "full"}
+                        disabled={requested !== undefined || requestedSecondsSize !== undefined}
+                        onChange={(event) => {
+                            setError(undefined);
+                            setRequestedSecondsSize(event.target.value as "full" | "half");
+                        }}>
+                        <option value="full">Full size</option>
+                        <option value="half">Half size</option>
+                    </select>
+                </label>
+            )}
             {(selected?.source === "seconds" || selected?.source === "secondsRing") && (
                 <label className="font-choice">
                     Seconds display
@@ -80,7 +109,7 @@ export function ClockDisplayPanel({ scene, elementId, onSceneChange }: Props) {
                     ))}
                 </div>
             )}
-            {requested && <p className="typography-status" role="status">Updating time…</p>}
+            {(requested || requestedSecondsSize) && <p className="typography-status" role="status">Updating time…</p>}
             {error && <p className="typography-status" role="alert">{error}</p>}
         </section>
     );

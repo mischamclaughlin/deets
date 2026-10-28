@@ -35,7 +35,7 @@ def _source(identity, label, group, sample, kind="text", complication=None):
     if complication is not None:
         result["type"] = complication
     result["allowedFonts"] = (
-        ["widget", "time"] if identity in {"time", "divider"} else
+        ["widget", "time"] if identity in {"time", "timeSeconds", "divider"} else
         ["widget", "time", "numeric", "tall"] if identity in {"hours", "minutes", "seconds", "secondsRing"} else
         ["widget", "date"] if identity == "numericDate" else ["widget"]
     )
@@ -44,6 +44,7 @@ def _source(identity, label, group, sample, kind="text", complication=None):
 
 CATALOG = [
     _source("time", "Time", "Clock & date", "10:08"),
+    _source("timeSeconds", "Time with seconds", "Clock & date", "10:08:23"),
     _source("hours", "Hours", "Clock & date", "10"),
     _source("minutes", "Minutes", "Clock & date", "08"),
     _source("divider", "Divider", "Design", ":"),
@@ -164,13 +165,21 @@ def scene_font_pack(scene):
     pack = font_pack(scene["device"])
     generated = {element.get("font") for element in scene.get("elements", [])
                  if isinstance(element, dict) and isinstance(element.get("font"), str) and element["font"].startswith("generated:")}
-    if not generated:
-        return pack
     result = {"fonts": dict(pack["fonts"]), "images": dict(pack["images"])}
     for key in generated:
         record = load(key, scene["device"])
         result["fonts"][key] = record["font"]
         result["images"][key] = record["image"]
+    from designer_seconds import with_half_seconds
+    for element in scene.get("elements", []):
+        if not isinstance(element, dict) or element.get("source") != "timeSeconds" or element.get("secondsSize", "full") != "half":
+            continue
+        key = element.get("font")
+        if (isinstance(key, str) and key in result["fonts"] and not result["fonts"][key].get("halfSeconds")
+                and all(str(ord(char)) in result["fonts"][key]["glyphs"] for char in ":0123456789")):
+            font, image = with_half_seconds(result["fonts"][key], result["images"][key])
+            result["fonts"][key] = {**font, "halfSeconds": True}
+            result["images"][key] = image
     return result
 
 
@@ -215,7 +224,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -228,7 +237,7 @@ def validate_scene(payload):
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
-                (generated and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} or font not in pack["fonts"])) or
+                (generated and (source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
         if "typography" in original:
@@ -236,20 +245,23 @@ def validate_scene(payload):
             typography = settings(original["typography"])
             if not generated or load(font, device)["typography"] != typography:
                 raise ValueError("The typography settings do not match the generated font.")
-        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}):
+        if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}):
             raise ValueError("Only clock elements can choose whether to inherit the watch font.")
-        if source in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
+        if source in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"} and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
                 raise ValueError("The inheriting element does not match the watch font.")
-        if "ringTicksToCircumference" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
+        if "ringTicksToCircumference" in original and (source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or type(original["ringTicksToCircumference"]) is not bool):
             raise ValueError("Choose whether seconds-ring ticks follow the circumference on a clock element.")
-        if "ringTicksStretchToCircumference" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
+        if "ringTicksStretchToCircumference" in original and (source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or type(original["ringTicksStretchToCircumference"]) is not bool):
             raise ValueError("Choose whether seconds-ring ticks stretch to the circumference on a clock element.")
         if original.get("ringTicksToCircumference", False) and original.get("ringTicksStretchToCircumference", False):
             raise ValueError("Choose alignment or stretching for seconds-ring ticks, not both.")
+        if "secondsSize" in original and (source not in {"time", "timeSeconds", "hours", "minutes", "seconds", "secondsRing"}
+                or not isinstance(original["secondsSize"], str) or original["secondsSize"] not in {"full", "half"}):
+            raise ValueError("Choose full or half size for the seconds on a time element.")
         if "dividerSymbol" in original:
             from designer_typography import DIVIDER_SYMBOLS
             symbol = original["dividerSymbol"]
@@ -257,7 +269,7 @@ def validate_scene(payload):
                 raise ValueError("Choose a supported divider symbol on a divider element.")
         if source == "divider" and str(ord(original.get("dividerSymbol", ":"))) not in pack["fonts"][font]["glyphs"]:
             raise ValueError("The selected font does not contain this divider symbol; apply its typography again.")
-        if "dividerPosition" in original and (source not in {"time", "hours", "minutes", "divider", "seconds", "secondsRing"}
+        if "dividerPosition" in original and (source not in {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
                 or not isinstance(original["dividerPosition"], str)
                 or original["dividerPosition"] not in {"top", "middle", "bottom"}):
             raise ValueError("Choose top, middle or bottom for the divider position on a clock element.")
@@ -299,6 +311,8 @@ def validate_scene(payload):
                   "nightColour": night_colour, "visible": original["visible"]}
         if "typography" in original:
             result["typography"] = typography
+        if "secondsSize" in original:
+            result["secondsSize"] = original["secondsSize"]
         if "inheritFont" in original:
             result["inheritFont"] = original["inheritFont"]
         if "dividerSymbol" in original:
@@ -326,8 +340,9 @@ def validate_scene(payload):
 
 def layout_text(text, element, font):
     """Lay out and clip a text run to its integer native-pixel element box."""
+    from designer_seconds import display_text
     glyphs = []
-    for character in str(text):
+    for character in display_text(text, element):
         glyph = font["glyphs"].get(str(ord(character)), font["glyphs"].get("63"))
         if glyph is not None:
             glyphs.append(glyph)

@@ -17,13 +17,12 @@ export function ElementsPanel({ scene, selectedId, onSelect }: Props) {
                     const label = isClockSource(element.source)
                         ? `Time ${preceding.filter((item) => isClockSource(item.source)).length}`
                         : element.source === "divider"
-                            ? `Divider ${preceding.filter((item) => item.source === "divider").length}`
+                            ? element.dividerSymbol ?? ":"
                             : element.id;
                     return <li key={element.id}>
                         <button type="button" className="element-choice" aria-pressed={selectedId === element.id}
                             onClick={() => onSelect(element.id)}>
                             <span>{label}</span>
-                            {element.source === "divider" && <span className="element-format">{element.dividerSymbol ?? ":"}</span>}
                             {isClockSource(element.source) && (
                                 <span className="element-format">{element.source === "secondsRing" ? "SS · Ring" : clockModes.find((mode) => mode.source === element.source)?.label}</span>
                             )}

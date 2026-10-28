@@ -39,7 +39,7 @@ export function DividerPanel({ scene, elementId, onSceneChange }: {
             Symbol
             <select value={requested ?? selected.dividerSymbol ?? ":"} disabled={requested !== undefined}
                 onChange={(event) => { setError(undefined); setRequested(event.target.value as DividerSymbol); }}>
-                {symbols.map(({ symbol, name }) => <option key={symbol} value={symbol}>{symbol} {name}</option>)}
+                {symbols.map(({ symbol, name }) => <option key={symbol} value={symbol} aria-label={name}>{symbol}</option>)}
             </select>
         </label>
         <label className="font-choice">
