@@ -535,7 +535,7 @@ test("manual text boxes retain independent dimensions and can return to automati
     assert.ok(fixed.ops.every((op) => op.x >= 88 && op.y >= 164 && op.x + op.width <= 268 && op.y + op.height <= 204));
     const fitted = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time" }))], headers);
     assert.equal(fitted.status, 200, JSON.stringify(fitted.body));
-    assert.equal((fitted.body as unknown as WatchMapping).scene.elements[0].boxSizing, undefined);
+    assert.equal((fitted.body as unknown as WatchMapping).scene.elements[0].boxSizing, "hug");
     const missing = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene }))], headers);
     assert.equal(missing.status, 400);
     const extra = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time", width: 42 }))], headers);

@@ -43,8 +43,8 @@ export interface SceneElement {
     y: number;
     width: number;
     height: number;
-    /** Preserve an explicitly sized text box independently of its font. */
-    boxSizing?: "fixed";
+    /** Use explicit clipping dimensions or hug the live visible text ink. */
+    boxSizing?: "fixed" | "hug";
     align: "left" | "centre" | "right";
     colour: number;
     nightColour: number;

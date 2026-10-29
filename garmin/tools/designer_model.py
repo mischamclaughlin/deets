@@ -318,9 +318,9 @@ def validate_scene(payload):
             if any((2 * corner_x - size) ** 2 + (2 * corner_y - size) ** 2 > radius_twice ** 2
                    for corner_x in (x, x + width) for corner_y in (y, y + height)):
                 raise ValueError(f"Element '{identity}' must fit inside the circumference boundary.")
-        if "boxSizing" in original and (info["kind"] != "text" or original["boxSizing"] != "fixed"):
-            raise ValueError("Only text elements can use a fixed clipping box.")
-        if info["kind"] == "text" and original.get("boxSizing") != "fixed" and height != pack["fonts"][font]["height"]:
+        if "boxSizing" in original and (info["kind"] != "text" or original["boxSizing"] not in ("fixed", "hug")):
+            raise ValueError("Only text elements can use fixed or hugging boxes.")
+        if info["kind"] == "text" and original.get("boxSizing") not in ("fixed", "hug") and height != pack["fonts"][font]["height"]:
             raise ValueError("Automatic text height must match its native bitmap font.")
         if info["kind"] == "solar" and height < 3:
             raise ValueError("A solar timeline needs at least three pixels of height.")
@@ -383,9 +383,38 @@ def validate_scene(payload):
     return scene
 
 
+
+def text_ink_bounds(text, element, font):
+    """Unclipped visible glyph bounds, independent of advance/trailing spacing."""
+    from designer_seconds import display_text
+    pen, bounds = 0, []
+    for char in display_text(text, element):
+        glyph = font["glyphs"].get(str(ord(char)), font["glyphs"].get("63"))
+        if glyph is None:
+            continue
+        if glyph["width"] and glyph["height"]:
+            left, top = pen + glyph["xoffset"], glyph["yoffset"]
+            bounds.append((left, top, left+glyph["width"], top+glyph["height"]))
+        pen += glyph["xadvance"]
+    if not bounds:
+        return 0, 0, 1, 1
+    left, top = min(b[0] for b in bounds), min(b[1] for b in bounds)
+    return left, top, max(b[2] for b in bounds)-left, max(b[3] for b in bounds)-top
+
+
+def hugging_element(text, element, font):
+    left, top, width, height = text_ink_bounds(text, element, font)
+    return {**element, "x": element["x"] + element["width"]//2 - width//2,
+            "y": element["y"] + element["height"]//2 - height//2,
+            "width": width, "height": height}, left, top
+
+
 def layout_text(text, element, font):
     """Lay out and clip a text run to its integer native-pixel element box."""
     from designer_seconds import display_text
+    ink_left, ink_top = 0, 0
+    if element.get("boxSizing") == "hug":
+        element, ink_left, ink_top = hugging_element(text, element, font)
     glyphs = []
     for character in display_text(text, element):
         glyph = font["glyphs"].get(str(ord(character)), font["glyphs"].get("63"))
@@ -401,14 +430,14 @@ def layout_text(text, element, font):
     alignment = element.get("align", "left")
     offset = ((element["width"] - total) // 2 if alignment == "centre" else
               element["width"] - total if alignment == "right" else 0)
-    cursor = element["x"] + offset
+    cursor = element["x"] - ink_left if element.get("boxSizing") == "hug" else element["x"] + offset
     top = element["y"]
     clip_right = element["x"] + element["width"]
     clip_bottom = top + element.get("height", font["height"])
     operations = []
     for glyph in glyphs:
-        glyph_y = glyph["yoffset"]
-        if element.get("source") == "divider":
+        glyph_y = glyph["yoffset"] - ink_top
+        if element.get("source") == "divider" and element.get("boxSizing") != "hug":
             spare = element.get("height", font["height"]) - glyph["height"]
             position = element.get("dividerPosition", "middle")
             glyph_y = 0 if position == "top" else spare if position == "bottom" else spare // 2

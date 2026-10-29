@@ -81,8 +81,8 @@ class FixedBoxTests(unittest.TestCase):
             layout=bridge.dispatch({'operation':'fit-box','payload':{'scene':scene,'elementId':'clock'}})
             changed=layout['scene']['elements'][0]
             self.assertEqual(scene,original)
-            self.assertNotIn('boxSizing',changed)
-            self.assertEqual(changed['height'],changed['typography']['size'])
+            self.assertEqual(changed['boxSizing'],'hug')
+            self.assertLessEqual(changed['height'],changed['typography']['size'])
             for axis,extent in (('x','width'),('y','height')):
                 self.assertEqual(changed[axis]+changed[extent]//2,
                                  scene['elements'][0][axis]+scene['elements'][0][extent]//2)

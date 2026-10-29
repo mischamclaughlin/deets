@@ -145,8 +145,8 @@ visual appearance and hardware power consumption remain unverified.
 ## Independent element boxes
 
 The right element sidebar exposes X, Y, width and height in native pixels. Numeric
-fields accept bounded arithmetic with precedence and parentheses and round the
-final result to a whole pixel. Expressions are parsed as arithmetic; no script
+fields apply on blur or Enter, accept bounded arithmetic with precedence and
+parentheses, and round the final result to a whole pixel. There is no Apply button. Expressions are parsed as arithmetic; no script
 evaluation or dependencies are used. Invalid dimensions remain subject to the
 existing screen, circle and chart constraints.
 
@@ -154,10 +154,19 @@ Text dimensions set `boxSizing: "fixed"`. The box clips glyphs without scaling
 them, and survives font refresh, typography changes and clock/date format edits.
 Native and preview clipping both use the explicit box height. Automatic text
 bounds still reserve the widest live value, which can leave horizontal space
-around narrower times. Fit automatically restores that sizing around the box
-centre. Switching a fixed text element to a ring restores square ring geometry.
+around narrower times. Fit automatically now selects `boxSizing: "hug"`: it trims
+all four sides to the visible preview glyph ink, preserving the integer centre.
+Hugging survives font/format changes. At runtime Garmin recomputes and caches ink
+bounds when the text changes, so wider times grow around the same centre instead
+of being clipped to the narrower sample. Manually editing dimensions returns to
+fixed clipping. Switching a fixed text element to a ring restores square ring geometry.
 
 Build, lint and 197 tests passed for this update. A scene with clipped combined
 time/half-seconds, a taller date box and a bottom-aligned divider compiled on all
 three targets; its 47 mm simulator day/night drawing test passed. Visual UI and
 native raster parity remain unverified by the agent.
+
+For the hugging update, tests cover all 1,440 HH:MM values without losing glyph
+coverage, as well as date, divider, half-seconds and font refresh. Native tests
+exercise dynamic time/date samples in day/night modes. Visual appearance and
+framebuffer parity remain for user review.

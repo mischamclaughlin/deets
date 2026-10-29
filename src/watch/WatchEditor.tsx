@@ -221,7 +221,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                     onSceneChange={setScene} onSelect={setSelectedId} />}
-                {selected && <ElementBoxPanel key={`${selected.id}-${selected.x}-${selected.y}-${selected.width}-${selected.height}-${selected.font}`}
+                {selected && <ElementBoxPanel key={selected.id}
                     scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {scene.elements.some((element) => element.id === selectedId && (isClockSource(element.source) || element.source === "divider")) && (

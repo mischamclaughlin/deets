@@ -45,7 +45,7 @@ class DesignerExportTests(unittest.TestCase):
             self.assertEqual(original, exported)
             source = (project / "source/DesignerView.mc").read_text()
             glyph = pack["fonts"]["time"]["glyphs"]["48"]
-            expected = [glyph[k] for k in ("x", "y", "width", "height", "yoffset", "xadvance")]
+            expected = [glyph[k] for k in ("x", "y", "width", "height", "yoffset", "xadvance", "xoffset")]
             self.assertIn("48 => " + exporter._mc(expected), source)
             self.assertIn("Math.floor((element[4] - total) / 2.0).toNumber()", source)
             self.assertIn("dc.drawText", source)

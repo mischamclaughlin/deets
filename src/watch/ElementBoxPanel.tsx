@@ -7,6 +7,30 @@ import "./ElementBoxPanel.css";
 const fields = ["x", "y", "width", "height"] as const;
 type Field = typeof fields[number];
 
+function BoxInput({ field, value, onCommit, invalid }: {
+    field: Field;
+    value: number;
+    onCommit: (field: Field, expression: string) => void;
+    invalid: boolean;
+}) {
+    const [draft, setDraft] = useState(String(value));
+    return <label>
+        {field === "x" || field === "y" ? field.toUpperCase() : field === "width" ? "Width" : "Height"}
+        <input type="text" value={draft} spellCheck={false} autoComplete="off"
+            aria-invalid={invalid ? true : undefined}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => {
+                if (draft === String(value)) return;
+                try { setDraft(String(evaluatePixelExpression(draft))); } catch { /* The parent reports invalid input. */ }
+                onCommit(field, draft);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+                if (event.key === "Escape") { setDraft(String(value)); }
+            }} />
+    </label>;
+}
+
 /** Native box dimensions are independent of font rasterisation. */
 export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     scene: Scene;
@@ -16,7 +40,6 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     const element = scene.elements.find((item) => item.id === elementId)!;
     const text = !["stepsWeek", "floorsWeek", "runWeek", "heartZones", "temperatureZones", "solarTimeline", "secondsRing"].includes(element.source);
     const canFit = isEditableTextSource(element.source) && element.source !== "secondsRing";
-    const [draft, setDraft] = useState(() => Object.fromEntries(fields.map((field) => [field, String(element[field])])) as Record<Field, string>);
     const [request, setRequest] = useState<{ base: Scene; next: Scene; fit: boolean }>();
     const [error, setError] = useState<string>();
     useEffect(() => {
@@ -37,38 +60,35 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
 
     return <section className="element-box-panel" aria-labelledby="element-box-heading">
         <h2 id="element-box-heading">Element box</h2>
-        <form onSubmit={(event) => {
-            event.preventDefault();
-            try {
-                const dimensions = Object.fromEntries(fields.map((field) => [field, evaluatePixelExpression(draft[field])])) as Record<Field, number>;
-                setDraft(Object.fromEntries(fields.map((field) => [field, String(dimensions[field])])) as Record<Field, string>);
-                setError(undefined);
-                setRequest({ base: scene, fit: false, next: { ...scene, elements: scene.elements.map((item) => item.id === elementId
-                    ? { ...item, ...dimensions, ...(text ? { boxSizing: "fixed" as const } : {}) }
-                    : item) } });
-            } catch (failure) {
-                setError(failure instanceof Error ? failure.message : "Enter a valid number or calculation.");
-            }
-        }}>
-            <fieldset disabled={request !== undefined}>
-                <legend className="element-box-legend">Position and size in native pixels</legend>
-                <div className="element-box-fields">
-                    {fields.map((field) => <label key={field}>
-                        {field === "x" || field === "y" ? field.toUpperCase() : field === "width" ? "Width" : "Height"}
-                        <input type="text" value={draft[field]} spellCheck={false} autoComplete="off"
-                            aria-invalid={error ? true : undefined}
-                            onChange={(event) => setDraft((current) => ({ ...current, [field]: event.target.value }))} />
-                    </label>)}
-                </div>
-                <div className="element-box-actions">
-                    <button type="submit">{request ? "Applying…" : "Apply box"}</button>
-                    {canFit && <button type="button" onClick={() => {
-                        setError(undefined);
-                        setRequest({ base: scene, next: scene, fit: true });
-                    }}>Fit automatically</button>}
-                </div>
-            </fieldset>
-        </form>
+        <fieldset>
+            <legend className="element-box-legend">Position and size in native pixels</legend>
+            <div className="element-box-fields">
+                {fields.map((field) => <BoxInput key={`${field}-${element[field]}`} field={field} value={element[field]}
+                    invalid={error !== undefined} onCommit={(changed, expression) => {
+                        try {
+                            const value = evaluatePixelExpression(expression);
+                            setError(undefined);
+                            setRequest((pending) => {
+                                const base = pending?.base ?? scene;
+                                const next = pending?.next ?? scene;
+                                return { base, fit: false, next: { ...next, elements: next.elements.map((item) => item.id === elementId
+                                    ? { ...item, [changed]: value,
+                                        ...(item.source === "secondsRing" && (changed === "width" || changed === "height") ? { width: value, height: value } : {}),
+                                        ...(text && (changed === "width" || changed === "height") ? { boxSizing: "fixed" as const } : {}) }
+                                    : item) } };
+                            });
+                        } catch (failure) {
+                            setError(failure instanceof Error ? failure.message : "Enter a valid number or calculation.");
+                        }
+                    }} />)}
+            </div>
+            {canFit && <div className="element-box-actions">
+                <button type="button" disabled={request !== undefined} onClick={() => {
+                    setError(undefined);
+                    setRequest({ base: scene, next: scene, fit: true });
+                }}>Fit automatically</button>
+            </div>}
+        </fieldset>
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;
 }

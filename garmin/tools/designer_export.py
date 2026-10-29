@@ -75,7 +75,7 @@ def _font_code(pack, used_fonts, needed_codes):
         for code, metrics in sorted(font["glyphs"].items(), key=lambda item: int(item[0])):
             if int(code) not in needed_codes[key]:
                 continue
-            row = [metrics[field] for field in ("x", "y", "width", "height", "yoffset", "xadvance")]
+            row = [metrics[field] for field in ("x", "y", "width", "height", "yoffset", "xadvance", "xoffset")]
             glyphs.append(f"{int(code)} => {_mc(row)}")
         blocks.append(
             f"        _fonts.add({{{', '.join(glyphs)}}});\n"
@@ -139,6 +139,8 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
             maximum = len(str(catalogue[source]["sample"]))
         visible = min(maximum, element["width"] // min(advances, default=1) + 2)
         cache_cost += 64 * visible + 48
+        if element.get("boxSizing") == "hug":
+            cache_cost += 512  # Dynamic bounds and the resolved clipping-box row.
     rectangles = 0
     if proof:
         for element in scene["elements"]:
@@ -260,6 +262,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
             ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
             source == "timeSeconds" and element.get("secondsSize", "full") == "half",
+            element.get("boxSizing") == "hug", 0, 0,
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -409,9 +412,11 @@ class DesignerView extends WatchUi.WatchFace {
         var cached = _glyphCache.hasKey(index) ? _glyphCache[index] : null;
         if (cached != null && cached[0].equals(text)) {
             operations = cached[1] as Array<Array<Number>>;
+            if (element[19]) { element = cached[2] as Array; }
         } else {
+            if (element[19]) { element = hugElement(element, text); }
             operations = layoutText(element, text);
-            _glyphCache[index] = [text, operations];
+            _glyphCache[index] = element[19] ? [text, operations, element] : [text, operations];
         }
         var nativeFont = _nativeFonts[element[1]];
         dc.setColor(night ? element[7] : element[6], Graphics.COLOR_TRANSPARENT);
@@ -422,6 +427,45 @@ class DesignerView extends WatchUi.WatchFace {
                         operation[2].toChar().toString(), Graphics.TEXT_JUSTIFY_LEFT);
         }
         dc.clearClip();
+    }
+
+    private function hugElement(element as Array, text as String) as Array {
+        var font = _fonts[element[1]];
+        var characters = text.toCharArray();
+        var advance = 0;
+        var inkLeft = 0;
+        var inkRight = 0;
+        var inkTop = 0;
+        var inkBottom = 0;
+        var hasInk = false;
+        for (var i = 0; i < characters.size(); i += 1) {
+            var code = characters[i].toNumber();
+            if (element[18] && i >= 5) { code += 57344; }
+            var glyph = glyphFor(font, code);
+            if (glyph == null) { continue; }
+            if (glyph[2] > 0 && glyph[3] > 0) {
+                var left = advance + glyph[6];
+                var right = left + glyph[2];
+                var top = glyph[4];
+                var bottom = top + glyph[3];
+                if (!hasInk || left < inkLeft) { inkLeft = left; }
+                if (!hasInk || right > inkRight) { inkRight = right; }
+                if (!hasInk || top < inkTop) { inkTop = top; }
+                if (!hasInk || bottom > inkBottom) { inkBottom = bottom; }
+                hasInk = true;
+            }
+            advance += glyph[5];
+        }
+        var width = hasInk ? inkRight - inkLeft : 1;
+        var height = hasInk ? inkBottom - inkTop : 1;
+        var resolved = element.slice(0, element.size());
+        resolved[2] = element[2] + Math.floor(element[4] / 2.0).toNumber() - Math.floor(width / 2.0).toNumber();
+        resolved[3] = element[3] + Math.floor(element[11] / 2.0).toNumber() - Math.floor(height / 2.0).toNumber();
+        resolved[4] = width;
+        resolved[11] = height;
+        resolved[20] = inkLeft;
+        resolved[21] = inkTop;
+        return resolved;
     }
 
     private function layoutText(element as Array, text as String) as Array<Array<Number>> {
@@ -446,8 +490,12 @@ class DesignerView extends WatchUi.WatchFace {
         }
         if (!_fontInkBounds[element[1]] && advance > 0) { total -= 1; }
         var pen = element[2];
-        if (element[5] == 1) { pen += Math.floor((element[4] - total) / 2.0).toNumber(); }
-        if (element[5] == 2) { pen += element[4] - total; }
+        if (element[19]) {
+            pen -= element[20];
+        } else {
+            if (element[5] == 1) { pen += Math.floor((element[4] - total) / 2.0).toNumber(); }
+            if (element[5] == 2) { pen += element[4] - total; }
+        }
         var left = element[2];
         var right = left + element[4];
         var top = element[3];
@@ -458,9 +506,9 @@ class DesignerView extends WatchUi.WatchFace {
             if (!font.hasKey(code)) { code = 63; }
             var glyph = glyphFor(font, code);
             if (glyph == null) { continue; }
-            var dx = pen;
-            var glyphY = top + glyph[4];
-            if (element[0].equals("divider")) {
+            var dx = pen + glyph[6];
+            var glyphY = top + glyph[4] - (element[19] ? element[21] : 0);
+            if (element[0].equals("divider") && !element[19]) {
                 var spare = element[11] - glyph[3];
                 glyphY = top;
                 if (element[16] == 1) { glyphY += Math.floor(spare / 2.0).toNumber(); }
@@ -476,7 +524,7 @@ class DesignerView extends WatchUi.WatchFace {
             if (dx + width > right) { width = right - dx; }
             if (dy + height > bottom) { height = bottom - dy; }
             if (width > 0 && height > 0) {
-                operations.add([pen, glyphY, code]);
+                operations.add([pen + glyph[6], glyphY, code]);
             }
             pen += glyph[5];
         }

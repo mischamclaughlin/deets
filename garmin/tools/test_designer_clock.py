@@ -196,7 +196,7 @@ class ClockModeTests(unittest.TestCase):
             source = (project / "source/DesignerView.mc").read_text()
             self.assertIn('element[0].equals("divider")', source)
             self.assertIn('if (element[16] == 2) { glyphY += spare; }', source)
-            self.assertIn('operations.add([pen, glyphY, code]);', source)
+            self.assertIn('operations.add([pen + glyph[6], glyphY, code]);', source)
 
     def test_divider_position_rejects_invalid_values_and_non_clock_sources(self):
         for value in (None, True, 1, [], "centre", "elsewhere"):

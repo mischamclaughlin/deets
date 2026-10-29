@@ -43,7 +43,7 @@ def element_settings(element, device):
         return dict(element["typography"])
     from designer_model import font_pack
     height = (font_pack(device)["fonts"][element["font"]]["height"]
-              if element["source"] == "secondsRing" or element.get("boxSizing") == "fixed" else element["height"])
+              if element["source"] == "secondsRing" or element.get("boxSizing") in ("fixed", "hug") else element["height"])
     return {"family": "widget" if element["font"] in {"widget", "date"} else "time",
         "size": height, "thickness": 0, "width": 100, "letterSpacing": 1}
 
@@ -404,6 +404,13 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
             size = DEVICES[scene["device"]]
             element.update(x=0, y=0, width=size, height=size)
         element.update(**changes)
+    elif element.get("boxSizing") == "hug":
+        from designer_model import scene_font_pack, hugging_element, SOURCES
+        element.update(**changes)
+        future_metrics = scene_font_pack(edited)["fonts"][element["font"]]
+        sample = element.get("dividerSymbol", ":") if source == "divider" else SOURCES[source]["sample"]
+        fitted, _, _ = hugging_element(str(sample), element, future_metrics)
+        element.update(**fitted)
     elif element.get("boxSizing") == "fixed":
         # Manual boxes own their geometry independently of glyph dimensions.
         # Font refresh, presets and format edits must not silently resize them.
@@ -432,15 +439,15 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
 
 
 def fit_text_box(scene, element_id):
-    """Restore automatic text bounds from a valid fixed box in one atomic edit."""
+    """Hug the preview text ink and retain a live content-fitting mode."""
     from designer_model import validate_scene, scene_font_pack
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
     if target["source"] == "secondsRing":
         raise ValueError("Select a time, date or divider text element to fit its box.")
-    metrics = scene_font_pack(scene)["fonts"][target["font"]]
     edited = copy.deepcopy(scene)
-    _clock_target(edited, element_id).pop("boxSizing", None)
+    _clock_target(edited, element_id)["boxSizing"] = "hug"
+    metrics = scene_font_pack(scene)["fonts"][target["font"]]
     return _fit_clock(edited, element_id, metrics)
 
 
