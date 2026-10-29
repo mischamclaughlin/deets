@@ -118,3 +118,24 @@ changing frames in each day/night mode, with a maximum sampled application heap
 of 46,704 bytes including the test harness. This is not a peak graphics-memory or
 battery measurement. Visual appearance, native raster parity and physical-watch
 battery behaviour remain for user review.
+
+## Anti-aliased seconds ticks
+
+Seconds-ring ticks now use the same shared coverage-resource mechanism as text.
+Each rotated rectangle is clipped analytically against native pixel cells; its
+covered area supplies 16-level edge coverage rather than an on/off centre test.
+Preview operations and native glyph resources consume those same masks. Tick
+hierarchy, clearance fitting, stretching, layer order and brightness rules remain.
+
+One atlas and a compact 60-position table are shared per distinct geometry,
+independent of colour. Fonts load during initialisation. The exported glyph
+metrics reserve cropped tick-sized cells; watch-sized line heights/advances can
+exhaust Garmin's graphics pool even for small masks. Empty ticks are skipped.
+Both VM estimates and the graphics-coverage guard include the resources.
+
+A mixed scene with ordinary, clearance-fitted and stretched rings plus Garmin text
+compiled without warnings on all three sizes. Its 47 mm simulator check passed
+day/night frames, with a maximum sampled application heap of 64,240 bytes including
+the test harness. Coverage tests check analytic areas, cropped resource pixels,
+positions, shared colours and native-size bounds. Native framebuffer parity,
+visual appearance and hardware power consumption remain unverified.

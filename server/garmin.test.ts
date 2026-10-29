@@ -222,8 +222,8 @@ test("seconds switch between digits and the full outer ring without replacing cl
         assert.equal(element.source, source);
         if (source === "secondsRing") {
             assert.deepEqual([element.x, element.y, element.width, element.height], [0, 0, 416, 416]);
-            assert.ok(mapped.ops.length > 60);
-            assert.ok(mapped.ops.every((op) => op.kind === "rect"));
+            assert.equal(mapped.ops.length, 60);
+            assert.ok(mapped.ops.every((operation) => operation.kind === "bitmap" && operation.font.startsWith("ring:")));
         } else {
             assert.equal(mapped.ops.length, source === "time" ? 5 : source === "timeSeconds" ? 8 : 2);
         }

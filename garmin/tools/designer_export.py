@@ -1,6 +1,6 @@
 """Export the canonical designer scene into an isolated Monkey C project.
 
-The browser and watch consume the same binary atlas pixels and glyph metrics.
+The browser and watch consume the same canonical atlas coverage and glyph metrics.
 No font measurement, responsive scaling or independent watch-layout rules are
 introduced by the exported renderer.
 """
@@ -11,7 +11,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from designer_model import CATALOG, scene_font_pack, validate_scene
-from designer_charts import chart_ops, ring_geometry, ring_signature, device_colour
+from designer_charts import chart_ops, ring_font, ring_signature, device_colour
 from designer_fonts import write_fonts, graphics_cost, FONT_GRAPHICS_BUDGET
 
 
@@ -145,11 +145,26 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
         for element in scene["elements"]:
             if catalogue[element["source"]]["kind"] not in {"text", "ring"}:
                 rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
-    # One positive packed number per merged rectangle, with conservative array
-    # slot/container overhead. Equal width/outer/inner radius triples share the same immutable table.
+    # Native tick coverage lives in the graphics pool, with only compact draw
+    # positions in VM memory. Identical geometry shares one resource and table.
     rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
-    ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(*signature)) for signature in rings)
+    ring_cost = sum(_ring_resource_cost(signature) for signature in rings)
     return metadata + references + cache_cost + rectangles + ring_cost + 80 * len(scene["elements"])
+
+
+def _ring_positions(font):
+    """Sixty stable draw slots; invisible ticks do not allocate native glyphs."""
+    return [[glyph["xoffset"], glyph["yoffset"], 0xE100 + index]
+            if glyph is not None and glyph["width"] > 0 and glyph["height"] > 0 else []
+            for index in range(60)
+            for glyph in [font["glyphs"].get(str(0xE100 + index))]]
+
+
+def _ring_resource_cost(signature):
+    positions = _ring_positions(ring_font(*signature)[0])
+    visible = sum(bool(position) for position in positions)
+    return 64 + 48 * 60 + 48 * visible + (96 if visible else 0)
+
 
 
 def _provider_patch(project, types, widget_types):
@@ -190,7 +205,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     project = Path(project)
     if project.resolve() == Path(__file__).resolve().parent.parent:
         raise ValueError("Scene exports must be prepared in an isolated project copy.")
-    pack = scene_font_pack(scene)
+    canonical_pack = scene_font_pack(scene)
+    pack = {"fonts": dict(canonical_pack["fonts"]), "images": dict(canonical_pack["images"])}
     catalogue = _catalogue()
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if catalogue[element["source"]]["kind"] == "text"})
@@ -205,10 +221,24 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     if estimated_cost > RESOURCE_BUDGET:
         raise ValueError("This design exceeds the watch's conservative resource budget. "
                          "Use fewer font styles, shorter labels or fewer elements before exporting.")
-    if graphics_cost(pack, needed_codes) > FONT_GRAPHICS_BUDGET:
-        raise ValueError("This design exceeds the conservative font graphics budget. Use fewer or smaller font styles before exporting.")
     ring_indices = {signature: index for index, signature in enumerate(sorted({ring_signature(scene, element)
         for element in scene["elements"] if element["source"] == "secondsRing"}))}
+    resource_fonts = list(used_fonts)
+    resource_codes = {key: set(codes) for key, codes in needed_codes.items()}
+    ring_fonts, rings = {}, {}
+    for signature, identity in ring_indices.items():
+        font, image = ring_font(*signature)
+        positions = _ring_positions(font)
+        rings[identity] = positions
+        visible_codes = {position[2] for position in positions if position}
+        if visible_codes:
+            key = f"ring:{identity}"
+            ring_fonts[identity] = len(resource_fonts)
+            resource_fonts.append(key)
+            resource_codes[key] = visible_codes
+            pack["fonts"][key], pack["images"][key] = font, image
+    if graphics_cost(pack, resource_codes) > FONT_GRAPHICS_BUDGET:
+        raise ValueError("This design exceeds the conservative font graphics budget. Use fewer or smaller font styles before exporting.")
     rows = []
     for element in scene["elements"]:
         source = element["source"]
@@ -220,7 +250,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
                 destination.extend([[operation[key] for key in ("x", "y", "width", "height", "colour")]
                                     for operation in chart_ops(element, night=night)])
         rows.append([
-            source, font_indices.get(element["font"], 0), element["x"], element["y"],
+            source, (ring_fonts.get(ring_indices[ring_signature(scene, element)], 0) if source == "secondsRing"
+                     else font_indices.get(element["font"], 0)), element["x"], element["y"],
             element["width"], {"left": 0, "centre": 1, "right": 2}[element["align"]],
             device_colour(element["colour"]) if kind == "text" else element["colour"],
             device_colour(element["nightColour"]) if kind == "text" else element["nightColour"],
@@ -258,7 +289,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         strings = ET.Element("strings")
         ET.SubElement(strings, "string", {"id": "AppName"}).text = "Epix Canvas"
         ET.ElementTree(strings).write(legacy_strings, encoding="utf-8", xml_declaration=True)
-    font_resources = write_fonts(project, pack, used_fonts, needed_codes)
+    font_resources = write_fonts(project, pack, resource_fonts, resource_codes)
     manifest_path = project / "manifest.xml"
     manifest = ET.parse(manifest_path)
     application = manifest.find("{http://www.garmin.com/xml/connectiq}application")
@@ -273,8 +304,6 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     proof_values = {item["id"]: item.get("sample", "--") for item in CATALOG if item["id"] in text_sources}
     proof_dictionary = ", ".join(f"{_mc(key)} => {_mc(value)}" for key, value in proof_values.items()
                                  if not isinstance(value, dict))
-    rings = {index: [list(group) for group in ring_geometry(*signature)]
-             for signature, index in ring_indices.items()}
     ring_table = "{" + ", ".join(f"{width} => {_mc(positions)}" for width, positions in rings.items()) + "}"
     source = VIEW_SOURCE
     replacements = {
@@ -615,12 +644,11 @@ class DesignerView extends WatchUi.WatchFace {
         var ticks = ringTicks(element[17]);
         for (var i = 0; i < ticks.size(); i += 1) {
             var brightness = i < seconds ? 68 : (i == seconds ? 100 : 24);
+            var position = ticks[i];
+            if (position.size() == 0) { continue; }
             dc.setColor(shade(colour, brightness), Graphics.COLOR_TRANSPARENT);
-            for (var j = 0; j < ticks[i].size(); j += 1) {
-                var packed = ticks[i][j];
-                dc.fillRectangle(element[2] + (packed & 511), element[3] + ((packed >> 9) & 511),
-                    ((packed >> 18) & 31) + 1, ((packed >> 23) & 31) + 1);
-            }
+            dc.drawText(element[2] + position[0], element[3] + position[1],
+                _nativeFonts[element[1]], position[2].toChar().toString(), Graphics.TEXT_JUSTIFY_LEFT);
         }
     }
 

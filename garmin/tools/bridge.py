@@ -12,7 +12,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 import designer_model as model
-from designer_charts import chart_ops, device_colour, ring_tick_radius, ring_tick_inner_radius
+from designer_charts import chart_ops, device_colour, ring_tick_radius, ring_tick_inner_radius, ring_font, ring_asset_key
 from designer_export import prepare_scene_project
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,10 +51,17 @@ def layout(payload):
             operations.extend(chart_ops(element, night=night, ring_radius=ring_tick_radius(scene, element),
                                         ring_inner_radius=ring_tick_inner_radius(scene, element)))
     pack = model.scene_font_pack(scene)
+    images = dict(pack["images"])
+    for element in scene["elements"]:
+        if element["source"] == "secondsRing" and element["visible"] != ("day" if night else "night"):
+            signature = (element["width"], ring_tick_radius(scene, element), ring_tick_inner_radius(scene, element))
+            key = ring_asset_key(*signature)
+            _, images[key] = ring_font(*signature)
+            fonts.add(key)
     return {"scene": scene, "size": model.DEVICES[scene["device"]], "mapping": mapping(scene),
             "background": device_colour(0 if night else scene["background"]), "areas": areas,
             "ops": [{**operation, "colour": device_colour(operation["colour"])} for operation in operations],
-            "assets": {font: "data:image/png;base64," + base64.b64encode(pack["images"][font]).decode() for font in sorted(fonts)}}
+            "assets": {font: "data:image/png;base64," + base64.b64encode(images[font]).decode() for font in sorted(fonts)}}
 
 
 def compiler_config():

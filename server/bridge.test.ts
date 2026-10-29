@@ -22,7 +22,7 @@ test("native mapping round-trips the typed scene and exposes exact element bound
             assert.equal(area[dimension], element[dimension]);
     }
     assert.ok(layout.ops.some((operation) => operation.kind === "bitmap"));
-    assert.ok(layout.ops.some((operation) => operation.kind === "rect"));
+    assert.ok(layout.ops.some((operation) => operation.kind === "bitmap" && operation.font.startsWith("ring:")));
     assert.match(layout.mapping, /^[a-f0-9]{64}$/);
     assert.ok(layout.assets.time?.startsWith("data:image/png;base64,"));
 });

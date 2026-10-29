@@ -1,5 +1,5 @@
 import unittest
-from designer_charts import chart_ops, ring_geometry, unpack_ring_rect, shade, device_colour
+from designer_charts import chart_ops, ring_geometry, unpack_ring_rect, shade, device_colour, ring_font
 
 class ChartTests(unittest.TestCase):
     def element(self, source, width=181, height=18):
@@ -37,13 +37,11 @@ class ChartTests(unittest.TestCase):
         self.assertGreater(len(pixels(groups[5])), len(pixels(groups[1])))
         self.assertEqual(max(y for _, y in pixels(groups[0])) - min(y for _, y in pixels(groups[0])) + 1, 15)
         ops = chart_ops(self.element('secondsRing', width=width, height=width))
-        expected = []
-        for i, group in enumerate(groups):
-            c = shade(0x4D9DE0, 100 if i == 23 else 68 if i < 23 else 24)
-            for packed in group:
-                x, y, w, h = unpack_ring_rect(packed)
-                expected.append(dict(kind='rect', x=x+20, y=y+40, width=w, height=h, colour=c))
-        self.assertEqual(ops, expected)
+        self.assertEqual(len(ops), 60)
+        self.assertTrue(all(op['kind'] == 'bitmap' for op in ops))
+        self.assertEqual([op['colour'] for op in ops],
+                         [shade(0x4D9DE0, 100 if i == 23 else 68 if i < 23 else 24) for i in range(60)])
+        self.assertEqual((ops[0]['x'], ops[0]['y'], ops[0]['width'], ops[0]['height']), (225, 44, 6, 15))
         # Only the sixty tick masks remain; there is no continuous outer outline.
         self.assertNotIn(shade(0x4D9DE0, 42), {op['colour'] for op in ops})
 

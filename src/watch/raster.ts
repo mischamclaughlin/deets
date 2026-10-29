@@ -1,4 +1,4 @@
-import type { FontKey, WatchMapping } from "../../shared/scene.ts";
+import type { MaskKey, WatchMapping } from "../../shared/scene.ts";
 
 const hex = (colour: number) => `#${colour.toString(16).padStart(6, "0")}`;
 
@@ -8,14 +8,14 @@ export async function paintWatch(
     mapping: WatchMapping,
     signal: AbortSignal,
 ): Promise<void> {
-    const masks = new Map<FontKey, HTMLImageElement>();
+    const masks = new Map<MaskKey, HTMLImageElement>();
     await Promise.all(
         Object.entries(mapping.assets).map(async ([font, url]) => {
             if (!url) throw new Error("A mapped Garmin font asset is missing.");
             const image = new Image();
             image.src = url;
             await image.decode();
-            masks.set(font as FontKey, image);
+            masks.set(font as MaskKey, image);
         }),
     );
     if (signal.aborted) return;

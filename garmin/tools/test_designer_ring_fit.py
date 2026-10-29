@@ -86,7 +86,7 @@ class RingFitTests(unittest.TestCase):
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
         self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1)})
-        expected = sum(64 + sum(48+16*len(group) for group in charts.ring_geometry(*signature)) for signature in signatures) + 160
+        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 160
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
             project = Path(directory)
@@ -97,7 +97,7 @@ class RingFitTests(unittest.TestCase):
             source = (project/"source/DesignerView.mc").read_text()
             self.assertIn("ringTicks(element[17])", source)
             for index, signature in enumerate(sorted(signatures)):
-                self.assertIn(f"{index} => " + exporter._mc([list(group) for group in charts.ring_geometry(*signature)]), source)
+                self.assertIn(f"{index} => " + exporter._mc(exporter._ring_positions(charts.ring_font(*signature)[0])), source)
 
     def test_stretched_ticks_keep_outer_tips_and_reach_clearance_on_every_watch(self):
         for device, size in model.DEVICES.items():
@@ -162,7 +162,7 @@ class RingFitTests(unittest.TestCase):
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
         self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1), (416, 204, 174)})
-        expected = sum(64 + sum(48+16*len(group) for group in charts.ring_geometry(*signature)) for signature in signatures) + 240
+        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 240
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
             project = Path(directory)
@@ -172,4 +172,4 @@ class RingFitTests(unittest.TestCase):
             exporter.prepare_scene_project(project, scene)
             source = (project/"source/DesignerView.mc").read_text()
             for index, signature in enumerate(sorted(signatures)):
-                self.assertIn(f"{index} => " + exporter._mc([list(group) for group in charts.ring_geometry(*signature)]), source)
+                self.assertIn(f"{index} => " + exporter._mc(exporter._ring_positions(charts.ring_font(*signature)[0])), source)

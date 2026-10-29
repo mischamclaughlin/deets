@@ -123,6 +123,89 @@ def ring_geometry(width, outer_radius=None, inner_radius=-1):
     return tuple(groups)
 
 
+
+def ring_asset_key(width, outer_radius=None, inner_radius=-1):
+    return f"ring:{width}:{outer_radius}:{inner_radius}"
+
+
+def _clip_polygon(points, axis, boundary, keep_greater):
+    """Clip a convex tick polygon to one pixel edge."""
+    result = []
+    for start, end in zip(points, points[1:] + points[:1]):
+        a, b = start[axis] - boundary, end[axis] - boundary
+        inside_a, inside_b = (a >= 0, b >= 0) if keep_greater else (a <= 0, b <= 0)
+        if inside_a != inside_b:
+            fraction = a / (a - b)
+            result.append(tuple(start[i] + fraction * (end[i] - start[i]) for i in (0, 1)))
+        if inside_b:
+            result.append(end)
+    return result
+
+
+def _pixel_coverage(polygon, x, y):
+    clipped = polygon
+    for axis, boundary, greater in ((0, x, True), (0, x+1, False), (1, y, True), (1, y+1, False)):
+        clipped = _clip_polygon(clipped, axis, boundary, greater)
+        if len(clipped) < 3:
+            return 0
+    # Translate before the shoelace sum to avoid cancellation near large coordinates.
+    clipped = [(px-x, py-y) for px, py in clipped]
+    area = abs(sum(a[0]*b[1] - b[0]*a[1] for a, b in zip(clipped, clipped[1:] + clipped[:1]))) / 2
+    return min(255, max(0, math.floor(area * 15 + .5) * 17))
+
+
+@functools.lru_cache(maxsize=64)
+def ring_font(width, outer_radius=None, inner_radius=-1):
+    """Analytic pixel coverage shared by preview and native tick font resources."""
+    from designer_model import _png_rgba
+    scale, centre = min(1, width / 40), width / 2
+    outer = centre - 4 * scale if outer_radius is None else outer_radius
+    cells = []
+    for second in range(60):
+        angle = second * math.pi / 30
+        rx, ry = math.sin(angle), -math.cos(angle)
+        length = (15 if second % 15 == 0 else 11 if second % 5 == 0 else 7) * scale
+        half = (6 if second % 15 == 0 else 4 if second % 5 == 0 else 2) * scale / 2
+        inner = max(0, outer-length) if inner_radius < 0 else max(0, min(outer, inner_radius))
+        polygon = [(centre + rx*r - ry*t, centre + ry*r + rx*t)
+                   for r, t in ((inner, -half), (outer, -half), (outer, half), (inner, half))]
+        pixels = {}
+        if outer > inner:
+            for y in range(max(0, math.floor(min(p[1] for p in polygon))), min(width, math.ceil(max(p[1] for p in polygon)))):
+                for x in range(max(0, math.floor(min(p[0] for p in polygon))), min(width, math.ceil(max(p[0] for p in polygon)))):
+                    alpha = _pixel_coverage(polygon, x, y)
+                    if alpha:
+                        pixels[x, y] = alpha
+        cells.append(pixels)
+    # Shelf packing bounds long stretched ticks without allocating a full watch per tick.
+    placements, cursor_x, cursor_y, row_height, atlas_width = [], 0, 0, 0, 1
+    for pixels in cells:
+        left = min((x for x, _ in pixels), default=0)
+        top = min((y for _, y in pixels), default=0)
+        w = max((x for x, _ in pixels), default=-1) - left + 1
+        h = max((y for _, y in pixels), default=-1) - top + 1
+        if cursor_x + w > 4096:
+            cursor_x, cursor_y, row_height = 0, cursor_y + row_height + 1, 0
+        placements.append((cursor_x, cursor_y, left, top, w, h))
+        atlas_width = max(atlas_width, cursor_x + w)
+        cursor_x += w + 1
+        row_height = max(row_height, h)
+    atlas_height = max(1, cursor_y + row_height)
+    if atlas_height > 2048:
+        raise ValueError("The seconds-ring atlas exceeds the native resource bounds.")
+    pixels = bytearray(atlas_width * atlas_height * 4)
+    glyphs = {}
+    for second, (cell, placement) in enumerate(zip(cells, placements)):
+        ax, ay, left, top, w, h = placement
+        glyphs[str(0xE100 + second)] = dict(x=ax, y=ay, width=w, height=h,
+            xoffset=left, yoffset=top, xadvance=max(1, w+1))
+        for (x, y), alpha in cell.items():
+            offset = ((ay+y-top) * atlas_width + ax+x-left) * 4
+            pixels[offset:offset+4] = bytes((255, 255, 255, alpha))
+    return dict(height=max(1, max(glyph["height"] for glyph in glyphs.values())), atlasWidth=atlas_width, atlasHeight=atlas_height,
+                glyphs=glyphs, coverageBits=4, label="Seconds ticks"), _png_rgba(atlas_width, atlas_height, pixels)
+
+
 def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_radius=-1):
     source = element['source']
     value = SAMPLES[source] if value is None else value
@@ -159,9 +242,14 @@ def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_
                 rect(x + a, y + height // 2 - 1, width - a, 3, colour)
         rect(x + min(width - 1, max(0, width * now // 86400)), y, 1, height, colour)
     elif source == 'secondsRing':
-        for i, group in enumerate(ring_geometry(width, ring_radius, ring_inner_radius)):
+        font, _ = ring_font(width, ring_radius, ring_inner_radius)
+        key = ring_asset_key(width, ring_radius, ring_inner_radius)
+        for i in range(60):
+            glyph = font["glyphs"][str(0xE100+i)]
+            if not glyph["width"] or not glyph["height"]:
+                continue
             brightness = 100 if i == value else 68 if i < value else 24
-            for packed in group:
-                tx, ty, tw, th = unpack_ring_rect(packed)
-                rect(x + tx, y + ty, tw, th, shade(colour, brightness))
+            ops.append(dict(kind="bitmap", font=key, elementId=element.get("id", "secondsRing"),
+                x=x+glyph["xoffset"], y=y+glyph["yoffset"], sx=glyph["x"], sy=glyph["y"],
+                width=glyph["width"], height=glyph["height"], colour=shade(colour, brightness)))
     return ops

@@ -5,6 +5,8 @@ export const devices = {
 } as const;
 export type Device = keyof typeof devices;
 export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;
+/** Coverage resources used only by mapped drawing operations. */
+export type MaskKey = FontKey | `ring:${string}`;
 export type ClockSource = "time" | "timeSeconds" | "hours" | "minutes" | "seconds" | "secondsRing";
 export const isClockSource = (source: string): source is ClockSource =>
     source === "time" || source === "timeSeconds" || source === "hours" || source === "minutes" ||
@@ -111,7 +113,7 @@ export interface BitmapOp {
     sx: number;
     sy: number;
     colour: number;
-    font: FontKey;
+    font: MaskKey;
     elementId: string;
 }
 export interface WatchMapping {
@@ -120,6 +122,6 @@ export interface WatchMapping {
     background: number;
     ops: Array<RectOp | BitmapOp>;
     areas: MappedArea[];
-    assets: Partial<Record<FontKey, string>>;
+    assets: Partial<Record<MaskKey, string>>;
     mapping: string;
 }
