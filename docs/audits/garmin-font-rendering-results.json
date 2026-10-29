@@ -1,0 +1,420 @@
+{
+  "measured_on": "2026-10-28 and 2026-10-29",
+  "sdk": "Connect IQ SDK 9.3.0; installed target profiles API 5.2.0",
+  "production_base_commit": "3e70c24",
+  "production_patch": "Replace Math.max (API 6.0.3) with an integer comparison in layoutText.",
+  "prototype": "Native .fnt v2: same visible glyph masks and canonical per-glyph layout; zero-area glyphs omitted from native resources while canonical spacing remains.",
+  "source_hashes": {
+    "garmin/tools/designer_export.py": "5e385a9f1248e3d6f06a06ac7d41824800a2fcd1b9956de9fd883e0bda53992c",
+    "garmin/tools/audit_font_rendering.py": "cc091f014baa3389c7c3163c77a2dd21f1d41cf5d703e9bcb7fe6bbbe11e195b",
+    "garmin/tools/audit_font_runtime.py": "892a37efabd940ae9ca68ada3f487f37eb4b1057cab992624c0ecec9317d8453"
+  },
+  "declared_device_capabilities": {
+    "provenance": "Installed Garmin device descriptors compiler.json and simulator.json, read 2026-10-28; declared capabilities, not physical-watch measurements.",
+    "devices": [
+      {
+        "device": "epix2pro42mm",
+        "resolution": {
+          "height": 390,
+          "width": 390
+        },
+        "displayType": "amoled",
+        "bitsPerPixel": 16,
+        "watchFaceMemoryLimit": 131072,
+        "graphicsResourcePoolSize": 3145728,
+        "connectIQVersion": "5.2.0",
+        "systemVectorFaces": [
+          "BionicBold",
+          "RobotoCondensedBold",
+          "RobotoCondensedRegular",
+          "NotoSansSCMedium",
+          "KosugiRegular",
+          "NanumGothicRegular",
+          "PridiRegularGarmin",
+          "SakkalMajallaBold",
+          "SakkalMajallaRoman",
+          "Swiss721Bold",
+          "Swiss721Regular"
+        ]
+      },
+      {
+        "device": "epix2pro47mm",
+        "resolution": {
+          "height": 416,
+          "width": 416
+        },
+        "displayType": "amoled",
+        "bitsPerPixel": 16,
+        "watchFaceMemoryLimit": 131072,
+        "graphicsResourcePoolSize": 3145728,
+        "connectIQVersion": "5.2.0",
+        "systemVectorFaces": [
+          "BionicBold",
+          "RobotoCondensedBold",
+          "RobotoCondensedRegular",
+          "NotoSansSCMedium",
+          "KosugiRegular",
+          "NanumGothicRegular",
+          "PridiRegularGarmin",
+          "SakkalMajallaBold",
+          "SakkalMajallaRoman",
+          "Swiss721Bold",
+          "Swiss721Regular"
+        ]
+      },
+      {
+        "device": "epix2pro51mm",
+        "resolution": {
+          "height": 454,
+          "width": 454
+        },
+        "displayType": "amoled",
+        "bitsPerPixel": 16,
+        "watchFaceMemoryLimit": 131072,
+        "graphicsResourcePoolSize": 3145728,
+        "connectIQVersion": "5.2.0",
+        "systemVectorFaces": [
+          "BionicBold",
+          "RobotoCondensedBold",
+          "RobotoCondensedRegular",
+          "NotoSansSCMedium",
+          "KosugiRegular",
+          "NanumGothicRegular",
+          "PridiRegularGarmin",
+          "SakkalMajallaBold",
+          "SakkalMajallaRoman",
+          "Swiss721Bold",
+          "Swiss721Regular"
+        ]
+      }
+    ]
+  },
+  "compile_comparison": {
+    "method": "Compile-only native-font resource storage/tinting comparison. Both variants retain canonical per-glyph layout; native drawText pixel alignment, runtime RAM, CPU and power are unverified.",
+    "results": [
+      {
+        "device": "epix2pro42mm",
+        "scene": "simple",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 154972,
+        "font_resources": 0,
+        "bitmap_resources": 25,
+        "designer_source_bytes": 17516,
+        "generated_asset_file_bytes": 5118,
+        "compile_seconds": 1.84,
+        "existing_conservative_vm_guard_estimate": 6912
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140780,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16485,
+        "generated_asset_file_bytes": 2922,
+        "compile_seconds": 2.303
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "mixed",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 181548,
+        "font_resources": 0,
+        "bitmap_resources": 123,
+        "designer_source_bytes": 22884,
+        "generated_asset_file_bytes": 17648,
+        "compile_seconds": 1.957,
+        "existing_conservative_vm_guard_estimate": 16902
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144572,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18025,
+        "generated_asset_file_bytes": 7384,
+        "compile_seconds": 2.435
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "stress",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 215068,
+        "font_resources": 0,
+        "bitmap_resources": 193,
+        "designer_source_bytes": 26275,
+        "generated_asset_file_bytes": 30992,
+        "compile_seconds": 2.186,
+        "existing_conservative_vm_guard_estimate": 28214
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145772,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18582,
+        "generated_asset_file_bytes": 8476,
+        "compile_seconds": 2.506
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "simple",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 154972,
+        "font_resources": 0,
+        "bitmap_resources": 25,
+        "designer_source_bytes": 17517,
+        "generated_asset_file_bytes": 5118,
+        "compile_seconds": 1.807,
+        "existing_conservative_vm_guard_estimate": 6912
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140780,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16486,
+        "generated_asset_file_bytes": 2922,
+        "compile_seconds": 2.389
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "mixed",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 181548,
+        "font_resources": 0,
+        "bitmap_resources": 123,
+        "designer_source_bytes": 22885,
+        "generated_asset_file_bytes": 17648,
+        "compile_seconds": 1.993,
+        "existing_conservative_vm_guard_estimate": 16902
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144572,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18026,
+        "generated_asset_file_bytes": 7384,
+        "compile_seconds": 2.38
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "stress",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 215068,
+        "font_resources": 0,
+        "bitmap_resources": 193,
+        "designer_source_bytes": 26275,
+        "generated_asset_file_bytes": 30992,
+        "compile_seconds": 2.198,
+        "existing_conservative_vm_guard_estimate": 28214
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145772,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18582,
+        "generated_asset_file_bytes": 8476,
+        "compile_seconds": 2.78
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "simple",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 154972,
+        "font_resources": 0,
+        "bitmap_resources": 25,
+        "designer_source_bytes": 17517,
+        "generated_asset_file_bytes": 5118,
+        "compile_seconds": 2.034,
+        "existing_conservative_vm_guard_estimate": 6912
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140780,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16486,
+        "generated_asset_file_bytes": 2922,
+        "compile_seconds": 2.375
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "mixed",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 181548,
+        "font_resources": 0,
+        "bitmap_resources": 123,
+        "designer_source_bytes": 22885,
+        "generated_asset_file_bytes": 17648,
+        "compile_seconds": 2.032,
+        "existing_conservative_vm_guard_estimate": 16902
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144572,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18026,
+        "generated_asset_file_bytes": 7384,
+        "compile_seconds": 2.281
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "stress",
+        "variant": "glyph-bitmaps",
+        "prg_bytes": 215068,
+        "font_resources": 0,
+        "bitmap_resources": 193,
+        "designer_source_bytes": 26275,
+        "generated_asset_file_bytes": 30992,
+        "compile_seconds": 2.361,
+        "existing_conservative_vm_guard_estimate": 28214
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145772,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18582,
+        "generated_asset_file_bytes": 8476,
+        "compile_seconds": 2.456
+      }
+    ]
+  },
+  "simulator_comparison": {
+    "method": "Exercise both font prototypes through CLI simulator tests without reading pixels.\n\nStart the Connect IQ simulator first. These instrumented tests measure application\nheap snapshots after frames, including test overhead. They do not measure graphics\npool usage, within-frame peaks, hardware execution budgets or battery consumption.\n",
+    "device": "epix2pro47mm",
+    "frames_per_mode": 24,
+    "runs": [
+      {
+        "scene": "simple",
+        "variant": "glyph-bitmaps",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 31400,
+          "initialised": 36344,
+          "first": 37416,
+          "day": 40688,
+          "nightFirst": 37416,
+          "night": 40688,
+          "afterFrameMax": 40688,
+          "dayElapsedMs": 119,
+          "nightElapsedMs": 119
+        }
+      },
+      {
+        "scene": "simple",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 29600,
+          "initialised": 33688,
+          "first": 34424,
+          "day": 34424,
+          "nightFirst": 34424,
+          "night": 34424,
+          "afterFrameMax": 34448,
+          "dayElapsedMs": 131,
+          "nightElapsedMs": 131
+        }
+      },
+      {
+        "scene": "mixed",
+        "variant": "glyph-bitmaps",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 45688,
+          "initialised": 58040,
+          "first": 61736,
+          "day": 72152,
+          "nightFirst": 61736,
+          "night": 72152,
+          "afterFrameMax": 72152,
+          "dayElapsedMs": 271,
+          "nightElapsedMs": 270
+        }
+      },
+      {
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 36368,
+          "initialised": 44536,
+          "first": 46112,
+          "day": 46112,
+          "nightFirst": 46112,
+          "night": 46112,
+          "afterFrameMax": 46192,
+          "dayElapsedMs": 256,
+          "nightElapsedMs": 255
+        }
+      },
+      {
+        "scene": "stress",
+        "variant": "glyph-bitmaps",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 52384,
+          "initialised": 67744,
+          "first": 75888,
+          "day": 104224,
+          "nightFirst": 75888,
+          "night": 104224,
+          "afterFrameMax": 104224,
+          "dayElapsedMs": 629,
+          "nightElapsedMs": 620
+        }
+      },
+      {
+        "scene": "stress",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 37888,
+          "initialised": 46896,
+          "first": 50760,
+          "day": 50760,
+          "nightFirst": 50760,
+          "night": 50760,
+          "afterFrameMax": 50784,
+          "dayElapsedMs": 528,
+          "nightElapsedMs": 529
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "No native raster comparison or visual inspection.",
+    "No physical-watch measurements or battery claims.",
+    "Simulator heap snapshots include test harness overhead and exclude graphics-pool usage and within-frame allocation peaks.",
+    "Host elapsed milliseconds are diagnostic only, not hardware execution times.",
+    "Early simulator timeouts also affected a previously passing bitmap control. All six final cases passed after restarting the audit simulator. The zero-area prototype correction and restart were both applied; neither is claimed as the sole timeout cause."
+  ]
+}

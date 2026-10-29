@@ -492,7 +492,8 @@ class DesignerView extends WatchUi.WatchFace {
             var glyph = glyphFor(font, measuredCode);
             if (glyph != null) {
                 if (_fontInkBounds[element[1]]) {
-                    total = Math.max(total, advance + glyph[2]);
+                    var rightEdge = advance + glyph[2];
+                    if (rightEdge > total) { total = rightEdge; }
                 } else {
                     total += glyph[5];
                 }
