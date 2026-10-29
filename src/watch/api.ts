@@ -121,3 +121,6 @@ export const setDateSource = (scene: Scene, elementId: string, source: DateSourc
 /** Rebuild editable text from source fonts before editing or exporting it. */
 export const refreshFonts = (scene: Scene, signal?: AbortSignal) =>
     post<WatchMapping>("refresh-fonts", { scene }, signal);
+
+export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSignal) =>
+    post<WatchMapping>("fit-box", { scene, elementId }, signal);

@@ -141,3 +141,23 @@ day/night frames, with a maximum sampled application heap of 64,240 bytes includ
 the test harness. Coverage tests check analytic areas, cropped resource pixels,
 positions, shared colours and native-size bounds. Native framebuffer parity,
 visual appearance and hardware power consumption remain unverified.
+
+## Independent element boxes
+
+The right element sidebar exposes X, Y, width and height in native pixels. Numeric
+fields accept bounded arithmetic with precedence and parentheses and round the
+final result to a whole pixel. Expressions are parsed as arithmetic; no script
+evaluation or dependencies are used. Invalid dimensions remain subject to the
+existing screen, circle and chart constraints.
+
+Text dimensions set `boxSizing: "fixed"`. The box clips glyphs without scaling
+them, and survives font refresh, typography changes and clock/date format edits.
+Native and preview clipping both use the explicit box height. Automatic text
+bounds still reserve the widest live value, which can leave horizontal space
+around narrower times. Fit automatically restores that sizing around the box
+centre. Switching a fixed text element to a ring restores square ring geometry.
+
+Build, lint and 197 tests passed for this update. A scene with clipped combined
+time/half-seconds, a taller date box and a bottom-aligned divider compiled on all
+three targets; its 47 mm simulator day/night drawing test passed. Visual UI and
+native raster parity remain unverified by the agent.

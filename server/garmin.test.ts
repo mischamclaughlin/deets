@@ -524,3 +524,22 @@ test("font refresh upgrades the initial scene and keeps strict scene-only reques
     }
     assert.equal((await requestApi("/api/garmin/refresh-fonts", [], { origin: "https://attacker.example" })).status, 403);
 });
+
+test("manual text boxes retain independent dimensions and can return to automatic fitting", async () => {
+    const headers = { "content-type": "application/json" };
+    const manual = { ...scene, elements: scene.elements.map((element) => ({ ...element, boxSizing: "fixed" as const, width: 180, height: 40 })) };
+    const changed = await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene: manual }))], headers);
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    const fixed = changed.body as unknown as WatchMapping;
+    assert.equal(fixed.scene.elements[0].height, 40);
+    assert.ok(fixed.ops.every((op) => op.x >= 88 && op.y >= 164 && op.x + op.width <= 268 && op.y + op.height <= 204));
+    const fitted = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time" }))], headers);
+    assert.equal(fitted.status, 200, JSON.stringify(fitted.body));
+    assert.equal((fitted.body as unknown as WatchMapping).scene.elements[0].boxSizing, undefined);
+    const missing = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene }))], headers);
+    assert.equal(missing.status, 400);
+    const extra = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time", width: 42 }))], headers);
+    assert.equal(extra.status, 400);
+    const crossOrigin = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time" }))], { ...headers, origin: "https://example.com" });
+    assert.equal(crossOrigin.status, 403);
+});

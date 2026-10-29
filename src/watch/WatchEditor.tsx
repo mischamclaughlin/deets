@@ -6,6 +6,7 @@ import { moveElement } from "./snapping.ts";
 import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
+import { ElementBoxPanel } from "./ElementBoxPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
 import { ColourPresetsPanel } from "./ColourPresetsPanel.tsx";
 import { ElementColourPanel } from "./ElementColourPanel.tsx";
@@ -220,6 +221,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                     onSceneChange={setScene} onSelect={setSelectedId} />}
+                {selected && <ElementBoxPanel key={`${selected.id}-${selected.x}-${selected.y}-${selected.width}-${selected.height}-${selected.font}`}
+                    scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {scene.elements.some((element) => element.id === selectedId && (isClockSource(element.source) || element.source === "divider")) && (
                     <>

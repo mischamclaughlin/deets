@@ -116,6 +116,11 @@ def dispatch(request):
         if set(payload) != {"scene"}:
             raise ValueError("Choose a scene to refresh its fonts.")
         return layout({"scene": refresh_fonts(payload["scene"])})
+    if operation == "fit-box":
+        from designer_typography import fit_text_box
+        if set(payload) != {"scene", "elementId"}:
+            raise ValueError("Choose a scene and text element to fit its box.")
+        return layout({"scene": fit_text_box(payload["scene"], payload["elementId"])})
     if operation == "typography":
         from designer_typography import apply
         if set(payload) != {"scene", "elementId", "typography"}:

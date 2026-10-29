@@ -234,7 +234,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -318,8 +318,10 @@ def validate_scene(payload):
             if any((2 * corner_x - size) ** 2 + (2 * corner_y - size) ** 2 > radius_twice ** 2
                    for corner_x in (x, x + width) for corner_y in (y, y + height)):
                 raise ValueError(f"Element '{identity}' must fit inside the circumference boundary.")
-        if info["kind"] == "text" and height != pack["fonts"][font]["height"]:
-            raise ValueError("Text height must match its native bitmap font.")
+        if "boxSizing" in original and (info["kind"] != "text" or original["boxSizing"] != "fixed"):
+            raise ValueError("Only text elements can use a fixed clipping box.")
+        if info["kind"] == "text" and original.get("boxSizing") != "fixed" and height != pack["fonts"][font]["height"]:
+            raise ValueError("Automatic text height must match its native bitmap font.")
         if info["kind"] == "solar" and height < 3:
             raise ValueError("A solar timeline needs at least three pixels of height.")
         if not isinstance(original["align"], str) or original["align"] not in {"left", "centre", "right"}:
@@ -341,6 +343,8 @@ def validate_scene(payload):
         for link_key in ("colourPresetId", "nightColourPresetId"):
             if link_key in original:
                 result[link_key] = original[link_key]
+        if "boxSizing" in original:
+            result["boxSizing"] = original["boxSizing"]
         if "typography" in original:
             result["typography"] = typography
         if "textPresetId" in original:

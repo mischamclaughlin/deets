@@ -79,7 +79,6 @@ def _font_code(pack, used_fonts, needed_codes):
             glyphs.append(f"{int(code)} => {_mc(row)}")
         blocks.append(
             f"        _fonts.add({{{', '.join(glyphs)}}});\n"
-            f"        _fontHeights.add({font['height']});\n"
             f"        _fontInkBounds.add({_mc(font.get('inkBounds', False))});"
         )
     return "\n".join(blocks)
@@ -341,7 +340,6 @@ import Toybox.Lang;
 class DesignerView extends WatchUi.WatchFace {
     private var _elements as Array<Array> = @ELEMENTS@;
     private var _fonts as Array<Dictionary> = [];
-    private var _fontHeights as Array<Number> = [];
     private var _fontInkBounds as Array<Boolean> = [];
     private var _nativeFonts as Array<WatchUi.FontResource> = [];
     private var _fontResources as Array<ResourceId> = @FONT_RESOURCES@;
@@ -417,7 +415,7 @@ class DesignerView extends WatchUi.WatchFace {
         }
         var nativeFont = _nativeFonts[element[1]];
         dc.setColor(night ? element[7] : element[6], Graphics.COLOR_TRANSPARENT);
-        dc.setClip(element[2], element[3], element[4], _fontHeights[element[1]]);
+        dc.setClip(element[2], element[3], element[4], element[11]);
         for (var i = 0; i < operations.size(); i += 1) {
             var operation = operations[i];
             dc.drawText(operation[0], operation[1], nativeFont,
@@ -453,7 +451,7 @@ class DesignerView extends WatchUi.WatchFace {
         var left = element[2];
         var right = left + element[4];
         var top = element[3];
-        var bottom = top + _fontHeights[element[1]];
+        var bottom = top + element[11];
         for (var i = 0; i < characters.size(); i += 1) {
             var code = characters[i].toNumber();
             if (element[18] && i >= 5) { code += 57344; }
@@ -463,7 +461,7 @@ class DesignerView extends WatchUi.WatchFace {
             var dx = pen;
             var glyphY = top + glyph[4];
             if (element[0].equals("divider")) {
-                var spare = _fontHeights[element[1]] - glyph[3];
+                var spare = element[11] - glyph[3];
                 glyphY = top;
                 if (element[16] == 1) { glyphY += Math.floor(spare / 2.0).toNumber(); }
                 if (element[16] == 2) { glyphY += spare; }

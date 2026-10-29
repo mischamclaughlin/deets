@@ -43,7 +43,7 @@ def element_settings(element, device):
         return dict(element["typography"])
     from designer_model import font_pack
     height = (font_pack(device)["fonts"][element["font"]]["height"]
-              if element["source"] == "secondsRing" else element["height"])
+              if element["source"] == "secondsRing" or element.get("boxSizing") == "fixed" else element["height"])
     return {"family": "widget" if element["font"] in {"widget", "date"} else "time",
         "size": height, "thickness": 0, "width": 100, "letterSpacing": 1}
 
@@ -398,10 +398,15 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
     element = _clock_target(edited, element_id)
     source = changes.get("source", element["source"])
     if source == "secondsRing":
+        element.pop("boxSizing", None)
         if element["source"] != "secondsRing":
             from designer_model import DEVICES
             size = DEVICES[scene["device"]]
             element.update(x=0, y=0, width=size, height=size)
+        element.update(**changes)
+    elif element.get("boxSizing") == "fixed":
+        # Manual boxes own their geometry independently of glyph dimensions.
+        # Font refresh, presets and format edits must not silently resize them.
         element.update(**changes)
     else:
         seconds_size = changes.get("secondsSize", element.get("secondsSize", "full"))
@@ -424,6 +429,19 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
         return validate_scene(edited)
     except ValueError as error:
         raise ValueError("This text setting does not fit at the element's position inside the watch boundary. Reduce size or width, or move it towards the centre.") from error
+
+
+def fit_text_box(scene, element_id):
+    """Restore automatic text bounds from a valid fixed box in one atomic edit."""
+    from designer_model import validate_scene, scene_font_pack
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    if target["source"] == "secondsRing":
+        raise ValueError("Select a time, date or divider text element to fit its box.")
+    metrics = scene_font_pack(scene)["fonts"][target["font"]]
+    edited = copy.deepcopy(scene)
+    _clock_target(edited, element_id).pop("boxSizing", None)
+    return _fit_clock(edited, element_id, metrics)
 
 
 def set_clock_source(scene, element_id, source):
