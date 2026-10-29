@@ -1,8 +1,12 @@
 # Garmin font rendering audit
 
-Investigation: 28–29 October 2026. Status: comparison complete; native font backend
-is recommended for the next migration, with pixel and power acceptance still open.
-The production renderer retains glyph bitmaps. Its API 5.2 text-layout failure is fixed.
+Historical comparison. The native font backend was subsequently enabled on
+29 October 2026; see [production migration](../garmin-native-font-export.md).
+Recorded measurements below describe the audit versions, not the current exporter.
+
+Investigation: 28–29 October 2026. Status at the time of comparison: native font resources recommended, with pixel
+and power acceptance open. The production renderer then retained glyph bitmaps;
+its API 5.2 text-layout failure had been fixed.
 
 ## Recommendation
 
@@ -138,7 +142,10 @@ Anti-aliased text is a subsequent target-format decision: retain coverage values
 compile a supported font format, and reproduce its colour conversion and blending
 in the preview before claiming equivalence.
 
-## Reproduce
+## Current validation commands
+
+The historical two-backend comparison tool is preserved in commit `f6a8d3d`.
+Current audit tools validate production native-font exports once per scene.
 
 Use new output directory names; both tools refuse existing directories and leave
 the production exporter and earlier audit outputs intact.

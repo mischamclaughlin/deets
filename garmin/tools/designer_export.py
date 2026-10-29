@@ -7,13 +7,12 @@ introduced by the exported renderer.
 
 import hashlib
 import json
-import struct
-import zlib
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from designer_model import CATALOG, scene_font_pack, validate_scene
-from designer_charts import chart_ops, ring_geometry, ring_signature
+from designer_charts import chart_ops, ring_geometry, ring_signature, device_colour
+from designer_fonts import write_fonts, graphics_cost, FONT_GRAPHICS_BUDGET
 
 
 TYPE_SOURCES = {
@@ -31,7 +30,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     for key in used_fonts:
         digest.update(key.encode())
@@ -62,44 +61,6 @@ def _mc(value):
     if isinstance(value, (list, tuple)):
         return "[" + ", ".join(_mc(item) for item in value) + "]"
     raise TypeError(f"Unsupported generated value: {type(value).__name__}")
-
-
-def _coloured_atlas(mask, colour, crop=None):
-    """Encode the canonical binary alpha mask as a transparent two-colour PNG.
-
-    Garmin cannot tint palette bitmaps at runtime. Packing the selected colour
-    here retains the exact alpha pixels and avoids uncompressed ARGB resources.
-    """
-    atlas_width, atlas_height = struct.unpack(">II", mask[16:24])
-    left, top, width, height = crop if crop is not None else (0, 0, atlas_width, atlas_height)
-    offset, compressed = 8, bytearray()
-    while offset < len(mask):
-        length = struct.unpack(">I", mask[offset:offset + 4])[0]
-        kind = mask[offset + 4:offset + 8]
-        if kind == b"IDAT":
-            compressed.extend(mask[offset + 8:offset + 8 + length])
-        offset += length + 12
-    raw = zlib.decompress(compressed)
-    stride = atlas_width * 4 + 1
-    packed = bytearray()
-    for y in range(height):
-        row = raw[(top + y) * stride:(top + y + 1) * stride]
-        if row[0] != 0:
-            raise ValueError("The canonical atlas encoder changed its PNG row filter.")
-        packed.append(0)
-        for start in range(0, width, 8):
-            value = 0
-            for bit in range(8):
-                x = start + bit
-                if x < width and row[1 + (left + x) * 4 + 3]:
-                    value |= 1 << (7 - bit)
-            packed.append(value)
-    def chunk(kind, payload):
-        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
-    rgb = bytes(((colour >> 16) & 255, (colour >> 8) & 255, colour & 255))
-    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 1, 3, 0, 0, 0))
-            + chunk(b"PLTE", b"\0\0\0" + rgb) + chunk(b"tRNS", bytes((0, 255)))
-            + chunk(b"IDAT", zlib.compress(packed, 9)) + chunk(b"IEND", b""))
 
 
 def _catalogue():
@@ -155,43 +116,30 @@ RESOURCE_BUDGET = 32 * 1024
 
 
 def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
-    """Conservative VM allocation allowance above the provider/runtime baseline.
+    """Conservative application-heap allowance above the provider baseline.
 
-    Count both mode lookup tables, the larger mode's live glyph bitmaps, cached
-    glyph positions, packed seconds-ring masks and proof rectangles. Native bitmap headers/containers are
-    deliberately budgeted above their payload size; this is a rejection guard,
-    not a claim to predict the VM's exact peak allocation.
+    Native fonts are shared across colours and preloaded once. Count font metadata,
+    references and cached positions here; coverage storage has a separate graphics
+    pool guard. Estimates are rejection guards, not measured allocation peaks.
+    pair_codes remains accepted for callers of the historical audit interface.
     """
-    metadata = sum(48 * sum(str(code) in pack["fonts"][font]["glyphs"] for code in codes)
+    del pair_codes
+    metadata = sum(192 * sum(str(code) in pack["fonts"][font]["glyphs"] for code in codes)
                    for font, codes in needed_codes.items())
-    lookup = sum(24 * sum(str(code) in pack["fonts"][font]["glyphs"] for code in codes)
-                 for (font, _), codes in pair_codes.items())
-    mode_costs = []
-    for night in (False, True):
-        pairs = {(element["font"], element["nightColour" if night else "colour"])
-                 for element in scene["elements"]
-                 if catalogue[element["source"]]["kind"] == "text"
-                 and element["visible"] != ("day" if night else "night")}
-        bitmap_cost = 0
-        for font, colour in pairs:
-            for code in pair_codes[(font, colour)]:
-                glyph = pack["fonts"][font]["glyphs"].get(str(code))
-                if glyph and glyph["width"] and glyph["height"]:
-                    bitmap_cost += 64 + ((glyph["width"] + 7) // 8) * glyph["height"]
-        cache_cost = 0
-        for element in scene["elements"]:
-            source = element["source"]
-            if catalogue[source]["kind"] != "text" or element["visible"] == ("day" if night else "night"):
-                continue
-            font = pack["fonts"][element["font"]]
-            advances = [glyph["xadvance"] for code, glyph in font["glyphs"].items()
-                        if int(code) in needed_codes[element["font"]] and glyph["xadvance"] > 0]
-            maximum = len(element.get("text", "")) if source == "label" else 24
-            if proof and source != "label":
-                maximum = len(str(catalogue[source]["sample"]))
-            visible = min(maximum, element["width"] // min(advances, default=1) + 2)
-            cache_cost += 32 * visible + 48
-        mode_costs.append(bitmap_cost + cache_cost)
+    references = 96 * len(needed_codes)
+    cache_cost = 0
+    for element in scene["elements"]:
+        source = element["source"]
+        if catalogue[source]["kind"] != "text":
+            continue
+        font = pack["fonts"][element["font"]]
+        advances = [glyph["xadvance"] for code, glyph in font["glyphs"].items()
+                    if int(code) in needed_codes[element["font"]] and glyph["xadvance"] > 0]
+        maximum = len(element.get("text", "")) if source == "label" else 24
+        if proof and source != "label":
+            maximum = len(str(catalogue[source]["sample"]))
+        visible = min(maximum, element["width"] // min(advances, default=1) + 2)
+        cache_cost += 64 * visible + 48
     rectangles = 0
     if proof:
         for element in scene["elements"]:
@@ -201,7 +149,7 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
     # slot/container overhead. Equal width/outer/inner radius triples share the same immutable table.
     rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
     ring_cost = sum(64 + sum(48 + 16 * len(group) for group in ring_geometry(*signature)) for signature in rings)
-    return metadata + lookup + max(mode_costs, default=0) + rectangles + ring_cost + 80 * len(scene["elements"])
+    return metadata + references + cache_cost + rectangles + ring_cost + 80 * len(scene["elements"])
 
 
 def _provider_patch(project, types, widget_types):
@@ -248,22 +196,17 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
                          if catalogue[element["source"]]["kind"] == "text"})
     font_indices = {key: index for index, key in enumerate(used_fonts)}
     needed_codes = {key: set() for key in used_fonts}
-    pair_codes = {}
     for element in scene["elements"]:
         if catalogue[element["source"]]["kind"] != "text":
             continue
         codes = _element_codes(element, catalogue, proof)
         needed_codes[element["font"]].update(codes)
-        for night, colour_key in ((False, "colour"), (True, "nightColour")):
-            if element["visible"] == ("day" if night else "night"):
-                continue
-            pair_codes.setdefault((element["font"], element[colour_key]), set()).update(codes)
-    estimated_cost = _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof)
+    estimated_cost = _resource_cost(scene, pack, catalogue, needed_codes, {}, proof)
     if estimated_cost > RESOURCE_BUDGET:
         raise ValueError("This design exceeds the watch's conservative resource budget. "
-                         "Use fewer font/colour combinations, shorter labels or fewer elements before exporting.")
-    atlas_pairs = sorted(pair_codes)
-    atlas_indices = {pair: index for index, pair in enumerate(atlas_pairs)}
+                         "Use fewer font styles, shorter labels or fewer elements before exporting.")
+    if graphics_cost(pack, needed_codes) > FONT_GRAPHICS_BUDGET:
+        raise ValueError("This design exceeds the conservative font graphics budget. Use fewer or smaller font styles before exporting.")
     ring_indices = {signature: index for index, signature in enumerate(sorted({ring_signature(scene, element)
         for element in scene["elements"] if element["source"] == "secondsRing"}))}
     rows = []
@@ -279,11 +222,11 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         rows.append([
             source, font_indices.get(element["font"], 0), element["x"], element["y"],
             element["width"], {"left": 0, "centre": 1, "right": 2}[element["align"]],
-            element["colour"], element["nightColour"],
+            device_colour(element["colour"]) if kind == "text" else element["colour"],
+            device_colour(element["nightColour"]) if kind == "text" else element["nightColour"],
             {"both": 0, "day": 1, "night": 2}[element["visible"]],
             (element.get("dividerSymbol", ":") if source == "divider" else element.get("text", "")), kind, element["height"], day_rectangles, night_rectangles,
-            atlas_indices.get((element["font"], element["colour"]), -1),
-            atlas_indices.get((element["font"], element["nightColour"]), -1),
+            -1, -1,  # Reserved legacy colour-resource slots; fonts now use runtime colour.
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
             ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
             source == "timeSeconds" and element.get("secondsSize", "full") == "half",
@@ -298,7 +241,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     for source_file in (project / "source").glob("*.mc"):
         if source_file.name not in retained:
             source_file.unlink()
-    # The generated renderer uses glyph bitmaps only. Do not import unrelated
+    # The generated renderer uses its own native fonts. Do not import unrelated
     # native fonts/icons/settings into the exported application's resource table.
     for descriptor in project.glob("resources-epix2pro*/fonts/fonts.xml"):
         descriptor.unlink()
@@ -315,25 +258,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         strings = ET.Element("strings")
         ET.SubElement(strings, "string", {"id": "AppName"}).text = "Epix Canvas"
         ET.ElementTree(strings).write(legacy_strings, encoding="utf-8", xml_declaration=True)
-    assets = project / "resources/designer"
-    assets.mkdir(parents=True, exist_ok=True)
-    resources = ET.Element("drawables")
-    glyph_resources = []
-    for index, (key, colour) in enumerate(atlas_pairs):
-        entries = []
-        for code, glyph in pack["fonts"][key]["glyphs"].items():
-            if int(code) not in pair_codes[(key, colour)] or glyph["width"] <= 0 or glyph["height"] <= 0:
-                continue
-            filename = f"glyph-{key.replace(chr(58), chr(45))}-{colour:06x}-{code}.png"
-            crop = tuple(glyph[field] for field in ("x", "y", "width", "height"))
-            (assets / filename).write_bytes(_coloured_atlas(pack["images"][key], colour, crop))
-            resource_id = f"DesignerGlyph{index}_{code}"
-            ET.SubElement(resources, "bitmap", {
-                "id": resource_id, "filename": f"designer/{filename}", "automaticPalette": "true",
-            })
-            entries.append(f"{code} => Rez.Drawables.{resource_id}")
-        glyph_resources.append(f"{index} => {{{', '.join(entries)}}}")
-    ET.ElementTree(resources).write(project / "resources/designer.xml", encoding="utf-8", xml_declaration=True)
+    font_resources = write_fonts(project, pack, used_fonts, needed_codes)
     manifest_path = project / "manifest.xml"
     manifest = ET.parse(manifest_path)
     application = manifest.find("{http://www.garmin.com/xml/connectiq}application")
@@ -357,7 +282,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         "@BACKGROUND@": str(scene["background"]), "@PROOF@": _mc(proof),
         "@FORCED_NIGHT@": _mc(preview_night), "@SAMPLES@": "{" + proof_dictionary + "}",
         "@RING_TABLE@": ring_table,
-        "@GLYPH_RESOURCES@": "{" + ", ".join(glyph_resources) + "}",
+        "@FONT_RESOURCES@": "[" + ", ".join(font_resources) + "]",
     }
     for marker, replacement in replacements.items():
         source = source.replace(marker, replacement)
@@ -389,9 +314,8 @@ class DesignerView extends WatchUi.WatchFace {
     private var _fonts as Array<Dictionary> = [];
     private var _fontHeights as Array<Number> = [];
     private var _fontInkBounds as Array<Boolean> = [];
-    private var _bitmaps as Dictionary<ResourceId, WatchUi.BitmapResource> = {};
-    private var _glyphResources as Dictionary<Number, Dictionary<Number, ResourceId>> = @GLYPH_RESOURCES@;
-    private var _atlasNight = null;
+    private var _nativeFonts as Array<WatchUi.FontResource> = [];
+    private var _fontResources as Array<ResourceId> = @FONT_RESOURCES@;
     private var _lowPower = false;
     private var _forcedNight = @FORCED_NIGHT@;
     private var _proof = @PROOF@;
@@ -407,6 +331,9 @@ class DesignerView extends WatchUi.WatchFace {
     function initialize() {
         WatchFace.initialize();
 @FONTS@
+        for (var i = 0; i < _fontResources.size(); i += 1) {
+            _nativeFonts.add(WatchUi.loadResource(_fontResources[i]) as WatchUi.FontResource);
+        }
         _provider = new EpixCanvasComplicationProvider();
         _provider.designerConfigure();
         _clockProvider = new EpixCanvasDataProvider();
@@ -421,7 +348,6 @@ class DesignerView extends WatchUi.WatchFace {
 
     function onUpdate(dc) {
         var night = _forcedNight == null ? _lowPower : _forcedNight;
-        loadAtlases(night);
         var background = night ? 0 : @BACKGROUND@;
         dc.setColor(background, background);
         dc.clear();
@@ -445,12 +371,6 @@ class DesignerView extends WatchUi.WatchFace {
         }
     }
 
-    private function loadAtlases(night as Boolean) {
-        if (_atlasNight != null && _atlasNight == night) { return; }
-        _bitmaps = {};
-        _atlasNight = night;
-    }
-
     private function glyphFor(font as Dictionary, code as Number) as Array<Number> or Null {
         if (font.hasKey(code)) { return font[code] as Array<Number>; }
         if (font.hasKey(63)) { return font[63] as Array<Number>; }
@@ -466,16 +386,13 @@ class DesignerView extends WatchUi.WatchFace {
             operations = layoutText(element, text);
             _glyphCache[index] = [text, operations];
         }
-        var atlasIndex = (night ? element[15] : element[14]) as Number;
-        var resources = _glyphResources[atlasIndex];
+        var nativeFont = _nativeFonts[element[1]];
+        dc.setColor(night ? element[7] : element[6], Graphics.COLOR_TRANSPARENT);
         dc.setClip(element[2], element[3], element[4], _fontHeights[element[1]]);
         for (var i = 0; i < operations.size(); i += 1) {
             var operation = operations[i];
-            var resource = resources[operation[2]] as ResourceId;
-            if (!_bitmaps.hasKey(resource)) {
-                _bitmaps[resource] = WatchUi.loadResource(resource);
-            }
-            dc.drawBitmap(operation[0], operation[1], _bitmaps[resource]);
+            dc.drawText(operation[0], operation[1], nativeFont,
+                        operation[2].toChar().toString(), Graphics.TEXT_JUSTIFY_LEFT);
         }
         dc.clearClip();
     }

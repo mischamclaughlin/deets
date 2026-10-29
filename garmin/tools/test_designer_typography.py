@@ -96,9 +96,9 @@ class TypographyTests(unittest.TestCase):
             shutil.copytree(model.ROOT / "resources", project / "resources")
             shutil.copy2(model.ROOT / "manifest.xml", project / "manifest.xml")
             exporter.prepare_scene_project(project, scene)
-            paths = list((project / "resources/designer").glob("glyph-generated-*.png"))
+            paths = list((project / "resources/designer-fonts").glob("font-*.fnt"))
             self.assertTrue(paths)
-            self.assertNotIn("generated:", paths[0].name)
+            self.assertEqual(paths[0].name, "font-0.fnt")
             source = (project / "source/DesignerView.mc").read_text()
             self.assertIn("advance + glyph[2]", source)
 

@@ -34,33 +34,30 @@ class DesignerExportTests(unittest.TestCase):
         shutil.copy2(ROOT / "source/EpixCanvasComplications.mc", project / "source/EpixCanvasComplications.mc")
         return project
 
-    def test_generated_atlas_and_metrics_are_the_shared_native_pixels(self):
+    def test_native_font_mask_and_metrics_are_the_shared_native_pixels(self):
         scene = self.scene()
         pack = font_pack(scene["device"])
         with tempfile.TemporaryDirectory() as temporary:
             project = self.project(temporary)
             exporter.prepare_scene_project(project, scene)
-            glyph = pack["fonts"]["time"]["glyphs"]["48"]
-            packed = (project / "resources/designer/glyph-time-4d9de0-48.png").read_bytes()
-            original_pixels = subprocess.check_output(["magick", "png:-", "-depth", "8", "rgba:-"], input=pack["images"]["time"])
-            exported_pixels = subprocess.check_output(["magick", "png:-", "-depth", "8", "rgba:-"], input=packed)
-            atlas_width = pack["fonts"]["time"]["atlasWidth"]
-            expected_alpha = bytes(original_pixels[((glyph["y"] + y) * atlas_width + glyph["x"] + x) * 4 + 3]
-                                   for y in range(glyph["height"]) for x in range(glyph["width"]))
-            self.assertEqual(expected_alpha, exported_pixels[3::4])
-            for index in range(0, len(exported_pixels), 4):
-                if exported_pixels[index + 3]:
-                    self.assertEqual(exported_pixels[index:index + 3], bytes((0x4d, 0x9d, 0xe0)))
+            original = subprocess.check_output(["magick", "png:-", "-alpha", "extract", "-depth", "8", "gray:-"], input=pack["images"]["time"])
+            exported = subprocess.check_output(["magick", str(project / "resources/designer-fonts/font-0.png"), "-depth", "8", "gray:-"])
+            self.assertEqual(original, exported)
             source = (project / "source/DesignerView.mc").read_text()
             glyph = pack["fonts"]["time"]["glyphs"]["48"]
             expected = [glyph[k] for k in ("x", "y", "width", "height", "yoffset", "xadvance")]
             self.assertIn("48 => " + exporter._mc(expected), source)
             self.assertIn("Math.floor((element[4] - total) / 2.0).toNumber()", source)
-            self.assertIn("dc.drawBitmap(operation[0], operation[1], _bitmaps[resource])", source)
+            self.assertIn("dc.drawText", source)
             self.assertIn("dc.setClip(element[2], element[3], element[4]", source)
-            self.assertNotIn("dc.drawText", source)
+            draw = source.split("private function drawTextElement", 1)[1].split("private function layoutText", 1)[0]
+            self.assertNotIn("WatchUi.loadResource", draw)
+            initialise = source.split("function initialize()", 1)[1].split("function onShow()", 1)[0]
+            self.assertIn("WatchUi.loadResource", initialise)
+            self.assertNotIn("dc.drawBitmap", source)
             self.assertNotIn("@", source)
-            self.assertEqual(len(ET.parse(project / "resources/designer.xml").findall("bitmap")), 22)
+            self.assertEqual(len(list(ET.parse(project / "resources/designer-fonts.xml").getroot().iter("font"))), 1)
+            self.assertFalse((project / "resources/designer.xml").exists())
             self.assertNotIn(":tintColor", source)
             self.assertEqual(ET.parse(project / "resources/designer_strings.xml").find("string").text, scene["name"])
 
@@ -125,13 +122,13 @@ class DesignerExportTests(unittest.TestCase):
             self.assertIn("_slotTypes = [2];", provider)
             self.assertIn("_widgetTypes = [2];", provider)
 
-    def test_resource_guard_rejects_excessive_unique_colour_labels(self):
+    def test_resource_guard_rejects_excessive_text_caches(self):
         scene = self.scene()
         scene["elements"] = []
         for index in range(40):
             scene["elements"].append({"id": f"label{index}", "source": "label", "font": "widget",
-                "x": 5, "y": 5, "width": 400, "align": "left", "colour": index + 1,
-                "nightColour": index + 100, "visible": "both",
+                "x": 5, "y": 5, "width": 400, "align": "left", "colour": 0xffffff,
+                "nightColour": 0x999999, "visible": "both",
                 "text": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"})
         scene = validate_scene(scene)
         with tempfile.TemporaryDirectory() as temporary:

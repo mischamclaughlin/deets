@@ -1,4 +1,4 @@
-"""Exercise both font prototypes through CLI simulator tests without reading pixels.
+"""Exercise the production native-font renderer through CLI simulator tests without reading pixels.
 
 Start the Connect IQ simulator first. These instrumented tests measure application
 heap snapshots after frames, including test overhead. They do not measure graphics
@@ -14,7 +14,7 @@ import re
 import subprocess
 import xml.etree.ElementTree as ET
 
-import audit_font_rendering as comparison
+import audit_font_rendering as rendering
 import bridge
 import designer_model as model
 
@@ -131,19 +131,16 @@ def main(argv=None):
     except FileExistsError:
         parser.error("The output directory already exists; choose a fresh dedicated directory.")
     report = {"method": __doc__, "device": args.device, "frames_per_mode": FRAMES, "runs": []}
-    for name, scene in comparison.scenes(args.device).items():
-        for variant in ("glyph-bitmaps", "native-fonts"):
-            project = out / name / variant
-            comparison.project_for(scene, project)
-            if variant == "native-fonts":
-                comparison.native_fonts(project, scene)
-            instrument(project, args.device)
-            result = {"scene": name, "variant": variant, **run_project(project, args.device)}
-            report["runs"].append(result)
-            (out / "results.json").write_text(json.dumps(report, indent=2))
-            print(json.dumps(result), flush=True)
-            if not result["passed"]:
-                raise RuntimeError(f"Simulator audit failed; see {project / 'runtime.log'}.")
+    for name, scene in rendering.scenes(args.device).items():
+        project = out / name / "native-fonts"
+        rendering.project_for(scene, project)
+        instrument(project, args.device)
+        result = {"scene": name, "variant": "native-fonts", **run_project(project, args.device)}
+        report["runs"].append(result)
+        (out / "results.json").write_text(json.dumps(report, indent=2))
+        print(json.dumps(result), flush=True)
+        if not result["passed"]:
+            raise RuntimeError(f"Simulator audit failed; see {project / 'runtime.log'}.")
     return report
 
 

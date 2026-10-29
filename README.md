@@ -185,3 +185,10 @@ the canvas; `--proof --night` selects its night rendering. A normal export alway
 uses live watch data and normal power callbacks. Compare the browser raster
 against a native simulator **Save Screen Capture** image. Physical-watch
 installation is a separate verification step.
+
+## Native Garmin fonts
+
+Text exports use Garmin `.fnt` resources generated from the same glyph masks and
+metrics as the preview. Each font style is loaded once and shared across day/night
+colours. See [native font export](docs/garmin-native-font-export.md) for the asset
+contract, resource guards, verification and remaining visual-review limits.

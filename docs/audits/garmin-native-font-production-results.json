@@ -1,0 +1,338 @@
+{
+  "verified_on": "2026-10-29",
+  "sdk": "Connect IQ SDK9.3.0; API5.2 target profiles",
+  "backend": "Production native .fnt fonts, preloaded independently of colour.",
+  "source_hashes": {
+    "garmin/tools/designer_export.py": "69c9b8bc94c1534861a01dca5f1dde6e8afe0ad709b7c9c10c188abb1052b645",
+    "garmin/tools/designer_fonts.py": "f0a949fbee2fc45ff7e5b109b831c79f93d1fbd2b6bf8eb2f5b517eabbf099f9",
+    "garmin/tools/audit_font_runtime.py": "b05e6c1e82dcb996d058c9b860f15b0bdbdde49dc9aa0b1f3bbbb3a0b76d040f"
+  },
+  "representative_builds": {
+    "method": "Compile the production native-font exporter on representative watch scenes.\n\nThis audits current production output, not the retired coloured-glyph prototype.\nHistorical comparison results remain historical evidence. No simulator pixels or\nruntime-memory measures are taken by this compile-only tool.\n",
+    "results": [
+      {
+        "device": "epix2pro42mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140652,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16354,
+        "generated_asset_file_bytes": 2844,
+        "compile_seconds": 2.211,
+        "conservative_resource_guard_estimate": 3360
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144444,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 17901,
+        "generated_asset_file_bytes": 7286,
+        "compile_seconds": 2.416,
+        "conservative_resource_guard_estimate": 12288
+      },
+      {
+        "device": "epix2pro42mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145644,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18468,
+        "generated_asset_file_bytes": 8028,
+        "compile_seconds": 2.418,
+        "conservative_resource_guard_estimate": 17408
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140652,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16355,
+        "generated_asset_file_bytes": 2844,
+        "compile_seconds": 2.168,
+        "conservative_resource_guard_estimate": 3360
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144444,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 17902,
+        "generated_asset_file_bytes": 7286,
+        "compile_seconds": 2.266,
+        "conservative_resource_guard_estimate": 12288
+      },
+      {
+        "device": "epix2pro47mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145644,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18468,
+        "generated_asset_file_bytes": 8028,
+        "compile_seconds": 2.231,
+        "conservative_resource_guard_estimate": 17408
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "simple",
+        "variant": "native-fonts",
+        "prg_bytes": 140652,
+        "font_resources": 1,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 16355,
+        "generated_asset_file_bytes": 2844,
+        "compile_seconds": 2.237,
+        "conservative_resource_guard_estimate": 3360
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "prg_bytes": 144444,
+        "font_resources": 2,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 17902,
+        "generated_asset_file_bytes": 7286,
+        "compile_seconds": 2.281,
+        "conservative_resource_guard_estimate": 12288
+      },
+      {
+        "device": "epix2pro51mm",
+        "scene": "stress",
+        "variant": "native-fonts",
+        "prg_bytes": 145644,
+        "font_resources": 4,
+        "bitmap_resources": 1,
+        "designer_source_bytes": 18468,
+        "generated_asset_file_bytes": 8028,
+        "compile_seconds": 2.254,
+        "conservative_resource_guard_estimate": 17408
+      }
+    ]
+  },
+  "representative_runtime": {
+    "method": "Exercise the production native-font renderer through CLI simulator tests without reading pixels.\n\nStart the Connect IQ simulator first. These instrumented tests measure application\nheap snapshots after frames, including test overhead. They do not measure graphics\npool usage, within-frame peaks, hardware execution budgets or battery consumption.\n",
+    "device": "epix2pro47mm",
+    "frames_per_mode": 24,
+    "runs": [
+      {
+        "scene": "simple",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 29816,
+          "initialised": 34128,
+          "first": 34544,
+          "day": 34544,
+          "nightFirst": 34544,
+          "night": 34544,
+          "afterFrameMax": 34568,
+          "dayElapsedMs": 130,
+          "nightElapsedMs": 130
+        }
+      },
+      {
+        "scene": "mixed",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 36912,
+          "initialised": 45632,
+          "first": 46568,
+          "day": 46568,
+          "nightFirst": 46568,
+          "night": 46568,
+          "afterFrameMax": 46648,
+          "dayElapsedMs": 261,
+          "nightElapsedMs": 261
+        }
+      },
+      {
+        "scene": "stress",
+        "variant": "native-fonts",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 39080,
+          "initialised": 49288,
+          "first": 51872,
+          "day": 51872,
+          "nightFirst": 51872,
+          "night": 51872,
+          "afterFrameMax": 51896,
+          "dayElapsedMs": 530,
+          "nightElapsedMs": 542
+        }
+      }
+    ]
+  },
+  "extended_builds": [
+    {
+      "device": "epix2pro42mm",
+      "scene": "edge-formats",
+      "prg_bytes": 146428,
+      "font_resources": 3,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 19376,
+      "generated_asset_file_bytes": 8345,
+      "compile_seconds": 2.277
+    },
+    {
+      "device": "epix2pro42mm",
+      "scene": "blank",
+      "prg_bytes": 138284,
+      "font_resources": 0,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 15763,
+      "generated_asset_file_bytes": 0,
+      "compile_seconds": 1.701
+    },
+    {
+      "device": "epix2pro42mm",
+      "scene": "uploaded",
+      "prg_bytes": 143612,
+      "font_resources": 2,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 17744,
+      "generated_asset_file_bytes": 6350,
+      "compile_seconds": 2.24
+    },
+    {
+      "device": "epix2pro47mm",
+      "scene": "edge-formats",
+      "prg_bytes": 146428,
+      "font_resources": 3,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 19376,
+      "generated_asset_file_bytes": 8345,
+      "compile_seconds": 2.324
+    },
+    {
+      "device": "epix2pro47mm",
+      "scene": "blank",
+      "prg_bytes": 138284,
+      "font_resources": 0,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 15763,
+      "generated_asset_file_bytes": 0,
+      "compile_seconds": 1.739
+    },
+    {
+      "device": "epix2pro47mm",
+      "scene": "uploaded",
+      "prg_bytes": 143612,
+      "font_resources": 2,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 17744,
+      "generated_asset_file_bytes": 6350,
+      "compile_seconds": 2.245
+    },
+    {
+      "device": "epix2pro51mm",
+      "scene": "edge-formats",
+      "prg_bytes": 146428,
+      "font_resources": 3,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 19376,
+      "generated_asset_file_bytes": 8345,
+      "compile_seconds": 2.255
+    },
+    {
+      "device": "epix2pro51mm",
+      "scene": "blank",
+      "prg_bytes": 138284,
+      "font_resources": 0,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 15763,
+      "generated_asset_file_bytes": 0,
+      "compile_seconds": 1.701
+    },
+    {
+      "device": "epix2pro51mm",
+      "scene": "uploaded",
+      "prg_bytes": 143612,
+      "font_resources": 2,
+      "bitmap_resources": 1,
+      "designer_source_bytes": 17744,
+      "generated_asset_file_bytes": 6350,
+      "compile_seconds": 2.26
+    }
+  ],
+  "extended_runtime": {
+    "device": "epix2pro47mm",
+    "method": "Exercise the production native-font renderer through CLI simulator tests without reading pixels.\n\nStart the Connect IQ simulator first. These instrumented tests measure application\nheap snapshots after frames, including test overhead. They do not measure graphics\npool usage, within-frame peaks, hardware execution budgets or battery consumption.\n",
+    "runs": [
+      {
+        "scene": "edge-formats",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 43224,
+          "initialised": 55944,
+          "first": 59304,
+          "day": 61432,
+          "nightFirst": 61432,
+          "night": 61432,
+          "afterFrameMax": 61488,
+          "dayElapsedMs": 642,
+          "nightElapsedMs": 649
+        }
+      },
+      {
+        "scene": "blank",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 26864,
+          "initialised": 29472,
+          "first": 29632,
+          "day": 29632,
+          "nightFirst": 29632,
+          "night": 29632,
+          "afterFrameMax": 29632,
+          "dayElapsedMs": 44,
+          "nightElapsedMs": 44
+        }
+      },
+      {
+        "scene": "uploaded",
+        "passed": true,
+        "runner_exit_code": 1,
+        "metrics": {
+          "before": 36296,
+          "initialised": 44648,
+          "first": 45688,
+          "day": 45688,
+          "nightFirst": 45688,
+          "night": 45688,
+          "afterFrameMax": 45712,
+          "dayElapsedMs": 274,
+          "nightElapsedMs": 277
+        }
+      }
+    ]
+  },
+  "cli_export": {
+    "device": "epix2pro47mm",
+    "bytes": 140796,
+    "scene": "Scene definition on disk; not the current in-memory editor state."
+  },
+  "limits": [
+    "No visual or native raster verification.",
+    "Simulator heap snapshots include the harness; not within-frame peaks or graphics-pool measurements.",
+    "No physical-watch power/battery claims.",
+    "Extended builds precede final text-palette serialisation; final all-target representative builds and both runtime sets use the final palette path."
+  ]
+}
