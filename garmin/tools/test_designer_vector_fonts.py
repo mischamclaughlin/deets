@@ -31,7 +31,7 @@ class VectorFontTests(unittest.TestCase):
                     _, record = typography.generate("epix2pro47mm", self.settings(family=family, size=size), **options)
                     self.assertEqual(record["font"]["height"], size)
 
-    def test_small_date_glyphs_have_binary_ink_and_stay_inside_native_height(self):
+    def test_small_date_glyphs_have_smooth_ink_and_stay_inside_native_height(self):
         for family in ("time", "widget"):
             for size in (12, 24):
                 with self.subTest(family=family, size=size):
@@ -45,7 +45,8 @@ class VectorFontTests(unittest.TestCase):
                         self.assertGreaterEqual(glyph["yoffset"], 0, char)
                         self.assertLessEqual(glyph["yoffset"] + glyph["height"], size, char)
                     _, _, pixels = typography._raw(base64.b64decode(record["image"]))
-                    self.assertEqual(set(pixels), {0, 255})
+                    self.assertTrue(set(pixels) <= set(range(0, 256, 17)))
+                    self.assertTrue(any(0 < alpha < 255 for alpha in pixels))
                     self.assertEqual(font["glyphs"]["32"]["width"], 0)
                     self.assertGreater(font["glyphs"]["32"]["xadvance"], 0)
 

@@ -18,6 +18,7 @@ export function FontPicker({ family, onChange, uploads, onUpload, disabled = fal
         <label className="font-choice">
             Font
             <select value={family} disabled={disabled || uploading} onChange={(event) => onChange(event.target.value)}>
+                <option value="garmin">Garmin · Roboto Condensed</option>
                 <option value="time">JetBrains Mono Regular</option>
                 <option value="widget">JetBrains Mono NL Thin</option>
                 {family.startsWith("upload:") && !uploads.some((font) => font.id === family) &&

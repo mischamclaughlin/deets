@@ -5,8 +5,8 @@ the temporary coloured-glyph bitmap exporter and prototype adapter are removed.
 
 ## Shared assets and layout
 
-Included TTF files and uploaded TTF/OTF files are build inputs. Native-size font
-preparation produces canonical binary masks and integer glyph metrics. The canvas
+Garmin SDK, included TTF and uploaded TTF/OTF files are build inputs. Native-size
+font preparation produces canonical greyscale masks and integer glyph metrics. The canvas
 mapping and Garmin resource writer both consume those assets; browser text
 measurement does not determine watch coordinates.
 
@@ -63,7 +63,8 @@ conservative rejection estimates, not measured allocation peaks or hardware limi
 
 No screenshots, rendered UI inspection or native raster comparisons were performed.
 Visual pixel parity, physical-watch memory peaks and battery behaviour remain
-unverified. The masks remain binary; this migration alone does not add smoothing.
+unverified. Native rendering may quantise blended colours differently from browser
+canvas; shared coverage and coordinates alone do not establish pixel parity.
 
 Measured data: [production results](audits/garmin-native-font-production-results.json).
 The earlier [font-rendering audit](audits/garmin-font-rendering.md) and its data
@@ -87,3 +88,33 @@ npm run export:garmin -- --out /tmp/Deets-native-fonts-new.prg
 Both audit tools refuse existing output directories. Generated projects remain
 isolated. Signing-key contents are never read; only the path goes to Garmin's
 compiler. The runtime audit reads test output and heap snapshots, not pixels.
+
+## Garmin default and edge coverage
+
+The application default is Garmin Roboto Condensed Regular, a text face exposed by
+all three supported epix Pro profiles. Garmin also uses Bionic for numeric fonts;
+there is no single family for every firmware font slot. We read Roboto Condensed
+from the locally installed Connect IQ `Fonts` directory, rather than redistributing
+the SDK source. Missing SDK fonts produce an actionable error. Explicit scene
+font choices and independent element fonts survive refresh; scenes without an
+explicit watch family adopt the new default. Newly added dates start in the current
+watch family and retain independent typography controls.
+
+This is an SDK-source face compiled to a subsetted resource, rather than a direct
+firmware vector-font call. It preserves editable width, thickness, spacing and the
+shared native layout. Uploaded fonts follow the same path. Resource filtering,
+colour-independent sharing, initialisation-time loading and memory guards remain.
+
+Rasterisation now retains 16 levels of coverage at native size, including through
+thickness edits and half-size seconds sampling. Font resources enable Garmin's
+`antialias` option. The previous renderer discarded coverage in both rasterisation
+and resource compilation; changing the typeface alone could not fix those edges.
+The renderer version changes so refresh regenerates earlier binary assets.
+
+Build, lint and the full test suite were rerun for this update. An additional mixed
+scene with Garmin time/date, half-size seconds and a styled uploaded font compiled
+without warnings for all three targets. Its 47 mm simulator test also passed 24
+changing frames in each day/night mode, with a maximum sampled application heap
+of 46,704 bytes including the test harness. This is not a peak graphics-memory or
+battery measurement. Visual appearance, native raster parity and physical-watch
+battery behaviour remain for user review.

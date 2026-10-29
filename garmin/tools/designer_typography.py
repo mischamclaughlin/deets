@@ -14,7 +14,7 @@ INCLUDED_FONTS = {
     "time": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMono-Regular.ttf",
     "widget": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMonoNL-Thin.ttf",
 }
-RASTER_VERSION = "vector-native-v1"
+RASTER_VERSION = "vector-native-coverage-v2"
 
 CACHE = Path(tempfile.gettempdir()) / "deets-fonts-v1"
 CODES = "0123456789:-?"
@@ -29,7 +29,7 @@ MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", 
 
 
 def family_setting(family):
-    if not isinstance(family, str) or (family not in {"time", "widget"} and not re.fullmatch(r"upload:[a-f0-9]{64}", family)):
+    if not isinstance(family, str) or (family not in {"time", "widget", "garmin"} and not re.fullmatch(r"upload:[a-f0-9]{64}", family)):
         raise ValueError("Choose an included font or upload a TTF/OTF font.")
     return family
 
@@ -132,16 +132,22 @@ def _morph(rows, amount):
     if not amount:
         return rows
     radius = abs(amount)
-    operation = any if amount > 0 else all
+    operation = max if amount > 0 else min
     height, width = len(rows), len(rows[0])
-    horizontal = [[operation(rows[y][xx] if 0 <= xx < width else False for xx in range(x-radius, x+radius+1))
+    horizontal = [[operation(rows[y][xx] if 0 <= xx < width else 0 for xx in range(x-radius, x+radius+1))
                    for x in range(width)] for y in range(height)]
-    return [[operation(horizontal[yy][x] if 0 <= yy < height else False for yy in range(y-radius, y+radius+1))
+    return [[operation(horizontal[yy][x] if 0 <= yy < height else 0 for yy in range(y-radius, y+radius+1))
              for x in range(width)] for y in range(height)]
 
 
 def _source_font(family):
-    path = INCLUDED_FONTS.get(family) if family in INCLUDED_FONTS else CACHE / f"{family.split(':')[1]}.font"
+    if family == "garmin":
+        # Read the installed SDK source locally; never copy it into the repository.
+        path = Path.home() / "Library/Application Support/Garmin/ConnectIQ/Fonts/RobotoCondensed-Regular.ttf"
+        if not path.is_file():
+            raise ValueError("Install the Garmin Connect IQ SDK fonts to use Garmin Roboto Condensed.")
+    else:
+        path = INCLUDED_FONTS.get(family) if family in INCLUDED_FONTS else CACHE / f"{family.split(':')[1]}.font"
     if not path.is_file() or path.stat().st_size > 5 * 1024 * 1024:
         raise ValueError("This font is unavailable; restore the included font or upload it again.")
     data = path.read_bytes()
@@ -158,7 +164,7 @@ def _vector_cells(path, codes, pointsize):
     arguments = []
     for char in codes:
         arguments.extend(["(", "-size", f"{extent}x{extent}", "xc:none", "-font", str(path),
-                          "-pointsize", str(pointsize), "+antialias", "-fill", "white",
+                          "-pointsize", str(pointsize), "-antialias", "-fill", "white",
                           "-annotate", f"+{x}+{baseline}", char, ")"])
     raw = _magick([*arguments, "-alpha", "extract", "-depth", "8", "gray:-"])
     stride = extent * extent
@@ -167,14 +173,14 @@ def _vector_cells(path, codes, pointsize):
     cells, top, bottom = {}, extent, 0
     for index, char in enumerate(codes):
         frame = raw[index * stride:(index + 1) * stride]
-        points = [(offset % extent, offset // extent) for offset, alpha in enumerate(frame) if alpha >= 128]
+        points = [(offset % extent, offset // extent) for offset, alpha in enumerate(frame) if alpha >= 9]
         if not points:
             raise ValueError("This font has no visible ink for a required character; increase its size.")
         left, right = min(xx for xx, _ in points), max(xx for xx, _ in points) + 1
         upper, lower = min(yy for _, yy in points), max(yy for _, yy in points) + 1
         if left == 0 or right == extent or upper == 0 or lower == extent:
             raise ValueError("This font exceeds the local glyph bounds.")
-        cells[char] = [[frame[yy * extent + xx] >= 128 for xx in range(left, right)] for yy in range(extent)]
+        cells[char] = [[((frame[yy * extent + xx] + 8) // 17) * 17 for xx in range(left, right)] for yy in range(extent)]
         top, bottom = min(top, upper), max(bottom, lower)
     return {char: rows[top:bottom] for char, rows in cells.items()}, bottom - top
 
@@ -229,9 +235,9 @@ def generate(device, value, *, divider=False, date=False):
             rows = _resize(rows, max(1, round(len(rows[0]) * value["width"] / 100)), len(rows))
         if pad:
             width = len(rows[0])
-            rows = [[False] * (width + 2 * pad) for _ in range(pad)] + [
-                [False] * pad + row + [False] * pad for row in rows] + [
-                [False] * (width + 2 * pad) for _ in range(pad)]
+            rows = [[0] * (width + 2 * pad) for _ in range(pad)] + [
+                [0] * pad + row + [0] * pad for row in rows] + [
+                [0] * (width + 2 * pad) for _ in range(pad)]
         transformed[char] = _morph(rows, value["thickness"])
     points = [(y, x) for rows in transformed.values() for y, row in enumerate(rows) for x, ink in enumerate(row) if ink]
     if not points:
@@ -260,12 +266,12 @@ def generate(device, value, *, divider=False, date=False):
             for x, ink in enumerate(row):
                 if ink:
                     start = ((y + offset) * atlas_width + cursor + x) * 4
-                    pixels[start:start+4] = b"\xff\xff\xff\xff"
+                    pixels[start:start+4] = bytes((255, 255, 255, ink))
         cursor += width + 1
     if date:
         glyphs["32"] = {"x": 0, "y": 0, "width": 0, "height": 0, "xoffset": 0, "yoffset": 0,
                         "xadvance": max(1, round(value["size"] / 3) + value["letterSpacing"])}
-    font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom text", "inkBounds": True}
+    font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom text", "inkBounds": True, "coverageBits": 4}
     image = _png_rgba(atlas_width, value["size"], pixels)
     record = {"font": font, "image": base64.b64encode(image).decode(), "typography": value, "device": device,
               "rasteriser": RASTER_VERSION, "sourceHash": source_hash, "codes": codes}
@@ -590,7 +596,7 @@ def add_date(scene):
     scene = validate_scene(scene)
     if len(scene["elements"]) >= 40:
         raise ValueError("A design can contain at most 40 elements.")
-    value = {"family": "widget", "size": 24, "thickness": 0, "width": 100, "letterSpacing": 1}
+    value = {"family": scene.get("fontFamily", "garmin"), "size": 24, "thickness": 0, "width": 100, "letterSpacing": 1}
     key, record = generate(scene["device"], value, date=True)
     size = DEVICES[scene["device"]]
     width, height = _date_width(record["font"], "numericDate"), record["font"]["height"]
@@ -634,6 +640,10 @@ def refresh_fonts(scene):
     """Upgrade editable text atomically while preserving its settings and centre."""
     from designer_model import validate_scene
     scene = validate_scene(scene)
+    # Older scenes without an explicit family used the previous application default.
+    # Explicit choices (including uploads) remain intact during this migration.
+    if "fontFamily" not in scene:
+        scene = set_watch_font(scene, "garmin")
     edited, cache = copy.deepcopy(scene), {}
     for element in scene["elements"]:
         if element["source"] in TEXT_SOURCES:

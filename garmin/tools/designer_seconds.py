@@ -24,19 +24,23 @@ def _expanded(descriptor, image):
     font = json.loads(descriptor)
     atlas_width, atlas_height, raw = _raw(image)
     half_height = max(1, font["height"] // 2)
+    antialiased = any(alpha not in (0, 255) for alpha in raw)
     additions = []
     for char in HALF_CHARACTERS:
         glyph = font["glyphs"][str(ord(char))]
         target_width = max(1, glyph["width"] // 2)
-        cell = [[False] * glyph["width"] for _ in range(font["height"])]
+        cell = [[0] * glyph["width"] for _ in range(font["height"])]
         for y in range(glyph["height"]):
             for x in range(glyph["width"]):
-                cell[y + glyph["yoffset"]][x] = raw[(y + glyph["y"]) * atlas_width + x + glyph["x"]] >= 128
-        # Area sampling preserves thin dots and strokes at the smallest supported size.
-        rows = [[any(cell[yy][xx]
-                    for yy in range(y * font["height"] // half_height, (y + 1) * font["height"] // half_height)
-                    for xx in range(x * glyph["width"] // target_width, (x + 1) * glyph["width"] // target_width))
-                 for x in range(target_width)] for y in range(half_height)]
+                cell[y + glyph["yoffset"]][x] = raw[(y + glyph["y"]) * atlas_width + x + glyph["x"]]
+        # Preserve legacy binary sampling; smooth masks retain fractional coverage.
+        if antialiased:
+            rows = _area_coverage(cell, target_width, half_height)
+        else:
+            rows = [[255 * any(cell[yy][xx]
+                        for yy in range(y * font["height"] // half_height, (y + 1) * font["height"] // half_height)
+                        for xx in range(x * glyph["width"] // target_width, (x + 1) * glyph["width"] // target_width))
+                     for x in range(target_width)] for y in range(half_height)]
         ink = [(x, y) for y, row in enumerate(rows) for x, on in enumerate(row) if on]
         if not ink:
             raise ValueError("The selected font has no visible seconds glyph.")
@@ -51,9 +55,10 @@ def _expanded(descriptor, image):
     pixels = bytearray(new_width * height * 4)
     for y in range(atlas_height):
         for x in range(atlas_width):
-            if raw[y * atlas_width + x] >= 128:
+            coverage = raw[y * atlas_width + x]
+            if coverage:
                 index = (y * new_width + x) * 4
-                pixels[index:index + 4] = b"\xff\xff\xff\xff"
+                pixels[index:index + 4] = bytes((255, 255, 255, coverage))
     result = copy.deepcopy(font)
     cursor = atlas_width
     for char, original, offset, rows in additions:
@@ -66,7 +71,28 @@ def _expanded(descriptor, image):
             for x, on in enumerate(row):
                 if on:
                     index = ((y + offset) * new_width + cursor + x) * 4
-                    pixels[index:index + 4] = b"\xff\xff\xff\xff"
+                    pixels[index:index + 4] = bytes((255, 255, 255, on))
         cursor += width + 1
     result.update(atlasWidth=new_width, atlasHeight=height)
     return result, _png_rgba(new_width, height, pixels)
+
+
+def _area_coverage(cell, width, height):
+    """Average exact pixel areas, quantised to the shared 16-level coverage."""
+    source_height, source_width = len(cell), len(cell[0])
+    rows = []
+    for y in range(height):
+        top, bottom = y * source_height, (y + 1) * source_height
+        row = []
+        for x in range(width):
+            left, right = x * source_width, (x + 1) * source_width
+            total = 0
+            for yy in range(top // height, (bottom + height - 1) // height):
+                overlap_y = min(bottom, (yy + 1) * height) - max(top, yy * height)
+                for xx in range(left // width, (right + width - 1) // width):
+                    overlap_x = min(right, (xx + 1) * width) - max(left, xx * width)
+                    total += cell[yy][xx] * overlap_x * overlap_y
+            area = source_width * source_height
+            row.append(min(255, ((total + area * 17 // 2) // (area * 17)) * 17))
+        rows.append(row)
+    return rows

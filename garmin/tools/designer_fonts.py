@@ -12,8 +12,8 @@ FONT_GRAPHICS_BUDGET = 2 * 1024 * 1024
 def graphics_cost(pack, needed_codes):
     """Conservative coverage-storage allowance within the targets' 3 MiB pool.
 
-    Reserve one byte per visible glyph pixel and fixed glyph overhead even though
-    exported fonts are monochrome. This is a separate rejection guard from the
+    Reserve one byte per visible glyph pixel and fixed glyph overhead for the
+    exported greyscale font coverage. This is a separate rejection guard from the
     application-heap estimate, not a measurement of firmware allocation.
     """
     return sum(64 + glyph["width"] * glyph["height"]
@@ -25,8 +25,6 @@ def graphics_cost(pack, needed_codes):
 def _coverage_png(mask):
     from designer_typography import _raw
     width, height, coverage = _raw(mask)
-    if any(value not in (0, 255) for value in coverage):
-        raise ValueError("The native font mask must contain canonical binary coverage.")
 
     def chunk(kind, data):
         return (struct.pack(">I", len(data)) + kind + data
@@ -62,7 +60,7 @@ def write_fonts(project, pack, used_fonts, needed_codes):
         filename = f"font-{index}"
         (assets / f"{filename}.png").write_bytes(_coverage_png(pack["images"][key]))
         lines = [
-            f'info face="Deets font {index}" size={font["height"]} bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0 outline=0',
+            f'info face="Deets font {index}" size={font["height"]} bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=4 padding=0,0,0,0 spacing=0,0 outline=0',
             f'common lineHeight={font["height"]} base={font["height"]} scaleW={font["atlasWidth"]} scaleH={font["atlasHeight"]} pages=1 packed=0',
             f'page id=0 file="{filename}.png"',
             f"chars count={len(glyphs)}",
@@ -72,7 +70,7 @@ def write_fonts(project, pack, used_fonts, needed_codes):
         (assets / f"{filename}.fnt").write_text("\n".join(lines) + "\n")
         identifier = f"DesignerFont{index}"
         ET.SubElement(resources, "font", {"id": identifier,
-                      "filename": f"designer-fonts/{filename}.fnt", "antialias": "false"})
+                      "filename": f"designer-fonts/{filename}.fnt", "antialias": "true"})
         identifiers.append(f"Rez.Fonts.{identifier}")
     ET.ElementTree(resources).write(project / "resources/designer-fonts.xml",
                                     encoding="utf-8", xml_declaration=True)
