@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scene, Typography } from "../../shared/scene.ts";
 import { applyTextPreset, setFontInheritance, setTypography } from "./api.ts";
+import { TextAlignmentControls } from "./TextAlignmentControls.tsx";
 import { textPresets } from "./text-presets.ts";
 import { typographyControls } from "./typography.ts";
 import { FontPicker, type UploadedFont } from "./FontPicker.tsx";
@@ -102,6 +103,7 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
     return (
         <section aria-labelledby="typography-heading" className="typography-panel">
             <h2 id="typography-heading">Typography</h2>
+            <TextAlignmentControls scene={scene} elementId={elementId} onSceneChange={onSceneChange} />
             {presets.length > 0 && <label className="font-choice">
                 Text preset
                 <select value={pendingPreset !== undefined ? pendingPreset.id ?? "" : element.textPresetId ?? ""}

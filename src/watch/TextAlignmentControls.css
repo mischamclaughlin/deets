@@ -1,0 +1,24 @@
+.text-alignment-control { margin-bottom: 1rem; }
+.text-alignment-control > span { font-size: 0.8rem; }
+.text-alignment-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
+.text-alignment-options button {
+    min-width: 0;
+    padding: 0.5rem 0.3rem;
+    border: 1px solid var(--border, #45513a);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.text-alignment-options button[aria-pressed="true"] {
+    background: #2b3822;
+    border-color: #a5b994;
+}
+.text-alignment-options button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
