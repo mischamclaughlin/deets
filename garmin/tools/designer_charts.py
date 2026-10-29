@@ -68,11 +68,10 @@ def _ring_rectangles(pixels):
 
 
 def ring_tick_radius(scene, element):
-    """Place every tick's outer tip on the content-clearance circumference."""
+    """Use the ring boundary unless the user selects the clearance guide."""
     width = element["width"]
-    scale = min(1, width / 40)
     if not element.get("ringTicksToCircumference", False):
-        return width / 2 - 4 * scale
+        return width / 2
     from designer_model import DEVICES
     guide_radius = DEVICES[scene["device"]] / 2 - scene.get("edgeInset", 0)
     return max(0, min(width / 2, guide_radius))
@@ -100,7 +99,7 @@ def ring_geometry(width, outer_radius=None, inner_radius=-1):
     """
     scale = min(1, width / 40)
     centre = width / 2
-    outer = centre - 4 * scale if outer_radius is None else outer_radius
+    outer = centre if outer_radius is None else outer_radius
     groups = []
     for second in range(60):
         angle = second * math.pi / 30
@@ -159,7 +158,7 @@ def ring_font(width, outer_radius=None, inner_radius=-1):
     """Analytic pixel coverage shared by preview and native tick font resources."""
     from designer_model import _png_rgba
     scale, centre = min(1, width / 40), width / 2
-    outer = centre - 4 * scale if outer_radius is None else outer_radius
+    outer = centre if outer_radius is None else outer_radius
     cells = []
     for second in range(60):
         angle = second * math.pi / 30

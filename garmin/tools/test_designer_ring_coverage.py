@@ -38,7 +38,7 @@ class RingCoverageTests(unittest.TestCase):
                     self.assertLessEqual(font['height'], 15)
                     self.assertTrue(all(g['xadvance'] <= g['width']+1 for g in font['glyphs'].values()))
                     top = font['glyphs'][str(0xE100)]
-                    self.assertEqual((top['width'], top['height'], top['yoffset']), (6, 15, 4))
+                    self.assertEqual((top['width'], top['height'], top['yoffset']), (6, 15, 0))
 
     def test_preview_uses_shared_mask_for_both_modes_and_preserves_layer_order(self):
         scene = typography.set_clock_source(fixtures.ClockModeTests().scene(), 'clock', 'secondsRing')

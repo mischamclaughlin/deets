@@ -41,7 +41,7 @@ class ChartTests(unittest.TestCase):
         self.assertTrue(all(op['kind'] == 'bitmap' for op in ops))
         self.assertEqual([op['colour'] for op in ops],
                          [shade(0x4D9DE0, 100 if i == 23 else 68 if i < 23 else 24) for i in range(60)])
-        self.assertEqual((ops[0]['x'], ops[0]['y'], ops[0]['width'], ops[0]['height']), (225, 44, 6, 15))
+        self.assertEqual((ops[0]['x'], ops[0]['y'], ops[0]['width'], ops[0]['height']), (225, 40, 6, 15))
         # Only the sixty tick masks remain; there is no continuous outer outline.
         self.assertNotIn(shade(0x4D9DE0, 42), {op['colour'] for op in ops})
 

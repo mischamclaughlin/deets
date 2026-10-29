@@ -31,11 +31,11 @@ class RingFitTests(unittest.TestCase):
         for device, size in model.DEVICES.items():
             scene = self.scene(device)
             element = scene["elements"][0]
-            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2 - 4)
-            self.assertEqual(charts.ring_geometry(size), charts.ring_geometry(size, size / 2 - 4))
+            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2)
+            self.assertEqual(charts.ring_geometry(size), charts.ring_geometry(size, size / 2))
             element["ringTicksToCircumference"] = False
-            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2 - 4)
-            self.assertEqual(min(y for _, y in self.pixels(charts.ring_geometry(size)[0])), 4)
+            self.assertEqual(charts.ring_tick_radius(scene, element), size / 2)
+            self.assertEqual(min(y for _, y in self.pixels(charts.ring_geometry(size)[0])), 0)
             element["ringTicksToCircumference"] = True
             for inset in (16, 34, 49):
                 scene["edgeInset"] = inset
@@ -85,7 +85,7 @@ class RingFitTests(unittest.TestCase):
         scene["elements"].append(fitted)
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
-        self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1)})
+        self.assertEqual(signatures, {(416, 208, -1), (416, 174, -1)})
         expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 160
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
@@ -108,11 +108,11 @@ class RingFitTests(unittest.TestCase):
                 scene["edgeInset"] = inset
                 outer = charts.ring_tick_radius(scene, element)
                 inner = charts.ring_tick_inner_radius(scene, element)
-                self.assertEqual(outer, size/2 - 4)
+                self.assertEqual(outer, size/2)
                 self.assertEqual(inner, size/2 - inset)
                 groups = charts.ring_geometry(*charts.ring_signature(scene, element))
                 self.assertEqual(len(groups), 60)
-                self.assertEqual(min(y for _, y in self.pixels(groups[0])), 4)
+                self.assertEqual(min(y for _, y in self.pixels(groups[0])), 0)
                 self.assertEqual(max(y for _, y in self.pixels(groups[0])) + 1, inset)
                 self.assertEqual(len({x for x, _ in self.pixels(groups[0])}), 6)
                 for index in range(60):
@@ -161,7 +161,7 @@ class RingFitTests(unittest.TestCase):
         ])
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
-        self.assertEqual(signatures, {(416, 204, -1), (416, 174, -1), (416, 204, 174)})
+        self.assertEqual(signatures, {(416, 208, -1), (416, 174, -1), (416, 208, 174)})
         expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 240
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):

@@ -262,7 +262,7 @@ test("stretched seconds ticks keep outer tips fixed and reach clearance inwards"
         const mapped = result.body as unknown as WatchMapping;
         assert.equal(mapped.scene.elements[0].ringTicksStretchToCircumference, true);
         const topTick = mapped.ops.filter((op) => op.x <= 208 && op.x + op.width > 208 && op.y < 100);
-        assert.equal(Math.min(...topTick.map((op) => op.y)), 4);
+        assert.equal(Math.min(...topTick.map((op) => op.y)), 0);
         assert.equal(Math.max(...topTick.map((op) => op.y + op.height)), edgeInset);
     }
     for (const flags of [

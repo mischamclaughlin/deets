@@ -126,6 +126,8 @@ Each rotated rectangle is clipped analytically against native pixel cells; its
 covered area supplies 16-level edge coverage rather than an on/off centre test.
 Preview operations and native glyph resources consume those same masks. Tick
 hierarchy, clearance fitting, stretching, layer order and brightness rules remain.
+By default the outer tick tips now meet the watch-face boundary, without the old
+four-pixel inset. Explicit clearance fitting still follows the selected guide.
 
 One atlas and a compact 60-position table are shared per distinct geometry,
 independent of colour. Fonts load during initialisation. The exported glyph
