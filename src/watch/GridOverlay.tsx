@@ -8,7 +8,7 @@ interface Props {
     grid: GridSettings;
     mirror: boolean;
     selectedId?: string;
-    onSelect: (id: string) => void;
+    onSelect: (id: string | undefined) => void;
     onChange: (grid: GridSettings) => void;
 }
 interface Drag {
@@ -81,12 +81,18 @@ export function GridOverlay({ size, inset, grid, mirror, selectedId, onSelect, o
             className={selectedId === line.id ? "grid-line selected" : "grid-line"}
             tabIndex={0} role="button" aria-pressed={selectedId === line.id}
             aria-label={`${line.axis === "rings" ? "Circumference" : line.axis === "rows" ? "Row" : "Column"} ${line.id.split("-").slice(1).join("-")}`}
-            aria-keyshortcuts="Delete Backspace ArrowLeft ArrowRight ArrowUp ArrowDown"
+            aria-keyshortcuts="Escape Delete Backspace ArrowLeft ArrowRight ArrowUp ArrowDown"
             onFocus={() => onSelect(line.id)} onClick={() => onSelect(line.id)}
             onKeyDown={(event) => {
                 if (event.key === "Escape") {
+                    event.preventDefault();
+                    const cancelled = drag.current;
                     drag.current = undefined;
                     setPreview(undefined);
+                    const svg = event.currentTarget.ownerSVGElement;
+                    if (cancelled && svg?.hasPointerCapture(cancelled.pointerId)) svg.releasePointerCapture(cancelled.pointerId);
+                    onSelect(undefined);
+                    event.currentTarget.blur();
                     return;
                 }
                 if (drag.current) return;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { refreshFonts } from "./api.ts";
 import { defaultGrid, editGridLine, gridLines } from "./grid.ts";
@@ -38,14 +38,26 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     }, [scene, fontsReady]);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
-    const [selectedId, setSelectedId] = useState<string | undefined>(initialScene.elements[0]?.id);
+    const [selectedId, setSelectedElement] = useState<string | undefined>(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [mirrorGrid, setMirrorGrid] = useState(false);
-    const [selectedGridLineId, setSelectedGridLineId] = useState<string>();
+    const [selectedGridLineId, setSelectedGridLine] = useState<string>();
+    const setSelectedId = useCallback((id: string | undefined) => {
+        setSelectedElement(id);
+        setSelectedGridLine(undefined);
+    }, []);
+    const setSelectedGridLineId = useCallback((id: string | undefined) => {
+        setSelectedGridLine(id);
+        setSelectedElement(undefined);
+    }, []);
+    function clearSelection() {
+        setSelectedElement(undefined);
+        setSelectedGridLine(undefined);
+    }
     const [uploads, setUploads] = useState<UploadedFont[]>([]);
     const rememberFont = (font: UploadedFont) => setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
     const selected = scene.elements.find((element) => element.id === selectedId);
@@ -53,7 +65,19 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const inset = scene.edgeInset ?? 0;
 
     return (
-        <div className="watch-editor">
+        <div className="watch-editor" tabIndex={-1}
+            onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                clearSelection();
+                event.currentTarget.focus({ preventScroll: true });
+            }}
+            onPointerDown={(event) => {
+                if (event.button !== 0 || !(event.target instanceof Element)) return;
+                if (event.target.closest("[data-element-id], [data-grid-id], button, input, select, textarea, label, a, summary, [contenteditable], [role='button']")) return;
+                clearSelection();
+                event.currentTarget.focus({ preventScroll: true });
+            }}>
             <aside className="watch-sidebar" aria-label="Watch face settings" tabIndex={0}>
                 <h1>deets</h1>
                 {!fontsReady && <p className="typography-status" role="status">Preparing fonts…</p>}

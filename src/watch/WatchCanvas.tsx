@@ -16,14 +16,14 @@ interface Props {
     grid?: GridSettings;
     mirrorGrid?: boolean;
     selectedGridLineId?: string;
-    onSelectGridLine?: (id: string) => void;
+    onSelectGridLine?: (id: string | undefined) => void;
     onChangeGrid?: (grid: GridSettings) => void;
     snapEnabled?: boolean;
     snapToGrid?: boolean;
     snapToGuides?: boolean;
     snapToElements?: boolean;
     selectedElementId?: string;
-    onSelectElement?: (id: string) => void;
+    onSelectElement?: (id: string | undefined) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
 }
 interface Drag {
@@ -58,7 +58,8 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     const [painted, setPainted] = useState<{ layout: WatchMapping; signature: string }>();
     const drag = useRef<Drag | undefined>(undefined);
     const [preview, setPreview] = useState<Drag>();
-    const [active, setActive] = useState<string>("time");
+    const [active, setActive] = useState<string>();
+    const selectedId = onSelectElement ? selectedElementId : active;
     const pixelScene = useMemo(() => preview ? {
         ...scene,
         elements: scene.elements.map((element) => element.id === preview.element.id
@@ -117,12 +118,16 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     }, [pendingMapping, signature, pixelScene, night]);
 
     useEffect(() => {
+        if (onSelectElement && restoreFocus.current !== selectedElementId) {
+            restoreFocus.current = undefined;
+            return;
+        }
         if (!ready || painted?.signature !== signature || !restoreFocus.current || !areas.current) return;
         const target = Array.from(areas.current.querySelectorAll<SVGGElement>("[data-element-id]"))
             .find((element) => element.dataset.elementId === restoreFocus.current);
         target?.focus();
         restoreFocus.current = undefined;
-    }, [ready, mapping, painted, signature]);
+    }, [ready, mapping, painted, signature, selectedElementId, onSelectElement]);
 
     function movePointer(event: ReactPointerEvent<SVGSVGElement>) {
         const currentDrag = drag.current;
@@ -239,10 +244,10 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     aria-label="Translated watch areas"
                 >
                     {mapping.areas.toSorted((left, right) =>
-                        Number(left.id === (selectedElementId ?? active)) - Number(right.id === (selectedElementId ?? active)),
+                        Number(left.id === selectedId) - Number(right.id === selectedId),
                     ).map((area) => {
                         const position = preview?.element.id === area.id ? preview.position : area;
-                        const selected = area.id === (selectedElementId ?? active);
+                        const selected = area.id === selectedId;
                         const ring = scene.elements.find((element) => element.id === area.id);
                         const clearance = scene.edgeInset ?? 0;
                         const tickHitInset = ring?.ringTicksStretchToCircumference ? (4 + clearance) / 2
@@ -260,10 +265,10 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                 data-element-id={area.id}
                                 tabIndex={0}
                                 role="button"
+                                aria-pressed={selected}
                                 aria-label={label}
                                 aria-keyshortcuts={onMoveElement ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
                                 className={selected ? "area selected" : "area"}
-                                onPointerEnter={() => { if (!drag.current) setActive(area.id); }}
                                 onFocus={() => { setActive(area.id); onSelectElement?.(area.id); }}
                                 onClick={() => { setActive(area.id); onSelectElement?.(area.id); }}
                                 onKeyDown={(event) => {
@@ -278,9 +283,16 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                             y: element.y + direction[1] * step,
                                         }, { enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, grid }));
                                     }
-                                    if (event.key === "Escape" && drag.current) {
+                                    if (event.key === "Escape") {
+                                        const cancelled = drag.current;
                                         drag.current = undefined;
                                         setPreview(undefined);
+                                        restoreFocus.current = undefined;
+                                        if (cancelled && areas.current?.hasPointerCapture(cancelled.pointerId))
+                                            areas.current.releasePointerCapture(cancelled.pointerId);
+                                        setActive(undefined);
+                                        onSelectElement?.(undefined);
+                                        event.currentTarget.blur();
                                     }
                                     if (
                                         event.key === "Enter" ||
