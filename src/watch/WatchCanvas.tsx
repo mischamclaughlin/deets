@@ -54,15 +54,17 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     const areas = useRef<SVGSVGElement>(null);
     const restoreFocus = useRef<string | undefined>(undefined);
     const [result, setResult] = useState<Result>();
-    const [painted, setPainted] = useState<string>();
+    const [painted, setPainted] = useState<{ layout: WatchMapping; signature: string }>();
     const drag = useRef<Drag | undefined>(undefined);
     const [preview, setPreview] = useState<Drag>();
     const [active, setActive] = useState<string>("time");
     const current =
         result?.scene === scene && result.night === night ? result : undefined;
-    const mapping = current?.layout;
-    const signature = mapping ? `${mapping.mapping}:${night}` : undefined;
-    const ready = !!signature && painted === signature;
+    const pendingMapping = current?.layout;
+    const signature = pendingMapping ? `${pendingMapping.mapping}:${night}` : undefined;
+    // Retain the last complete frame and its hit areas while the next frame loads.
+    const mapping = painted?.layout.scene.device === scene.device ? painted.layout : undefined;
+    const ready = !!mapping;
 
     useEffect(() => {
         const controller = new AbortController();
@@ -86,11 +88,11 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     }, [scene, night]);
 
     useEffect(() => {
-        if (!mapping || !canvas.current || !signature) return;
+        if (!pendingMapping || !canvas.current || !signature) return;
         const controller = new AbortController();
-        void paintWatch(canvas.current, mapping, controller.signal)
+        void paintWatch(canvas.current, pendingMapping, controller.signal)
             .then(() => {
-                if (!controller.signal.aborted) setPainted(signature);
+                if (!controller.signal.aborted) setPainted({ layout: pendingMapping, signature });
             })
             .catch((error) => {
                 if (!controller.signal.aborted)
@@ -104,15 +106,15 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     });
             });
         return () => controller.abort();
-    }, [mapping, signature, scene, night]);
+    }, [pendingMapping, signature, scene, night]);
 
     useEffect(() => {
-        if (!ready || !restoreFocus.current || !areas.current) return;
+        if (!ready || painted?.signature !== signature || !restoreFocus.current || !areas.current) return;
         const target = Array.from(areas.current.querySelectorAll<SVGGElement>("[data-element-id]"))
             .find((element) => element.dataset.elementId === restoreFocus.current);
         target?.focus();
         restoreFocus.current = undefined;
-    }, [ready, mapping]);
+    }, [ready, mapping, painted, signature]);
 
     function movePointer(event: ReactPointerEvent<SVGSVGElement>) {
         const currentDrag = drag.current;
@@ -154,7 +156,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 aria-label="Native-pixel Garmin watch face"
                 style={{ visibility: ready ? "visible" : "hidden" }}
             />
-            {!ready && (
+            {(!ready || current?.error) && (
                 <span className="watch-status" role="status">
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>
