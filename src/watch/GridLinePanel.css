@@ -1,0 +1,28 @@
+.grid-gap-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    padding: 3px 6px;
+    border: 1px solid #e1e9e3;
+    border-radius: 5px;
+    background: var(--surface);
+    color: #315643;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    cursor: text;
+}
+.grid-gap-value input {
+    min-width: 1ch;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: right;
+}
+.grid-gap-value:focus-within {
+    border-color: #315643;
+    outline: 2px solid #b8ead4;
+    outline-offset: 2px;
+}
