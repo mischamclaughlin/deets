@@ -19,7 +19,7 @@ TYPE_SOURCES = {
     "heartRate": 18, "temperature": 38, "highLow": 39,
     "floors": 4, "steps": 2, "weeklyRun": 19, "sunriseSunset": 13,
     "temperatureHigh": 39, "temperatureLow": 39,
-    "stepsWeek": 2, "floorsWeek": 4, "runWeek": 19,
+    "stepsWeek": 2, "floorsWeek": 4, "runWeek": 19, "weeklyWalk": -5, "walkWeek": -5,
     "heartZones": 18, "temperatureZones": 38, "solarTimeline": 13,
 }
 
@@ -30,7 +30,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     for key in used_fonts:
         digest.update(key.encode())
@@ -142,10 +142,9 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
         if element.get("boxSizing") == "hug":
             cache_cost += 512  # Dynamic bounds and the resolved clipping-box row.
     rectangles = 0
-    if proof:
-        for element in scene["elements"]:
-            if catalogue[element["source"]]["kind"] not in {"text", "ring"}:
-                rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
+    for element in scene["elements"]:
+        if (proof and catalogue[element["source"]]["kind"] not in {"text", "ring"}) or catalogue[element["source"]]["kind"] == "icon":
+            rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
     # Native tick coverage lives in the graphics pool, with only compact draw
     # positions in VM memory. Identical geometry shares one resource and table.
     rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
@@ -246,7 +245,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         kind = catalogue[source]["kind"]
         day_rectangles = []
         night_rectangles = []
-        if proof and kind not in {"text", "ring"}:
+        if (proof and kind not in {"text", "ring"}) or kind == "icon":
             for night, destination in ((False, day_rectangles), (True, night_rectangles)):
                 destination.extend([[operation[key] for key in ("x", "y", "width", "height", "colour")]
                                     for operation in chart_ops(element, night=night)])
@@ -266,7 +265,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
-                           if e["source"] in {"stepsWeek", "floorsWeek", "runWeek"}})
+                           if e["source"] in {"stepsWeek", "floorsWeek", "runWeek", "walkWeek", "weeklyWalk"}})
     _provider_patch(project, required_types, widget_types)
     # Unreferenced legacy classes still consume Connect IQ VM memory. Keep only
     # the runtime modules required by this generated scene, in the temporary copy.
@@ -575,6 +574,7 @@ class DesignerView extends WatchUi.WatchFace {
             case "floors": return _provider.designerValue(4);
             case "steps": return _provider.designerValue(2);
             case "weeklyRun": return _provider.designerValue(19);
+            case "weeklyWalk": return _provider.designerValue(-5);
             case "sunriseSunset": return _provider.designerValue(13);
         }
         return "--";
@@ -586,6 +586,7 @@ class DesignerView extends WatchUi.WatchFace {
             case "stepsWeek": return _snapshot.weeklyStepCounts;
             case "floorsWeek": return _snapshot.weeklyFloorCounts;
             case "runWeek": return _snapshot.weeklyRunDistances;
+            case "walkWeek": return _snapshot.weeklyWalkDistances;
         }
         return [null, null, null, null, null, null, null];
     }
@@ -598,7 +599,7 @@ class DesignerView extends WatchUi.WatchFace {
     }
 
     private function drawChart(dc as Graphics.Dc, element as Array, colour as Number, night as Boolean) {
-        if (_proof && !element[10].equals("ring")) {
+        if ((_proof && !element[10].equals("ring")) || element[10].equals("icon")) {
             var rectangles = (night ? element[13] : element[12]) as Array<Array<Number>>;
             for (var i = 0; i < rectangles.size(); i += 1) {
                 var rectangle = rectangles[i];

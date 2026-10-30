@@ -1,6 +1,7 @@
+import { ActivityLibrary } from "./ActivityLibrary.tsx";
 import { useEffect, useState } from "react";
-import type { Scene } from "../../shared/scene.ts";
-import { addDivider, addTime } from "./api.ts";
+import type { ActivitySource, Scene } from "../../shared/scene.ts";
+import { addElement } from "./api.ts";
 
 interface Props {
     scene: Scene;
@@ -9,12 +10,12 @@ interface Props {
 }
 
 export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
-    const [adding, setAdding] = useState<"time" | "divider">();
+    const [adding, setAdding] = useState<ActivitySource | "time" | "divider">();
     const [error, setError] = useState<string>();
     useEffect(() => {
         if (!adding) return;
         const controller = new AbortController();
-        void (adding === "divider" ? addDivider : addTime)(scene, controller.signal).then((layout) => {
+        void addElement(scene, adding, controller.signal).then((layout) => {
             if (controller.signal.aborted) return;
             onSceneChange(layout.scene);
             onSelect(layout.scene.elements[layout.scene.elements.length - 1].id);
@@ -37,6 +38,8 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
                 </button>
             ))}
             {error && <p className="typography-status" role="alert">{error}</p>}
+            <ActivityLibrary adding={adding} disabled={adding !== undefined || scene.elements.length >= 40}
+                onAdd={(source) => { setError(undefined); setAdding(source); }} />
         </section>
     );
 }

@@ -41,6 +41,7 @@ class EpixCanvasComplicationSnapshot {
     var weeklyFloorCounts as Array<Numeric or Null>;
     var weeklyFloorGoals as Array<Numeric or Null>;
     var weeklyRunDistances as Array<Numeric or Null>;
+    var weeklyWalkDistances as Array<Numeric or Null>;
     var sunriseSeconds;
     var sunsetSeconds;
     var solarEventIsSunset;
@@ -50,7 +51,7 @@ class EpixCanvasComplicationSnapshot {
                         middleWidgetTypes, middleWidgetValues,
                         temperatureNow, temperatureMaximum,
                         temperatureMinimum, stepCounts, stepGoals,
-                        floorCounts, floorGoals, runDistances,
+                        floorCounts, floorGoals, runDistances, walkDistances,
                         sunriseTime, sunsetTime, upcomingSolarEventIsSunset) {
         types = slotTypes;
         values = slotValues;
@@ -67,6 +68,7 @@ class EpixCanvasComplicationSnapshot {
         weeklyFloorCounts = floorCounts;
         weeklyFloorGoals = floorGoals;
         weeklyRunDistances = runDistances;
+        weeklyWalkDistances = walkDistances;
         sunriseSeconds = sunriseTime;
         sunsetSeconds = sunsetTime;
         solarEventIsSunset = upcomingSolarEventIsSunset;
@@ -78,6 +80,8 @@ class EpixCanvasComplicationProvider {
     const WIDGET_ALARMS = -2;
     const WIDGET_NUMERIC_DATE = -3;
     const WIDGET_NUMERIC_DATE_LARGE_HOURS = -4;
+    // Local history source; this is not a Garmin complication identifier.
+    const WIDGET_WEEKLY_WALK = -5;
     private const MIDDLE_MODE_NUMERIC_DATE = 100;
     private const MIDDLE_MODE_NUMERIC_DATE_LARGE_HOURS = 101;
     private const MIDDLE_MODE_DATE = 0;
@@ -107,6 +111,8 @@ class EpixCanvasComplicationProvider {
         [null, null, null, null, null, null, null];
     private var _weeklyRunDistances as Array<Numeric or Null> =
         [null, null, null, null, null, null, null];
+    private var _weeklyWalkDistances as Array<Numeric or Null> =
+        [null, null, null, null, null, null, null];
     private var _sunriseSeconds = null;
     private var _sunsetSeconds = null;
 
@@ -128,7 +134,7 @@ class EpixCanvasComplicationProvider {
 
         for (var index = 0; index < _slotTypes.size(); index += 1) {
             var type = _slotTypes[index];
-            if (type == Complications.COMPLICATION_TYPE_INVALID ||
+            if (type <= 0 ||
                 isDuplicateSelection(index, type)) {
                 continue;
             }
@@ -226,6 +232,7 @@ class EpixCanvasComplicationProvider {
             _weeklyFloorCounts,
             _weeklyFloorGoals,
             _weeklyRunDistances,
+            _weeklyWalkDistances,
             _sunriseSeconds,
             _sunsetSeconds,
             isSolarEventSunset()
@@ -327,6 +334,9 @@ class EpixCanvasComplicationProvider {
 
     private function refreshValues() {
         refreshSolarMetrics();
+        if (isTypeSelected(WIDGET_WEEKLY_WALK)) {
+            refreshWeeklyWalkHistory();
+        }
         for (var index = 0; index < _slotTypes.size(); index += 1) {
             _slotValues[index] = readValue(_slotTypes[index]);
         }
@@ -608,6 +618,55 @@ class EpixCanvasComplicationProvider {
         }
     }
 
+    private function refreshWeeklyWalkHistory() {
+        _weeklyWalkDistances = [null, null, null, null, null, null, null];
+        var weekStart = currentWeekStartSeconds();
+        var nowSeconds = Time.now().value();
+        var todayIndex = dayIndex(Time.now());
+        var distances =
+            [null, null, null, null, null, null, null];
+        for (var day = 0; day <= todayIndex; day += 1) {
+            distances[day] = 0;
+        }
+
+        try {
+            var activities = UserProfile.getUserActivityHistory();
+            var activity = activities.next();
+            while (activity != null) {
+                if (activity.startTime != null &&
+                    activity.startTime.value() >= weekStart &&
+                    activity.startTime.value() <= nowSeconds &&
+                    activity.type == Activity.SPORT_WALKING) {
+                    var walkDay = dayIndex(activity.startTime);
+                    var existingDistance = distances[walkDay];
+                    if (activity.distance == null || activity.distance < 0) {
+                        // An unknown recorded distance must not become zero.
+                        distances[walkDay] = null;
+                    } else if (existingDistance != null) {
+                        distances[walkDay] = existingDistance + activity.distance;
+                    }
+                }
+                activity = activities.next();
+            }
+            _weeklyWalkDistances = distances;
+        } catch (exception) {
+            // Keep every day unavailable when activity history cannot be read.
+        }
+    }
+
+    private function weeklyWalkValue() {
+        var distance = 0.0;
+        var todayIndex = dayIndex(Time.now());
+        for (var day = 0; day <= todayIndex; day += 1) {
+            var dailyDistance = _weeklyWalkDistances[day];
+            if (dailyDistance == null) {
+                return UNAVAILABLE;
+            }
+            distance += dailyDistance;
+        }
+        return formatDistance(distance);
+    }
+
     private function currentWeekStartSeconds() {
         var now = Time.now();
         var clock = System.getClockTime();
@@ -737,6 +796,10 @@ class EpixCanvasComplicationProvider {
     }
 
     private function readValue(type) {
+        if (type == WIDGET_WEEKLY_WALK) {
+            return weeklyWalkValue();
+        }
+
         if (type == Complications.COMPLICATION_TYPE_INVALID) {
             return "";
         }

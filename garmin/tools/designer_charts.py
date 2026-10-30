@@ -5,7 +5,8 @@ import functools
 SAMPLES = {
     'stepsWeek': [4000, 8200, 6000, 10000, 7500, 3000, 5000],
     'floorsWeek': [4, 8, 6, 10, 7, 3, 5],
-    'runWeek': [4, 8, 6, 10, 7, 3, 5],
+    'runWeek': [0, 5.2, 0, 8.1, 3.5, 8.0, 0],
+    'walkWeek': [2, 4, 3, 0, 5, 1, 3.6],
     'heartZones': 64, 'temperatureZones': 17,
     'solarTimeline': [25200, 64800, 36503], 'secondsRing': 23,
 }
@@ -207,6 +208,9 @@ def ring_font(width, outer_radius=None, inner_radius=-1):
 
 def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_radius=-1):
     source = element['source']
+    from designer_activity import ICON_MASKS, icon_ops
+    if source in ICON_MASKS:
+        return [{**op, 'colour': element['nightColour' if night else 'colour']} for op in icon_ops(element)]
     value = SAMPLES[source] if value is None else value
     x, y, width, height = (element[k] for k in ('x', 'y', 'width', 'height'))
     colour = element['nightColour' if night else 'colour']

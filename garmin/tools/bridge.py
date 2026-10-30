@@ -22,7 +22,7 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
     pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
@@ -175,9 +175,13 @@ def dispatch(request):
         return layout({"scene": set_text_defaults(payload["scene"], payload["defaults"])})
     if operation == "add":
         from designer_typography import add_time, add_divider, add_date
-        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"}:
+        from designer_activity import ACTIVITY_SOURCES, add_activity
+        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"} | ACTIVITY_SOURCES:
             raise ValueError("Choose a scene and a supported element to add.")
-        return layout({"scene": {"divider": add_divider, "time": add_time, "numericDate": add_date}[payload["source"]](payload["scene"])})
+        source = payload["source"]
+        edited = (add_activity(payload["scene"], source) if source in ACTIVITY_SOURCES else
+                  {"divider": add_divider, "time": add_time, "numericDate": add_date}[source](payload["scene"]))
+        return layout({"scene": edited})
     if operation == "divider":
         from designer_typography import set_divider_symbol
         if set(payload) != {"scene", "elementId", "symbol"}:

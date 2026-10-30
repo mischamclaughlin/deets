@@ -38,7 +38,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     onSceneChange: Dispatch<SetStateAction<Scene>>;
 }) {
     const element = scene.elements.find((item) => item.id === elementId)!;
-    const text = !["stepsWeek", "floorsWeek", "runWeek", "heartZones", "temperatureZones", "solarTimeline", "secondsRing"].includes(element.source);
+    const text = !["stepsIcon", "walkIcon", "runIcon", "walkWeek", "stepsWeek", "floorsWeek", "runWeek", "heartZones", "temperatureZones", "solarTimeline", "secondsRing"].includes(element.source);
     const canFit = isEditableTextSource(element.source) && element.source !== "secondsRing";
     const [request, setRequest] = useState<{ base: Scene; next: Scene; fit: boolean }>();
     const [error, setError] = useState<string>();
