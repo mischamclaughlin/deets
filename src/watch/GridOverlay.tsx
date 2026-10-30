@@ -1,5 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { editGridLine, gridLines, type GridLine, type GridSettings } from "./grid.ts";
+import type { Scene } from "../../shared/scene.ts";
+import { snapGridLineToElements } from "./grid-snapping.ts";
 import "./GridOverlay.css";
 
 interface Props {
@@ -7,6 +9,9 @@ interface Props {
     inset: number;
     grid: GridSettings;
     mirror: boolean;
+    scene: Scene;
+    night?: boolean;
+    snapToElements?: boolean;
     selectedId?: string;
     onSelect: (id: string | undefined) => void;
     onChange: (grid: GridSettings) => void;
@@ -26,7 +31,7 @@ function pointer(event: ReactPointerEvent<SVGSVGElement>) {
 }
 
 /** Editable annotations use native coordinates but never enter the exported scene. */
-export function GridOverlay({ size, inset, grid, mirror, selectedId, onSelect, onChange }: Props) {
+export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedId, onSelect, onChange }: Props) {
     const drag = useRef<Drag | undefined>(undefined);
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
@@ -47,8 +52,17 @@ export function GridOverlay({ size, inset, grid, mirror, selectedId, onSelect, o
             delta = ((vertical ? point.x - start.x : point.y - start.y)) / factor;
         }
         // Quantise the displacement to native pixels, retaining the original subdivision.
-        current.latest = Math.round(delta) === 0 ? current.grid
-            : editGridLine(size, inset, current.grid, line.id, line.value + Math.round(delta) / radius, mirror);
+        if (Math.round(delta) === 0) {
+            current.latest = current.grid;
+            setPreview(current.latest);
+            return;
+        }
+        const desired = line.value + Math.round(delta) / radius;
+        const snapped = snapGridLineToElements(scene, current.grid, line, desired, {
+            enabled: snapToElements && !event.altKey, night,
+        });
+        current.latest = snapped === line.value ? current.grid
+            : editGridLine(size, inset, current.grid, line.id, snapped, mirror);
         setPreview(current.latest);
     }
     function finish(event: ReactPointerEvent<SVGSVGElement>, commit: boolean) {

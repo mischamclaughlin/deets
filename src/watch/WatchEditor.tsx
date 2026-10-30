@@ -43,6 +43,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
+    const [snapGridToElements, setSnapGridToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [mirrorGrid, setMirrorGrid] = useState(false);
     const [selectedGridLineId, setSelectedGridLine] = useState<string>();
@@ -164,6 +165,12 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             onChange={(event) => setMirrorGrid(event.target.checked)} />
                         Mirror grid edits
                     </label>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={snapGridToElements}
+                            onChange={(event) => setSnapGridToElements(event.target.checked)} />
+                        Snap grid lines to elements
+                    </label>
+                    <p className="control-hint">Uses the Snap switch. Hold Alt to move freely.</p>
                     <p className="control-hint">Click a grid line to select it. Drag or use arrow keys to move it; Delete removes it. Mirror reflects row and column edits across the centre. Changing counts or ring spacing regenerates the grid.</p>
                     <button type="button" className="snap-button"
                         disabled={!grid.visible || !gridLines(size, inset, grid).some((line) => line.id === selectedGridLineId)}
@@ -249,6 +256,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         snapToGrid={snapToGrid}
                         snapToGuides={snapToGuides}
                         snapToElements={snapToElements}
+                        snapGridToElements={snapGridToElements}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({

@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { moveElement, type SnapOptions } from "../src/watch/snapping.ts";
-import { defaultGrid, editGridLine } from "../src/watch/grid.ts";
+import { defaultGrid, editGridLine, gridLines, type GridLine } from "../src/watch/grid.ts";
+import { snapGridLineToElements } from "../src/watch/grid-snapping.ts";
 import { devices, type Scene, type SceneElement } from "../shared/scene.ts";
 
 const element: SceneElement = { id: "test", source: "label", font: "widget", text: "TEST",
@@ -204,4 +205,70 @@ test("snapping follows edited guides and excludes deleted guides and rings", () 
     assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options, grid: ringMoved }).y, 112);
     assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options,
         grid: editGridLine(416, 16, ringMoved, "rings-1", null) }).y, 115);
+});
+
+
+const editableGrid = { ...defaultGrid, visible: true };
+const gridLine = (axis: GridLine["axis"]): GridLine => ({ id: `${axis}-1`, axis, value: -0.5, path: "" });
+
+test("dragged straight grid lines snap to element edges and centres on either axis", () => {
+    for (const axis of ["rows", "columns"] as const) {
+        for (const target of [180, 190, 200]) {
+            const desired = (target + 3 - 208) / 192;
+            assert.equal(snapGridLineToElements(scene, editableGrid, gridLine(axis), desired, { enabled: true }),
+                (target - 208) / 192);
+        }
+    }
+});
+
+test("grid-to-element snapping respects its switch, appearance and native-pixel threshold", () => {
+    const line = gridLine("rows");
+    const desired = (183 - 208) / 192;
+    const snap = (local: Scene, options: { enabled: boolean; night?: boolean; threshold?: number }) =>
+        snapGridLineToElements(local, editableGrid, line, desired, options);
+    assert.equal(snap(scene, { enabled: false }), desired);
+    assert.equal(snap(scene, { enabled: true, threshold: 2 }), desired);
+    assert.equal(snap(scene, { enabled: true, threshold: 3 }), (180 - 208) / 192);
+    const hidden: Scene = { ...scene, elements: [{ ...element, visible: "night" }] };
+    assert.equal(snap(hidden, { enabled: true }), desired);
+    assert.equal(snap(hidden, { enabled: true, night: true }), (180 - 208) / 192);
+    assert.equal(snap({ ...scene, elements: [{ ...element, visible: "day" }] }, { enabled: true, night: true }), desired);
+    assert.equal(snap({ ...scene, elements: [{ ...element, source: "secondsRing" }] }, { enabled: true }), desired);
+    assert.equal(snapGridLineToElements(scene, defaultGrid, line, desired, { enabled: true }), desired);
+});
+
+test("curved grid snapping uses actual ellipse intersections and rings use radial anchors", () => {
+    const local = { ...scene, elements: [{ ...element, x: 260, y: 140 }] };
+    for (const axis of ["rows", "columns"] as const) {
+        const vertical = axis === "columns";
+        const dx = 270 - 208, dy = 150 - 208;
+        const cross = vertical ? dy : dx;
+        const target = (vertical ? dx : dy) / (192 * Math.sqrt(1 - (cross / 192) ** 2));
+        const result = snapGridLineToElements(local, { ...editableGrid, curvedRows: true, curvedColumns: true },
+            gridLine(axis), target + 0.01 / 192, { enabled: true });
+        assert.ok(Math.abs(result - target) < 1e-12);
+    }
+    const radial = { ...scene, elements: [{ ...element, x: 208, y: 108 }] };
+    assert.equal(snapGridLineToElements(radial, editableGrid, gridLine("rings"), 100.01 / 192, { enabled: true }), 100 / 192);
+});
+
+test("grid snaps remain bounded and mirror correctly on every device", () => {
+    for (const [device, size] of Object.entries(devices)) {
+        const centre = size / 2, radius = centre - 16;
+        const local: Scene = { ...scene, device: device as Scene["device"],
+            elements: [{ ...element, x: centre - 60, y: centre - 60 }] };
+        const target = -60 / radius;
+        const value = snapGridLineToElements(local, editableGrid, gridLine("rows"), target + 3 / radius, { enabled: true });
+        assert.equal(value, target);
+        const changed = editGridLine(size, 16, editableGrid, "rows-1", value, true);
+        const lines = gridLines(size, 16, changed);
+        assert.equal(lines.find((line) => line.id === "rows-1")?.value, target);
+        assert.equal(lines.find((line) => line.id === "rows-3")?.value, -target);
+        const outside: Scene = { ...local, elements: [{ ...element, x: size + 10, y: size + 10 }] };
+        assert.equal(snapGridLineToElements(outside, editableGrid, gridLine("rows"), 0.99, { enabled: true }), 0.99);
+        const boundary: Scene = { ...local, elements: [{ ...element, x: centre + radius, y: centre }] };
+        assert.equal(snapGridLineToElements(boundary, editableGrid, gridLine("columns"), 0.99, { enabled: true }), 0.99);
+    }
+    assert.equal(snapGridLineToElements(scene, editableGrid, gridLine("rows"), 0.3, { enabled: true, threshold: -1 }), 0.3);
+    assert.ok(Number.isNaN(snapGridLineToElements(scene, editableGrid, gridLine("rows"), NaN, { enabled: true })));
 });

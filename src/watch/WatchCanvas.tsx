@@ -22,6 +22,7 @@ interface Props {
     snapToGrid?: boolean;
     snapToGuides?: boolean;
     snapToElements?: boolean;
+    snapGridToElements?: boolean;
     selectedElementId?: string;
     onSelectElement?: (id: string | undefined) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
@@ -49,7 +50,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineId, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineId, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -177,6 +178,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             {grid?.visible && onChangeGrid && onSelectGridLine && (
                 <GridOverlay key={`${size}-${scene.edgeInset ?? 0}`} size={size} inset={scene.edgeInset ?? 0}
                     grid={grid} mirror={mirrorGrid} selectedId={selectedGridLineId}
+                    scene={scene} night={night} snapToElements={snapEnabled && snapGridToElements}
                     onSelect={onSelectGridLine} onChange={onChangeGrid} />
             )}
             {grid?.visible && !onChangeGrid && (
