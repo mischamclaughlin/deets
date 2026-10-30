@@ -32,6 +32,10 @@ def _renderer_fingerprint(scene):
     digest = hashlib.sha256()
     for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
+    from designer_activity import icon_asset_paths
+    for path in icon_asset_paths():
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
     for key in used_fonts:
         digest.update(key.encode())
         digest.update(pack["images"][key])

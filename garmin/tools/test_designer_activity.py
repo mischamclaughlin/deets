@@ -1,10 +1,13 @@
 """Activity insertion, icon clipping and native export contracts."""
 import copy
 import tempfile
+import struct
+import subprocess
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
-from designer_activity import ACTIVITY_SOURCES, ICON_MASKS, add_activity
+from designer_activity import ACTIVITY_SOURCES, ICON_MASKS, ICON_DIRECTORY, add_activity, icon_asset_paths
 from designer_charts import chart_ops
 from designer_model import DEVICES, validate_scene
 import test_designer_export as export_tests
@@ -43,8 +46,38 @@ class ActivityTests(unittest.TestCase):
                         op['x']+op['width'] <= 80+width and op['y']+op['height'] <= 90+height for op in ops))
                     self.assertTrue(all(op['colour'] == element['nightColour' if night else 'colour'] for op in ops))
             masks.append(chart_ops(element))
-        self.assertNotEqual(masks[0], masks[1])
+        self.assertEqual(masks[0], masks[1])
         self.assertNotEqual(masks[1], masks[2])
+
+    def test_original_parent_icon_coverage_is_preserved_at_native_size(self):
+        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png'})
+        for source, name in ICON_MASKS.items():
+            data = (ICON_DIRECTORY / f'{name}.png').read_bytes()
+            width, height = struct.unpack('>II', data[16:24])
+            element = add_activity(self.scene(), source)['elements'][-1]
+            self.assertEqual((element['width'], element['height']), (width, height))
+            element.update(x=0, y=0)
+            operations = chart_ops(element)
+            actual = {(op['x']+x, op['y']+y) for op in operations
+                      for y in range(op['height']) for x in range(op['width'])}
+            alpha = subprocess.check_output(['magick', 'png:-', '-alpha', 'extract', '-depth', '8', 'gray:-'], input=data)
+            expected = {(x, y) for y in range(height) for x in range(width) if alpha[y*width+x] >= 128}
+            self.assertEqual(actual, expected)
+            self.assertEqual(sum(op['width']*op['height'] for op in operations), len(actual))
+            self.assertEqual(len(operations), len(set((op['x'], op['y'], op['width'], op['height']) for op in operations)))
+
+    def test_icon_asset_changes_invalidate_both_mapping_and_export_identity(self):
+        from designer_export import scene_application_id
+        scene = self.scene()
+        with tempfile.TemporaryDirectory() as directory:
+            icon = Path(directory) / "icon.png"
+            icon.write_bytes(b"first coverage")
+            with patch("designer_activity.icon_asset_paths", return_value=(icon,)):
+                mapping = bridge.mapping(scene)
+                identity = scene_application_id(scene)
+                icon.write_bytes(b"updated coverage")
+                self.assertNotEqual(mapping, bridge.mapping(scene))
+                self.assertNotEqual(identity, scene_application_id(scene))
 
     def test_add_bridge_accepts_activity_sources_and_rejects_unexpected_payloads(self):
         mapped = bridge.dispatch(dict(operation="add", payload=dict(scene=self.scene(), source="walkWeek")))

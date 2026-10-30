@@ -24,6 +24,10 @@ def mapping(scene):
     digest.update(json.dumps(scene, sort_keys=True).encode())
     for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
+    from designer_activity import icon_asset_paths
+    for path in icon_asset_paths():
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
     pack = model.scene_font_pack(scene)
     for font in sorted({e["font"] for e in scene["elements"] if model.SOURCES[e["source"]]["kind"] == "text"}):
         digest.update(pack["images"][font])
