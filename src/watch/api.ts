@@ -139,3 +139,6 @@ export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSig
 
 export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider", signal?: AbortSignal, options?: ActivityAddOptions) =>
     post<WatchMapping>("add", { scene, source, ...(options ? { options } : {}) }, signal);
+
+export const setActivityGraph = (scene: Scene, elementId: string, enabled: boolean, signal?: AbortSignal) =>
+    post<WatchMapping>("activity-graph", { scene, elementId, enabled }, signal);

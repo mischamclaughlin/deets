@@ -1,6 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { isEditableTextSource, type Scene } from "../../shared/scene.ts";
 import { previewWatch, fitElementBox } from "./api.ts";
+import { moveSceneElement } from "./snapping.ts";
 import { evaluatePixelExpression } from "./arithmetic.ts";
 import "./ElementBoxPanel.css";
 
@@ -71,6 +72,12 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
                             setRequest((pending) => {
                                 const base = pending?.base ?? scene;
                                 const next = pending?.next ?? scene;
+                                if (changed === "x" || changed === "y") {
+                                    const target = next.elements.find((item) => item.id === elementId)!;
+                                    return { base, fit: false, next: moveSceneElement(next, elementId,
+                                        { x: changed === "x" ? value : target.x, y: changed === "y" ? value : target.y },
+                                        { enabled: false, showGuideLines: false }) };
+                                }
                                 return { base, fit: false, next: { ...next, elements: next.elements.map((item) => item.id === elementId
                                     ? { ...item, [changed]: value,
                                         ...(item.source === "secondsRing" && (changed === "width" || changed === "height") ? { width: value, height: value } : {}),

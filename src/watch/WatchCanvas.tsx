@@ -4,7 +4,7 @@ import { previewWatch } from "./api.ts";
 import { preparedMapping } from "./mapping-cache.ts";
 import { gridLines, type GridSettings } from "./grid.ts";
 import { GridOverlay } from "./GridOverlay.tsx";
-import { moveElement } from "./snapping.ts";
+import { moveElement, moveSceneElement } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
 import "./WatchAnnotations.css";
@@ -63,11 +63,9 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     const [preview, setPreview] = useState<Drag>();
     const [active, setActive] = useState<string>();
     const selectedId = onSelectElement ? selectedElementId : active;
-    const pixelScene = useMemo(() => preview ? {
-        ...scene,
-        elements: scene.elements.map((element) => element.id === preview.element.id
-            ? { ...element, ...preview.position } : element),
-    } : scene, [scene, preview]);
+    const pixelScene = useMemo(() => preview
+        ? moveSceneElement(scene, preview.element.id, preview.position, { enabled: false, showGuideLines: false })
+        : scene, [scene, preview]);
     const prepared = preparedMapping(pixelScene, night);
     const current = result?.scene === pixelScene && result.night === night ? result
         : prepared ? { scene: pixelScene, night, layout: prepared } : undefined;

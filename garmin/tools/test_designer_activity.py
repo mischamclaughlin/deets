@@ -27,11 +27,11 @@ class ActivityTests(unittest.TestCase):
                 edited = add_activity(edited, source)
                 edited = add_activity(edited, source)
             self.assertEqual(original, self.scene(device))
-            self.assertEqual(len(edited['elements']), 24)
-            self.assertEqual(len({e['id'] for e in edited['elements']}), 24)
+            self.assertEqual(len(edited['elements']), 32)
+            self.assertEqual(len({e['id'] for e in edited['elements']}), 32)
             self.assertEqual(validate_scene(edited), edited)
             mapped = bridge.layout({'scene': edited})
-            self.assertEqual(len(mapped['areas']), 24)
+            self.assertEqual(len(mapped['areas']), 32)
             self.assertTrue(mapped['ops'])
 
     def test_icons_keep_all_pixels_inside_their_boxes_and_use_night_colour(self):
@@ -163,8 +163,8 @@ class ActivityTests(unittest.TestCase):
         self.assertEqual(scene, original)
 
     def test_bridge_accepts_partial_options_and_rejects_invalid_option_payloads(self):
-        for options, sources in (({}, ['steps']), ({'icon': True}, ['steps', 'stepsIcon']),
-                                 ({'graph': True}, ['steps', 'stepsWeek'])):
+        for options, sources in (({}, ['steps', 'stepsIcon']), ({'icon': True}, ['steps', 'stepsIcon']),
+                                 ({'icon': False}, ['steps']), ({'graph': True}, ['steps', 'stepsIcon', 'stepsWeek'])):
             mapped = bridge.dispatch(dict(operation='add', payload=dict(scene=self.scene(), source='steps', options=options)))
             self.assertEqual([item['source'] for item in mapped['scene']['elements']], sources)
         for options in (None, [], True, {'icon': 1}, {'graph': 'true'}, {'extra': False}, {'icon': None}):
@@ -181,3 +181,119 @@ class ActivityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             add_activity(scene, 'weeklyRun', dict(icon=True, graph=True))
         self.assertEqual(scene, saved)
+
+    def test_default_stack_has_linked_icon_above_value_with_exact_gap(self):
+        from designer_activity import ACTIVITY_GROUPS
+        for device in DEVICES:
+            for source in ACTIVITY_GROUPS:
+                with self.subTest(device=device, source=source):
+                    scene = add_activity(self.scene(device), source)
+                    value, icon = scene['elements']
+                    self.assertTrue(value['moveTogether'])
+                    self.assertEqual(icon['activityId'], value['id'])
+                    self.assertEqual(value['y'] - (icon['y'] + icon['height']), 16)
+                    self.assertLessEqual(abs((2*value['x']+value['width'])-(2*icon['x']+icon['width'])), 1)
+
+    def test_icon_only_attaches_to_latest_missing_role_without_duplicating_data(self):
+        original = add_activity(self.scene(), 'steps', {'icon': False})
+        original = add_activity(original, 'steps', {'icon': False})
+        saved = copy.deepcopy(original)
+        edited = add_activity(original, 'steps', {'value': False, 'icon': True})
+        self.assertEqual(original, saved)
+        self.assertEqual(len(edited['elements']), 3)
+        self.assertEqual(edited['elements'][:2], saved['elements'])
+        self.assertEqual(edited['elements'][-1]['activityId'], original['elements'][-1]['id'])
+        self.assertEqual(edited['elements'][-1]['source'], 'stepsIcon')
+        older = add_activity(edited, 'steps', {'value': False, 'icon': True})
+        self.assertEqual(older['elements'][-1]['activityId'], original['elements'][0]['id'])
+        loose = add_activity(older, 'steps', {'value': False, 'icon': True})
+        self.assertNotIn('activityId', loose['elements'][-1])
+        self.assertEqual(sum(item['source'] == 'steps' for item in loose['elements']), 2)
+
+    def test_companion_only_empty_selection_and_invalid_value_flag_are_rejected(self):
+        for options in ({'value': False, 'icon': False, 'graph': False}, {'value': 1}):
+            with self.assertRaises(ValueError):
+                add_activity(self.scene(), 'steps', options)
+        loose = add_activity(self.scene(), 'steps', {'value': False, 'icon': False, 'graph': True})
+        self.assertEqual([item['source'] for item in loose['elements']], ['stepsWeek'])
+        self.assertNotIn('activityId', loose['elements'][0])
+
+    def test_activity_metadata_rejects_dangling_wrong_and_duplicate_links(self):
+        scene = add_activity(self.scene(), 'steps')
+        for bad_link in ('missing', scene['elements'][1]['id'], True):
+            invalid = copy.deepcopy(scene)
+            invalid['elements'][1]['activityId'] = bad_link
+            with self.assertRaises(ValueError):
+                validate_scene(invalid)
+        wrong = copy.deepcopy(scene)
+        wrong['elements'][1]['source'] = 'runIcon'
+        with self.assertRaises(ValueError):
+            validate_scene(wrong)
+        duplicate = copy.deepcopy(scene)
+        duplicate['elements'].append({**duplicate['elements'][1], 'id': 'extra-icon'})
+        with self.assertRaises(ValueError):
+            validate_scene(duplicate)
+        wrong_toggle = copy.deepcopy(scene)
+        wrong_toggle['elements'][1]['moveTogether'] = True
+        with self.assertRaises(ValueError):
+            validate_scene(wrong_toggle)
+        wrong_toggle = copy.deepcopy(scene)
+        wrong_toggle['elements'][0]['moveTogether'] = 1
+        with self.assertRaises(ValueError):
+            validate_scene(wrong_toggle)
+        scene['elements'][0]['moveTogether'] = False
+        self.assertFalse(validate_scene(scene)['elements'][0]['moveTogether'])
+
+    def test_graph_toggle_from_any_group_member_is_idempotent_and_keeps_data_fixed(self):
+        from designer_activity import set_activity_graph
+        scene = add_activity(self.scene(), 'floors')
+        saved = copy.deepcopy(scene)
+        enabled = set_activity_graph(scene, scene['elements'][1]['id'], True)
+        self.assertEqual(scene, saved)
+        self.assertEqual(enabled['elements'][:2], scene['elements'])
+        graph = enabled['elements'][-1]
+        self.assertEqual(graph['activityId'], scene['elements'][0]['id'])
+        self.assertEqual(graph['y'] - (scene['elements'][0]['y'] + scene['elements'][0]['height']), 16)
+        self.assertEqual(set_activity_graph(enabled, graph['id'], True), enabled)
+        disabled = set_activity_graph(enabled, graph['id'], False)
+        self.assertEqual(disabled, scene)
+        self.assertEqual(set_activity_graph(disabled, scene['elements'][0]['id'], False), disabled)
+        mapped = bridge.dispatch(dict(operation='activity-graph', payload=dict(scene=scene, elementId=scene['elements'][0]['id'], enabled=True)))
+        self.assertEqual(len(mapped['scene']['elements']), 3)
+        for payload in (dict(scene=scene, elementId=scene['elements'][0]['id'], enabled=1),
+                        dict(scene=scene, elementId='missing', enabled=True),
+                        dict(scene=scene, elementId=scene['elements'][0]['id'], enabled=True, extra=False)):
+            with self.assertRaises(ValueError):
+                bridge.dispatch(dict(operation='activity-graph', payload=payload))
+
+    def test_graph_failure_is_atomic_at_capacity_and_near_boundary(self):
+        from designer_activity import set_activity_graph
+        scene = add_activity(self.scene(), 'steps')
+        for _ in range(38):
+            scene = add_activity(scene, 'stepsIcon')
+        saved = copy.deepcopy(scene)
+        with self.assertRaises(ValueError):
+            set_activity_graph(scene, scene['elements'][0]['id'], True)
+        self.assertEqual(scene, saved)
+        near_edge = add_activity(self.scene(), 'steps', {'icon': False})
+        near_edge['elements'][0]['y'] = 340
+        near_edge = validate_scene(near_edge)
+        saved = copy.deepcopy(near_edge)
+        with self.assertRaises(ValueError):
+            set_activity_graph(near_edge, near_edge['elements'][0]['id'], True)
+        self.assertEqual(near_edge, saved)
+
+    def test_copy_and_delete_preserve_valid_linked_activity_scenes(self):
+        from designer_actions import copy_element, delete_element
+        scene = add_activity(self.scene(), 'steps', {'graph': True})
+        parent, icon, graph = scene['elements']
+        copied_icon = copy_element(scene, icon['id'])
+        duplicate = next(item for item in copied_icon['elements'] if item['id'] not in {old['id'] for old in scene['elements']})
+        self.assertNotIn('activityId', duplicate)
+        copied_value = copy_element(scene, parent['id'])
+        duplicate = next(item for item in copied_value['elements'] if item['id'] not in {old['id'] for old in scene['elements']})
+        self.assertNotIn('moveTogether', duplicate)
+        deleted = delete_element(scene, parent['id'])
+        self.assertEqual(len(deleted['elements']), 2)
+        self.assertTrue(all('activityId' not in item for item in deleted['elements']))
+        self.assertEqual(delete_element(scene, graph['id'])['elements'], scene['elements'][:2])

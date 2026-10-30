@@ -29,6 +29,8 @@ def copy_element(scene, element_id):
     edited = copy.deepcopy(scene)
     duplicate = copy.deepcopy(target)
     duplicate["id"] = identity
+    duplicate.pop("activityId", None)
+    duplicate.pop("moveTogether", None)
     edited["elements"].insert(index + 1, duplicate)
     return validate_scene(edited)
 
@@ -38,6 +40,9 @@ def delete_element(scene, element_id):
     index, _ = _target(scene, element_id)
     edited = copy.deepcopy(scene)
     edited["elements"].pop(index)
+    for element in edited["elements"]:
+        if element.get("activityId") == element_id:
+            element.pop("activityId", None)
     return validate_scene(edited)
 
 

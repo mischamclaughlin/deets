@@ -95,51 +95,107 @@ def _new_activity_element(scene, source, identities):
         nightColour=0x8d99ae, visible="both")
 
 
+def _position_companions(value, companions):
+    """Centre each companion on the data with an exact sixteen-pixel box gap."""
+    for element in companions:
+        element["x"] = value["x"] + (value["width"] - element["width"]) // 2
+        element["y"] = (value["y"] - element["height"] - 16 if element["source"] in ICON_MASKS
+                        else value["y"] + value["height"] + 16)
+
+
 def _arrange_activity_group(scene, elements):
-    """Centre native boxes as one layout: icon beside value, graph underneath."""
+    """Centre the complete icon/data/graph stack in native pixels."""
     from designer_model import DEVICES
     value = elements[0]
-    icon = next((element for element in elements[1:] if element["source"] in ICON_MASKS), None)
-    graph = next((element for element in elements[1:] if element["source"].endswith("Week")), None)
-    gap = 8
-    row_width = value["width"] + (icon["width"] + gap if icon else 0)
-    row_height = max(value["height"], icon["height"] if icon else 0)
-    group_width = max(row_width, graph["width"] if graph else 0)
-    group_height = row_height + (gap + graph["height"] if graph else 0)
-    size = DEVICES[scene["device"]]
-    left, top = (size-group_width)//2, (size-group_height)//2
-    row_left = left + (group_width-row_width)//2
-    if icon:
-        icon.update(x=row_left, y=top+(row_height-icon["height"])//2)
-    value.update(x=row_left+(icon["width"]+gap if icon else 0), y=top+(row_height-value["height"])//2)
-    if graph:
-        graph.update(x=left+(group_width-graph["width"])//2, y=top+row_height+gap)
+    icon = next((item for item in elements[1:] if item["source"] in ICON_MASKS), None)
+    graph = next((item for item in elements[1:] if item["source"].endswith("Week")), None)
+    height = value["height"] + (icon["height"] + 16 if icon else 0) + (graph["height"] + 16 if graph else 0)
+    value["y"] = (DEVICES[scene["device"]] - height) // 2 + (icon["height"] + 16 if icon else 0)
+    _position_companions(value, elements[1:])
+
+
+def activity_parent(scene, element_id):
+    """Resolve a selected value or linked companion without guessing by position."""
+    selected = next((item for item in scene["elements"] if item["id"] == element_id), None)
+    if selected is None:
+        raise ValueError("Choose an existing activity element.")
+    if selected["source"] in ACTIVITY_GROUPS:
+        return selected
+    parent_id = selected.get("activityId")
+    parent = next((item for item in scene["elements"] if item["id"] == parent_id), None)
+    if parent is None or parent["source"] not in ACTIVITY_GROUPS:
+        raise ValueError("Choose activity data or one of its linked elements.")
+    return parent
 
 
 def add_activity(scene, source, options=_NO_OPTIONS):
-    """Add a value and its optional companions atomically, retaining legacy adds."""
+    """Add data and its chosen companions atomically, preserving independent parts."""
     from designer_model import validate_scene
     scene = validate_scene(scene)
     if source not in ACTIVITY_SOURCES:
         raise ValueError("Choose a supported activity element.")
-    sources = [source]
-    if options is not _NO_OPTIONS:
-        if source not in ACTIVITY_GROUPS:
+    if source not in ACTIVITY_GROUPS:
+        if options is not _NO_OPTIONS:
             raise ValueError("Icon and graph options belong to an activity data value.")
-        if (not isinstance(options, dict) or set(options) - {"icon", "graph"}
+        sources = [source]
+        include_value = False
+    else:
+        if options is _NO_OPTIONS:
+            options = {}
+        if (not isinstance(options, dict) or set(options) - {"value", "icon", "graph"}
                 or any(type(value) is not bool for value in options.values())):
-            raise ValueError("Choose boolean icon and graph options for the activity value.")
+            raise ValueError("Choose boolean value, icon and graph options for the activity.")
+        include_value = options.get("value", True)
         icon, graph = ACTIVITY_GROUPS[source]
-        if options.get("icon", False):
-            sources.append(icon)
-        if options.get("graph", False):
-            sources.append(graph)
+        sources = ([source] if include_value else []) + ([icon] if options.get("icon", True) else []) + ([graph] if options.get("graph", False) else [])
+        if not sources:
+            raise ValueError("Choose at least one activity element to add.")
     if len(scene["elements"]) + len(sources) > 40:
         raise ValueError(f"This addition needs {len(sources)} element slots; a design can contain at most 40 elements.")
     edited = copy.deepcopy(scene)
     identities = {element["id"] for element in scene["elements"]}
     additions = [_new_activity_element(scene, item, identities) for item in sources]
-    if options is not _NO_OPTIONS:
+    if include_value:
+        parent = additions[0]
+        parent["moveTogether"] = True
+        for companion in additions[1:]:
+            companion["activityId"] = parent["id"]
         _arrange_activity_group(scene, additions)
+    elif source in ACTIVITY_GROUPS:
+        # Attach each missing role to the newest compatible data value. If every
+        # value already has that role, retain the explicitly requested loose icon.
+        for companion in additions:
+            parent = next((item for item in reversed(edited["elements"]) if item["source"] == source and
+                not any(child.get("activityId") == item["id"] and child["source"] == companion["source"]
+                        for child in edited["elements"] + additions if child is not companion)), None)
+            if parent:
+                companion["activityId"] = parent["id"]
+                parent.setdefault("moveTogether", True)
+                _position_companions(parent, [companion])
     edited["elements"].extend(additions)
+    return validate_scene(edited)
+
+
+def set_activity_graph(scene, element_id, enabled):
+    """Toggle only this activity's graph; keep every existing box in place."""
+    from designer_model import validate_scene
+    if type(enabled) is not bool:
+        raise ValueError("Choose whether the weekly graph is enabled.")
+    scene = validate_scene(scene)
+    parent = activity_parent(scene, element_id)
+    graph_source = ACTIVITY_GROUPS[parent["source"]][1]
+    existing = next((item for item in scene["elements"] if item.get("activityId") == parent["id"] and item["source"] == graph_source), None)
+    if bool(existing) == enabled:
+        return scene
+    edited = copy.deepcopy(scene)
+    if not enabled:
+        edited["elements"] = [item for item in edited["elements"] if item["id"] != existing["id"]]
+    else:
+        if len(edited["elements"]) >= 40:
+            raise ValueError("A design can contain at most 40 elements.")
+        identities = {item["id"] for item in edited["elements"]}
+        graph = _new_activity_element(edited, graph_source, identities)
+        graph["activityId"] = parent["id"]
+        _position_companions(parent, [graph])
+        edited["elements"].append(graph)
     return validate_scene(edited)

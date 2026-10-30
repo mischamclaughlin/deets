@@ -13,6 +13,30 @@ export interface SnapOptions {
     threshold?: number;
 }
 
+/** Linked activity parts share translation until the data value opts out. */
+export function linkedElementIds(scene: Scene, elementId: string): string[] {
+    const selected = scene.elements.find((element) => element.id === elementId);
+    if (!selected) return [];
+    const root = selected.activityId
+        ? scene.elements.find((element) => element.id === selected.activityId)
+        : selected;
+    if (!root || root.moveTogether === false) return [elementId];
+    return scene.elements.filter((element) => element.id === root.id || element.activityId === root.id)
+        .map((element) => element.id);
+}
+
+/** Apply a single bounded native-pixel translation to the selected activity. */
+export function moveSceneElement(scene: Scene, elementId: string, desired: Point, options: SnapOptions): Scene {
+    const selected = scene.elements.find((element) => element.id === elementId);
+    if (!selected) return scene;
+    const position = moveElement(scene, selected, desired, options);
+    const dx = position.x - selected.x, dy = position.y - selected.y;
+    if (!dx && !dy) return scene;
+    const linked = new Set(linkedElementIds(scene, elementId));
+    return { ...scene, elements: scene.elements.map((element) => linked.has(element.id)
+        ? { ...element, x: element.x + dx, y: element.y + dy } : element) };
+}
+
 /** All geometry is in native pixels, independent of browser text and CSS. */
 export function moveElement(scene: Scene, element: SceneElement, desired: Point, options: SnapOptions): Point {
     if (element.source === "secondsRing") return { x: element.x, y: element.y };
@@ -20,12 +44,22 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
     const centre = size / 2;
     const radius = centre - (scene.edgeInset ?? 0);
     const { width, height } = element;
-    const valid = (point: Point) => {
-        if (point.x < 0 || point.y < 0 || point.x + width > size || point.y + height > size) return false;
-        return scene.edgeInset === undefined || [point.x, point.x + width].every((x) =>
-            [point.y, point.y + height].every((y) => (x - centre) ** 2 + (y - centre) ** 2 <= radius ** 2));
-    };
-    const centred = { x: Math.floor((size - width) / 2), y: Math.floor((size - height) / 2) };
+    const linked = new Set(linkedElementIds(scene, element.id));
+    const members = scene.elements.filter((item) => linked.has(item.id) && item.id !== element.id).concat(element);
+    const valid = (point: Point) => members.every((member) => {
+        const x = point.x + member.x - element.x, y = point.y + member.y - element.y;
+        if (x < 0 || y < 0 || x + member.width > size || y + member.height > size) return false;
+        return scene.edgeInset === undefined || [x, x + member.width].every((cx) =>
+            [y, y + member.height].every((cy) => (cx - centre) ** 2 + (cy - centre) ** 2 <= radius ** 2));
+    });
+    const left = Math.min(...members.map((member) => member.x));
+    const top = Math.min(...members.map((member) => member.y));
+    const right = Math.max(...members.map((member) => member.x + member.width));
+    const bottom = Math.max(...members.map((member) => member.y + member.height));
+    let centred = { x: Math.floor((size - (right - left)) / 2) + element.x - left,
+        y: Math.floor((size - (bottom - top)) / 2) + element.y - top };
+    // An asymmetric group can fit even when its bounding rectangle's centre cannot.
+    if (!valid(centred)) centred = { x: element.x, y: element.y };
     if (!valid(centred) || !Number.isFinite(desired.x) || !Number.isFinite(desired.y))
         return { x: element.x, y: element.y };
     const distance = (point: Point, target: Point) => Math.hypot(point.x - target.x, point.y - target.y);
@@ -60,7 +94,7 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
         const result = options.snapToGuides !== false && options.showGuideLines ? [centre] : [];
         if (options.snapToElements) {
             for (const other of scene.elements) {
-                if (other.id === element.id || other.source === "secondsRing" ||
+                if (other.id === element.id || linked.has(other.id) || other.source === "secondsRing" ||
                     other.visible === (options.night ? "day" : "night")) continue;
                 const start = vertical ? other.x : other.y;
                 const extent = vertical ? other.width : other.height;

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { refreshFonts } from "./api.ts";
 import { defaultGrid, editGridLine, gridLines } from "./grid.ts";
-import { moveElement } from "./snapping.ts";
+import { moveSceneElement } from "./snapping.ts";
 import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
 import { LibraryPanel } from "./LibraryPanel.tsx";
+import { ActivitySettingsPanel } from "./ActivitySettingsPanel.tsx";
 import { ElementBoxPanel } from "./ElementBoxPanel.tsx";
 import { ElementsPanel } from "./ElementsPanel.tsx";
 import { ColourPresetsPanel } from "./ColourPresetsPanel.tsx";
@@ -274,12 +275,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         snapGridToElements={snapGridToElements}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
-                        onMoveElement={(id, desired) => setScene((current) => ({
-                            ...current,
-                            elements: current.elements.map((element) => element.id === id
-                                ? { ...element, ...moveElement(current, element, desired, { enabled: false, showGuideLines, grid }) }
-                                : element),
-                        }))}
+                        onMoveElement={(id, desired) => setScene((current) => moveSceneElement(current, id, desired, { enabled: false, showGuideLines, grid }))}
                     />
                 </div>
                 <p className="canvas-info" id="canvas-dimensions">
@@ -291,6 +287,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     selectedIds={selectedGridLines} mirror={mirrorGrid} onChange={setGrid} />}
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                     onSceneChange={setScene} onSelect={setSelectedId} />}
+                {selected && <ActivitySettingsPanel scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
                 {selected && <ElementBoxPanel key={selected.id}
                     scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                 {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}

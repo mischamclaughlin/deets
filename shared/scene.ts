@@ -18,7 +18,7 @@ export const isDateSource = (source: string): source is DateSource =>
 export const isEditableTextSource = (source: string): boolean =>
     isClockSource(source) || isDateSource(source) || source === "divider";
 export type ActivitySource = "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
-export interface ActivityAddOptions { icon?: boolean; graph?: boolean; }
+export interface ActivityAddOptions { value?: boolean; icon?: boolean; graph?: boolean; }
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {
     family: string;
@@ -40,6 +40,10 @@ export interface ColourPreset {
 export interface SceneElement {
     id: string;
     source: string;
+    /** The activity value this icon or graph accompanies. */
+    activityId?: string;
+    /** Translate linked activity parts together unless explicitly disabled. */
+    moveTogether?: boolean;
     font: FontKey;
     x: number;
     y: number;

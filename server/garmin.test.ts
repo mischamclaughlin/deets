@@ -573,3 +573,23 @@ test("adding activity extras passes the API boundary as one atomic scene edit", 
     const origin = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "steps", options: { graph: true } }))], { ...headers, origin: "https://attacker.example" });
     assert.equal(origin.status, 403);
 });
+
+test("selected activity graph API preserves linked icon/data and strict requests", async () => {
+    const headers = { "content-type": "application/json" };
+    const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "floors" }))], headers);
+    assert.equal(added.status, 200);
+    const initial = added.body.scene as typeof scene;
+    const [value, icon] = initial.elements.slice(scene.elements.length);
+    assert.equal(icon.activityId, value.id);
+    assert.equal(value.moveTogether, true);
+    assert.equal(value.y - icon.y - icon.height, 16);
+    const graph = await requestApi("/api/garmin/activity-graph", [Buffer.from(JSON.stringify({ scene: initial, elementId: icon.id, enabled: true }))], headers);
+    assert.equal(graph.status, 200);
+    const updated = graph.body.scene as typeof scene;
+    assert.deepEqual(updated.elements.slice(0, initial.elements.length), initial.elements);
+    assert.equal(updated.elements.at(-1)?.activityId, value.id);
+    const invalid = await requestApi("/api/garmin/activity-graph", [Buffer.from(JSON.stringify({ scene: initial, elementId: value.id, enabled: "yes" }))], headers);
+    assert.equal(invalid.status, 400);
+    const origin = await requestApi("/api/garmin/activity-graph", [Buffer.from(JSON.stringify({ scene: initial, elementId: value.id, enabled: true }))], { ...headers, origin: "https://attacker.example" });
+    assert.equal(origin.status, 403);
+});

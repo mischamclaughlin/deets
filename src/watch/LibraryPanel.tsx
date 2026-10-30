@@ -57,7 +57,7 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
             <button type="button" className="library-browse-button" disabled={adding !== undefined} onClick={() => { setError(undefined); setAnnouncement(""); setOpen(true); }}
                 aria-haspopup="dialog" aria-expanded={open} aria-label="Browse element library">Browse <span aria-hidden="true">↗</span></button>
         </div>
-        <LibraryList key={scene.elements.length} onAdd={(source, options) => void add(source, options)} adding={adding} remaining={Math.max(0, 40-scene.elements.length)} />
+        <LibraryList key={scene.elements.length} onAdd={(source) => void add(source)} adding={adding} remaining={Math.max(0, 40-scene.elements.length)} />
         <p className="library-announcement" role="status">{announcement}</p>
         {!open && error && <p className="typography-status" role="alert">{error}</p>}
         {scene.elements.length >= 40 && <p className="library-announcement">All 40 slots are in use. Delete an element to add another.</p>}

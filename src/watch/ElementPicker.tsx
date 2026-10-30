@@ -44,7 +44,7 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
             <div><p className="picker-eyebrow">ELEMENT LIBRARY</p><h2 id="element-picker-title">Add to your watch</h2></div>
             <button className="picker-close" type="button" aria-label="Close element library" onClick={dismiss}>×</button>
         </header>
-        <p id="element-picker-description" className="picker-description">Choose your data, then include its icon or weekly graph if you need them.</p>
+        <p id="element-picker-description" className="picker-description">Choose data with its icon, or select individual parts. Preview your choices before adding.</p>
         <div className="picker-controls">
             <label className="picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg>
                 <input ref={search} type="search" aria-label="Search elements" placeholder="Search elements…" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -83,7 +83,7 @@ function ActivityCard({ scene, entry, adding, remaining, onAdd }: {
     remaining: number;
     onAdd: (source: LibrarySource, options?: ActivityAddOptions) => void;
 }) {
-    const [options, setOptions] = useState<ActivityAddOptions>({});
+    const [options, setOptions] = useState<ActivityAddOptions>({ value: true, icon: true, graph: false });
     return <article className="picker-card picker-activity-card" aria-label={entry.label}>
         <ElementPreview scene={scene} source={entry.source} options={options} />
         <div className="picker-card-caption"><span><span className="picker-card-title">{entry.label}</span>

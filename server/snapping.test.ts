@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { moveElement, type SnapOptions } from "../src/watch/snapping.ts";
+import { linkedElementIds, moveElement, moveSceneElement, type SnapOptions } from "../src/watch/snapping.ts";
 import { defaultGrid, editGridLine, gridLines, setGridLineGaps, type GridLine } from "../src/watch/grid.ts";
 import { snapGridLineToElements } from "../src/watch/grid-snapping.ts";
 import { devices, type Scene, type SceneElement } from "../shared/scene.ts";
@@ -286,4 +286,96 @@ test("dragged split guides align their edges to elements", () => {
     const line = gridLines(416, 16, grid).find((item) => item.id === "rows-2")!;
     const snapped = snapGridLineToElements(scene, grid, line, (172 - 208) / 192, { enabled: true });
     assert.ok(Math.abs(snapped - (170 - 208) / 192) < 1e-12);
+});
+
+
+function activityScene(device: Scene["device"] = "epix2pro47mm"): Scene {
+    const centre = devices[device] / 2;
+    const value: SceneElement = { ...element, id: "steps", source: "steps", x: centre-56,
+        y: centre, width: 112, height: 26, moveTogether: true };
+    return { ...scene, device, elements: [value,
+        { ...element, id: "steps-icon", source: "stepsIcon", activityId: value.id,
+            x: centre-10, y: centre-36, width: 20, height: 20 },
+        { ...element, id: "steps-graph", source: "stepsWeek", activityId: value.id,
+            x: centre-56, y: centre+42, width: 112, height: 24 },
+        { ...element, id: "unrelated", x: centre-100, y: centre-80 },
+    ] };
+}
+
+test("moving any linked activity part preserves the icon, value and graph offsets", () => {
+    const original = activityScene();
+    for (const id of ["steps", "steps-icon", "steps-graph"]) {
+        const selected = original.elements.find((item) => item.id === id)!;
+        assert.deepEqual(linkedElementIds(original, id), ["steps", "steps-icon", "steps-graph"]);
+        const changed = moveSceneElement(original, id, { x: selected.x+11, y: selected.y+7 }, none);
+        for (const before of original.elements) {
+            const after = changed.elements.find((item) => item.id === before.id)!;
+            assert.deepEqual({ x: after.x, y: after.y }, before.id === "unrelated"
+                ? { x: before.x, y: before.y } : { x: before.x+11, y: before.y+7 });
+        }
+        assert.equal(changed.elements[3], original.elements[3]);
+    }
+    assert.equal(moveSceneElement(original, "missing", { x: 1, y: 1 }, none), original);
+    assert.deepEqual(linkedElementIds(original, "missing"), []);
+});
+
+test("linked movement clamps the whole activity inside every device boundary", () => {
+    for (const device of Object.keys(devices) as Scene["device"][]) {
+        for (const edgeInset of [undefined, 16]) {
+            const original = { ...activityScene(device), edgeInset };
+            const size = devices[device], centre = size/2;
+            for (const selected of original.elements.slice(0, 3)) {
+                for (const x of [-100, 0, centre, size+100]) {
+                    for (const y of [-100, 0, centre, size+100]) {
+                        const position = moveElement(original, selected, { x, y }, none);
+                        const changed = moveSceneElement(original, selected.id, { x, y }, none);
+                        const dx = position.x-selected.x, dy = position.y-selected.y;
+                        for (const before of original.elements.slice(0, 3)) {
+                            const after = changed.elements.find((item) => item.id === before.id)!;
+                            assert.equal(after.x-before.x, dx);
+                            assert.equal(after.y-before.y, dy);
+                            assert.ok(Number.isInteger(after.x) && Number.isInteger(after.y));
+                            for (const cx of [after.x, after.x+after.width]) {
+                                for (const cy of [after.y, after.y+after.height]) {
+                                    assert.ok(cx >= 0 && cx <= size && cy >= 0 && cy <= size);
+                                    if (edgeInset !== undefined)
+                                        assert.ok((cx-centre)**2+(cy-centre)**2 <= (centre-edgeInset)**2);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+});
+
+test("disabling linked movement leaves all other activity parts in place", () => {
+    const original = activityScene();
+    original.elements[0] = { ...original.elements[0], moveTogether: false };
+    for (const selected of original.elements.slice(0, 3)) {
+        assert.deepEqual(linkedElementIds(original, selected.id), [selected.id]);
+        const changed = moveSceneElement(original, selected.id, { x: selected.x+9, y: selected.y+5 }, none);
+        for (const before of original.elements) {
+            const after = changed.elements.find((item) => item.id === before.id)!;
+            assert.deepEqual({ x: after.x, y: after.y }, before.id === selected.id
+                ? { x: before.x+9, y: before.y+5 } : { x: before.x, y: before.y });
+        }
+    }
+    const implicit = activityScene();
+    delete implicit.elements[0].moveTogether;
+    assert.equal(linkedElementIds(implicit, "steps-icon").length, 3);
+});
+
+test("linked members are excluded from snapping while external elements remain targets", () => {
+    const value: SceneElement = { ...element, id: "value", source: "steps", x: 180, y: 200, moveTogether: true };
+    const icon: SceneElement = { ...element, id: "icon", source: "stepsIcon", activityId: value.id, x: 181, y: 164 };
+    const linked: Scene = { ...scene, elements: [value, icon] };
+    const desired = { x: 183, y: 250 };
+    assert.deepEqual(moveElement(linked, value, desired, elementSnaps), desired);
+    const external: Scene = { ...linked, elements: [...linked.elements, { ...neighbour, x: 140, y: 100 }] };
+    assert.equal(moveElement(external, value, { x: 143, y: 250 }, elementSnaps).x, 140);
+    assert.equal(moveElement(linked, value, { x: 201, y: 250 }, guides).x, 198);
+    const separate: Scene = { ...linked, elements: [{ ...value, moveTogether: false }, icon] };
+    assert.equal(moveElement(separate, separate.elements[0], desired, elementSnaps).x, 181);
 });

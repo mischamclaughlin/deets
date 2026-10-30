@@ -177,6 +177,11 @@ def dispatch(request):
         if set(payload) != {"scene", "defaults"}:
             raise ValueError("Choose a scene and text defaults.")
         return layout({"scene": set_text_defaults(payload["scene"], payload["defaults"])})
+    if operation == "activity-graph":
+        from designer_activity import set_activity_graph
+        if set(payload) != {"scene", "elementId", "enabled"}:
+            raise ValueError("Choose an activity element and whether its weekly graph is enabled.")
+        return layout({"scene": set_activity_graph(payload["scene"], payload["elementId"], payload["enabled"])})
     if operation == "add":
         from designer_typography import add_time, add_divider, add_date
         from designer_activity import ACTIVITY_SOURCES, ACTIVITY_GROUPS, add_activity

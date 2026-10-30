@@ -11,19 +11,25 @@ export function ActivityOptions({ entry, options, onChange, onAdd, busy, remaini
     remaining: number;
 }) {
     const help = useId();
-    const count = 1 + Number(!!options.icon) + Number(!!options.graph);
+    const value = options.value !== false;
+    const icon = options.icon !== false;
+    const count = Number(value) + Number(icon) + Number(!!options.graph);
+    const label = value ? `Add ${entry.label.toLowerCase()}` : icon && options.graph ? `Add ${entry.label.toLowerCase()} extras`
+        : `Add ${entry.label.toLowerCase()} ${icon ? "icon" : "graph"}`;
     return <div className="activity-add-options">
         <fieldset disabled={busy}>
             <legend>Include with {entry.label.toLowerCase()}</legend>
-            <label><input type="checkbox" checked={!!options.icon} aria-label={`Include ${entry.label.toLowerCase()} icon`}
+            <label><input type="checkbox" checked={value} aria-label={`Include ${entry.label.toLowerCase()} value`}
+                onChange={(event) => onChange({ ...options, value: event.target.checked })} />Value</label>
+            <label><input type="checkbox" checked={icon} aria-label={`Include ${entry.label.toLowerCase()} icon`}
                 onChange={(event) => onChange({ ...options, icon: event.target.checked })} />Icon</label>
             <label><input type="checkbox" checked={!!options.graph} aria-label={`Include ${entry.label.toLowerCase()} weekly graph`}
                 onChange={(event) => onChange({ ...options, graph: event.target.checked })} />Weekly graph</label>
         </fieldset>
-        <button type="button" className="activity-add-button" disabled={busy || remaining < count} onClick={onAdd} aria-describedby={help}>
-            {busy ? "Adding…" : `Add ${entry.label.toLowerCase()}`}<span aria-hidden="true">+</span>
+        <button type="button" className="activity-add-button" disabled={busy || count === 0 || remaining < count} onClick={onAdd} aria-describedby={help}>
+            {busy ? "Adding…" : label}<span aria-hidden="true">+</span>
         </button>
-        <p id={help} className="activity-options-hint">{remaining < count ? `Needs ${count} free slots; ${remaining} available.`
-            : count > 1 ? `${count} elements · move each part independently` : "Value only · add extras if you need them"}</p>
+        <p id={help} className="activity-options-hint">{count === 0 ? "Choose at least one part." : remaining < count ? `Needs ${count} free slots; ${remaining} available.`
+            : value && icon ? "Icon above value · 16 px gap · move together" : !value ? "Add this part without duplicating the data" : "Change graph and movement in the right sidebar"}</p>
     </div>;
 }

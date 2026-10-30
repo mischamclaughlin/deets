@@ -240,7 +240,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -349,6 +349,9 @@ def validate_scene(payload):
         for link_key in ("colourPresetId", "nightColourPresetId"):
             if link_key in original:
                 result[link_key] = original[link_key]
+        for activity_key in ("activityId", "moveTogether"):
+            if activity_key in original:
+                result[activity_key] = original[activity_key]
         if "boxSizing" in original:
             result["boxSizing"] = original["boxSizing"]
         if "typography" in original:
@@ -373,6 +376,24 @@ def validate_scene(payload):
                 raise ValueError("Labels support up to 80 characters from the selected bitmap font.")
             result["text"] = text
         elements.append(result)
+    from designer_activity import ACTIVITY_GROUPS
+    registry = {element["id"]: element for element in elements}
+    roles = set()
+    for element in elements:
+        if "moveTogether" in element and (element["source"] not in ACTIVITY_GROUPS or type(element["moveTogether"]) is not bool):
+            raise ValueError("Only activity data can choose linked movement.")
+        if "activityId" not in element:
+            continue
+        parent_id = element["activityId"]
+        if not isinstance(parent_id, str):
+            raise ValueError("Choose an existing activity data value for this companion.")
+        parent = registry.get(parent_id)
+        if parent is None or parent_id == element["id"] or parent["source"] not in ACTIVITY_GROUPS or element["source"] not in ACTIVITY_GROUPS[parent["source"]]:
+            raise ValueError("The linked activity companion does not match its data value.")
+        role = (parent_id, element["source"])
+        if role in roles:
+            raise ValueError("An activity can have only one linked icon and weekly graph.")
+        roles.add(role)
     scene = {"version": 2, "name": name.strip(), "device": device,
              "background": background, "elements": elements}
     if edge_inset is not None:
