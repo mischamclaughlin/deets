@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "export:garmin": "node scripts/export.ts",
+    "test:export": "node scripts/test-export.ts",
     "test": "node --test server/arithmetic.test.ts server/bridge.test.ts server/garmin.test.ts server/grid.test.ts server/snapping.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
   },
   "dependencies": {
