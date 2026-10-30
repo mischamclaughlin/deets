@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { devices, type Scene, type SceneElement, type WatchMapping } from "../../shared/scene.ts";
 import { mapWatch } from "./api.ts";
-import { gridPaths, gridRadii, type GridSettings } from "./grid.ts";
+import { gridLines, type GridSettings } from "./grid.ts";
+import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
@@ -12,6 +13,10 @@ interface Props {
     showCircumference?: boolean;
     showGuideLines?: boolean;
     grid?: GridSettings;
+    mirrorGrid?: boolean;
+    selectedGridLineId?: string;
+    onSelectGridLine?: (id: string) => void;
+    onChangeGrid?: (grid: GridSettings) => void;
     snapEnabled?: boolean;
     snapToGrid?: boolean;
     snapToGuides?: boolean;
@@ -43,7 +48,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineId, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -154,15 +159,14 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>
             )}
-            {grid?.visible && (
-                <svg className="watch-grid" viewBox={`0 0 ${size} ${size}`}
-                    role="img" aria-label={`${grid.rows} rows and ${grid.columns} columns, ${grid.circumferences} extra circumferences starting ${grid.circumferenceStart}; ${grid.curvedRows ? "curved" : "straight"} rows, ${grid.curvedColumns ? "curved" : "straight"} columns`}>
-                    {gridRadii(size, scene.edgeInset ?? 0, grid).map((radius, index) => (
-                        <circle key={`ring-${index}`} cx={size / 2} cy={size / 2} r={radius} />
-                    ))}
-                    {gridPaths(size, scene.edgeInset ?? 0, grid).map((path, index) => (
-                        <path key={index} d={path} />
-                    ))}
+            {grid?.visible && onChangeGrid && onSelectGridLine && (
+                <GridOverlay key={`${size}-${scene.edgeInset ?? 0}`} size={size} inset={scene.edgeInset ?? 0}
+                    grid={grid} mirror={mirrorGrid} selectedId={selectedGridLineId}
+                    onSelect={onSelectGridLine} onChange={onChangeGrid} />
+            )}
+            {grid?.visible && !onChangeGrid && (
+                <svg className="watch-grid" viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Grid guides">
+                    {gridLines(size, scene.edgeInset ?? 0, grid).map((line) => <path key={line.id} d={line.path} />)}
                 </svg>
             )}
             {showGuideLines && (

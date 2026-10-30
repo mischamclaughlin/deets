@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { devices, isClockSource, type Scene } from "../../shared/scene.ts";
 import { refreshFonts } from "./api.ts";
-import { defaultGrid } from "./grid.ts";
+import { defaultGrid, editGridLine, gridLines } from "./grid.ts";
 import { moveElement } from "./snapping.ts";
 import { DividerPanel } from "./DividerPanel.tsx";
 import { ClockDisplayPanel } from "./ClockDisplayPanel.tsx";
@@ -44,6 +44,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
+    const [mirrorGrid, setMirrorGrid] = useState(false);
+    const [selectedGridLineId, setSelectedGridLineId] = useState<string>();
     const [uploads, setUploads] = useState<UploadedFont[]>([]);
     const rememberFont = (font: UploadedFont) => setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
     const selected = scene.elements.find((element) => element.id === selectedId);
@@ -133,12 +135,26 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             {label}
                         </label>
                     ))}
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={mirrorGrid}
+                            onChange={(event) => setMirrorGrid(event.target.checked)} />
+                        Mirror grid edits
+                    </label>
+                    <p className="control-hint">Click a grid line to select it. Drag or use arrow keys to move it; Delete removes it. Mirror reflects row and column edits across the centre. Changing counts or ring spacing regenerates the grid.</p>
+                    <button type="button" className="snap-button"
+                        disabled={!grid.visible || !gridLines(size, inset, grid).some((line) => line.id === selectedGridLineId)}
+                        onClick={() => {
+                            if (selectedGridLineId) setGrid((current) => editGridLine(size, inset, current, selectedGridLineId, null, mirrorGrid));
+                            setSelectedGridLineId(undefined);
+                        }}>Delete selected grid line</button>
+                    <button type="button" className="snap-button" disabled={!grid.edits}
+                        onClick={() => { setGrid((current) => ({ ...current, edits: undefined })); setSelectedGridLineId(undefined); }}>Reset grid edits</button>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
                                 {axis === "rows" ? "Rows" : "Columns"}
                                 <select value={grid[axis]}
-                                    onChange={(event) => setGrid((current) => ({ ...current, [axis]: Number(event.target.value) }))}>
+                                    onChange={(event) => setGrid((current) => ({ ...current, [axis]: Number(event.target.value), edits: undefined }))}>
                                     {Array.from({ length: 24 }, (_, index) => (
                                         <option key={index + 1} value={index + 1}>{index + 1}</option>
                                     ))}
@@ -152,7 +168,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             <select
                                 id="extra-circumferences"
                                 value={grid.circumferences}
-                                onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value) }))}
+                                onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value), edits: undefined }))}
                                 title="Spacing reduces automatically to fit all rings."
                             >
                                 {Array.from({ length: 25 }, (_, count) => (
@@ -167,6 +183,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                                 onClick={() => setGrid((current) => ({
                                     ...current,
                                     circumferenceStart: current.circumferenceStart === "inside" ? "outside" : "inside",
+                                    edits: undefined,
                                 }))}
                             >
                                 {grid.circumferenceStart === "inside" ? "in" : "out"}
@@ -179,7 +196,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     </div>
                     <input id="circumference-spacing" type="range" min={1} max={100} step={1}
                         value={grid.circumferenceSpacing}
-                        onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value) }))}
+                        onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value), edits: undefined }))}
                         title="Spacing reduces automatically to fit all rings." />
                     <label className="guide-toggle">
                         <input type="checkbox" checked={grid.curvedRows}
@@ -200,6 +217,10 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         showCircumference={showCircumference}
                         showGuideLines={showGuideLines}
                         grid={grid}
+                        mirrorGrid={mirrorGrid}
+                        selectedGridLineId={selectedGridLineId}
+                        onSelectGridLine={setSelectedGridLineId}
+                        onChangeGrid={setGrid}
                         snapEnabled={snapEnabled}
                         snapToGrid={snapToGrid}
                         snapToGuides={snapToGuides}

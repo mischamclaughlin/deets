@@ -1,0 +1,8 @@
+.grid-editor { z-index: 2; touch-action: none; }
+.grid-editor .grid-line { outline: none; }
+.grid-editor .grid-line-visible { pointer-events: none; }
+.watch-grid.grid-editor .grid-line-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: grab; }
+.watch-grid.grid-editor .grid-line-hit:active { cursor: grabbing; }
+.watch-grid.grid-editor .grid-line.selected .grid-line-visible,
+.watch-grid.grid-editor .grid-line:focus .grid-line-visible,
+.watch-grid.grid-editor .grid-line:hover .grid-line-visible { stroke: #d2f3e4; stroke-opacity: 1; stroke-width: 1.5; }

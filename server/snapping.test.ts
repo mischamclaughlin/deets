@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { moveElement, type SnapOptions } from "../src/watch/snapping.ts";
-import { defaultGrid } from "../src/watch/grid.ts";
+import { defaultGrid, editGridLine } from "../src/watch/grid.ts";
 import { devices, type Scene, type SceneElement } from "../shared/scene.ts";
 
 const element: SceneElement = { id: "test", source: "label", font: "widget", text: "TEST",
@@ -189,4 +189,19 @@ test("Guide controls centre-line attraction while the circumference stays a hard
     for (const snapToGuides of [false, true]) {
         assert.deepEqual(moveElement(scene, element, { x: 0, y: 198 }, { ...guides, snapToGuides }), { x: 17, y: 198 });
     }
+});
+
+
+test("snapping follows edited guides and excludes deleted guides and rings", () => {
+    const original = { ...defaultGrid, visible: true, rows: 4, columns: 1 };
+    const options = { ...none, enabled: true, grid: editGridLine(416, 16, original, "rows-1", -0.25) };
+    assert.equal(moveElement(scene, element, { x: 190, y: 163 }, options).y, 160);
+    assert.equal(moveElement(scene, element, { x: 190, y: 115 }, options).y, 115);
+    options.grid = editGridLine(416, 16, options.grid, "rows-1", null);
+    assert.equal(moveElement(scene, element, { x: 190, y: 163 }, options).y, 163);
+    const rings = { ...defaultGrid, visible: true, rows: 1, columns: 1, circumferences: 1 };
+    const ringMoved = editGridLine(416, 16, rings, "rings-1", 0.5);
+    assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options, grid: ringMoved }).y, 112);
+    assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options,
+        grid: editGridLine(416, 16, ringMoved, "rings-1", null) }).y, 115);
 });

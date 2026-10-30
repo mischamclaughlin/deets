@@ -1,5 +1,5 @@
 import { devices, type Scene, type SceneElement } from "../../shared/scene.ts";
-import { gridRadii, type GridSettings } from "./grid.ts";
+import { gridLines, gridRadii, type GridSettings } from "./grid.ts";
 
 interface Point { x: number; y: number }
 export interface SnapOptions {
@@ -68,12 +68,12 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
             }
         }
         if (options.snapToGrid !== false && grid?.visible) {
-            const count = vertical ? grid.columns : grid.rows;
             const curved = vertical ? grid.curvedColumns : grid.curvedRows;
             if (Math.abs(cross) <= radius) {
                 const factor = Math.sqrt(Math.max(0, 1 - (cross / radius) ** 2));
-                for (let index = 1; index < count; index++) {
-                    const offset = radius * (2 * index / count - 1);
+                for (const line of gridLines(size, scene.edgeInset ?? 0, grid)) {
+                    if (line.axis !== (vertical ? "columns" : "rows")) continue;
+                    const offset = radius * line.value;
                     if (curved) result.push(centre + offset * factor);
                     else if (offset ** 2 + cross ** 2 <= radius ** 2) result.push(centre + offset);
                 }
