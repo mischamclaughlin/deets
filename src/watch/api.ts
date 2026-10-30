@@ -1,4 +1,5 @@
 import type { ClockSource, DateSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import { preparedMapping, rememberMapping } from "./mapping-cache.ts";
 
 async function post<T>(
     path: string,
@@ -17,11 +18,22 @@ async function post<T>(
             error.error ?? "The Garmin operation could not complete.",
         );
     }
-    return (await response.json()) as T;
+    const result = await response.json();
+    if (result && typeof result === "object" && "mapping" in result && "scene" in result &&
+        "ops" in result && Array.isArray(result.ops) && "areas" in result && Array.isArray(result.areas) &&
+        "assets" in result && result.assets)
+        rememberMapping(result as WatchMapping, (payload as { night?: boolean }).night ?? false);
+    return result as T;
 }
 
 export const mapWatch = (scene: Scene, night = false, signal?: AbortSignal) =>
     post<WatchMapping>("layout", { scene, night }, signal);
+
+/** Editing can reuse prepared native pixels; export always requests a fresh proof. */
+export const previewWatch = (scene: Scene, night = false, signal?: AbortSignal) => {
+    const prepared = preparedMapping(scene, night);
+    return prepared ? Promise.resolve(prepared) : mapWatch(scene, night, signal);
+};
 
 /** Export the exact scene snapshot that supplied the validated mapping token. */
 export async function exportGarmin(

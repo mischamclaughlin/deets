@@ -1,6 +1,6 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { isEditableTextSource, type Scene } from "../../shared/scene.ts";
-import { mapWatch, fitElementBox } from "./api.ts";
+import { previewWatch, fitElementBox } from "./api.ts";
 import { evaluatePixelExpression } from "./arithmetic.ts";
 import "./ElementBoxPanel.css";
 
@@ -45,7 +45,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     useEffect(() => {
         if (!request) return;
         const controller = new AbortController();
-        void (request.fit ? fitElementBox(request.next, elementId, controller.signal) : mapWatch(request.next, false, controller.signal)).then((mapped) => {
+        void (request.fit ? fitElementBox(request.next, elementId, controller.signal) : previewWatch(request.next, false, controller.signal)).then((mapped) => {
             if (controller.signal.aborted) return;
             onSceneChange((current) => current === request.base ? mapped.scene : current);
             setRequest(undefined);

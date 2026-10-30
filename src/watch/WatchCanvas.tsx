@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { devices, type Scene, type SceneElement, type WatchMapping } from "../../shared/scene.ts";
-import { mapWatch } from "./api.ts";
+import { previewWatch } from "./api.ts";
+import { preparedMapping } from "./mapping-cache.ts";
 import { gridLines, type GridSettings } from "./grid.ts";
 import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement } from "./snapping.ts";
@@ -58,8 +59,14 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     const drag = useRef<Drag | undefined>(undefined);
     const [preview, setPreview] = useState<Drag>();
     const [active, setActive] = useState<string>("time");
-    const current =
-        result?.scene === scene && result.night === night ? result : undefined;
+    const pixelScene = useMemo(() => preview ? {
+        ...scene,
+        elements: scene.elements.map((element) => element.id === preview.element.id
+            ? { ...element, ...preview.position } : element),
+    } : scene, [scene, preview]);
+    const prepared = preparedMapping(pixelScene, night);
+    const current = result?.scene === pixelScene && result.night === night ? result
+        : prepared ? { scene: pixelScene, night, layout: prepared } : undefined;
     const pendingMapping = current?.layout;
     const signature = pendingMapping ? `${pendingMapping.mapping}:${night}` : undefined;
     // Retain the last complete frame and its hit areas while the next frame loads.
@@ -68,15 +75,16 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
 
     useEffect(() => {
         const controller = new AbortController();
-        void mapWatch(scene, night, controller.signal)
+        if (preparedMapping(pixelScene, night)) return;
+        void previewWatch(pixelScene, night, controller.signal)
             .then((layout) => {
                 if (!controller.signal.aborted)
-                    setResult({ scene, night, layout });
+                    setResult({ scene: pixelScene, night, layout });
             })
             .catch((error) => {
                 if (!controller.signal.aborted)
                     setResult({
-                        scene,
+                        scene: pixelScene,
                         night,
                         error:
                             error instanceof Error
@@ -85,9 +93,9 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     });
             });
         return () => controller.abort();
-    }, [scene, night]);
+    }, [pixelScene, night]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!pendingMapping || !canvas.current || !signature) return;
         const controller = new AbortController();
         void paintWatch(canvas.current, pendingMapping, controller.signal)
@@ -97,7 +105,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             .catch((error) => {
                 if (!controller.signal.aborted)
                     setResult({
-                        scene,
+                        scene: pixelScene,
                         night,
                         error:
                             error instanceof Error
@@ -106,7 +114,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     });
             });
         return () => controller.abort();
-    }, [pendingMapping, signature, scene, night]);
+    }, [pendingMapping, signature, pixelScene, night]);
 
     useEffect(() => {
         if (!ready || painted?.signature !== signature || !restoreFocus.current || !areas.current) return;
@@ -156,7 +164,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 aria-label="Native-pixel Garmin watch face"
                 style={{ visibility: ready ? "visible" : "hidden" }}
             />
-            {(!ready || current?.error) && (
+            {(!ready || !current?.layout || current?.error) && (
                 <span className="watch-status" role="status">
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>

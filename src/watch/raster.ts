@@ -1,6 +1,22 @@
 import type { MaskKey, WatchMapping } from "../../shared/scene.ts";
 
 const hex = (colour: number) => `#${colour.toString(16).padStart(6, "0")}`;
+const decodedMasks = new Map<string, { image: HTMLImageElement; ready: boolean; loading: Promise<void> }>();
+
+function maskAsset(url: string) {
+    const cached = decodedMasks.get(url);
+    if (cached) return cached;
+    const image = new Image();
+    image.src = url;
+    const asset = { image, ready: false, loading: Promise.resolve() };
+    asset.loading = image.decode().then(() => { asset.ready = true; }).catch((error: unknown) => {
+        if (decodedMasks.get(url) === asset) decodedMasks.delete(url);
+        throw error;
+    });
+    decodedMasks.set(url, asset);
+    if (decodedMasks.size > 64) decodedMasks.delete(decodedMasks.keys().next().value!);
+    return asset;
+}
 
 /** Only canonical integer draw operations touch exported ink; browser text is never measured. */
 export async function paintWatch(
@@ -9,15 +25,15 @@ export async function paintWatch(
     signal: AbortSignal,
 ): Promise<void> {
     const masks = new Map<MaskKey, HTMLImageElement>();
-    await Promise.all(
-        Object.entries(mapping.assets).map(async ([font, url]) => {
-            if (!url) throw new Error("A mapped Garmin font asset is missing.");
-            const image = new Image();
-            image.src = url;
-            await image.decode();
-            masks.set(font as MaskKey, image);
-        }),
-    );
+    const loading: Promise<void>[] = [];
+    for (const [font, url] of Object.entries(mapping.assets)) {
+        if (!url) throw new Error("A mapped Garmin font asset is missing.");
+        const asset = maskAsset(url);
+        masks.set(font as MaskKey, asset.image);
+        if (!asset.ready) loading.push(asset.loading);
+    }
+    // Once prepared, moving existing pixels paints synchronously without decoding again.
+    if (loading.length) await Promise.all(loading);
     if (signal.aborted) return;
     const frame = document.createElement("canvas");
     frame.width = frame.height = mapping.size;
