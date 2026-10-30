@@ -13,6 +13,17 @@ import type { WatchMapping } from "../shared/scene.ts";
 
 type Middleware = (request: IncomingMessage, response: ServerResponse, next: () => void) => void;
 
+function assertFitsContent(mapping: WatchMapping, elementId: string) {
+    const element = mapping.scene.elements.find((item) => item.id === elementId)!;
+    const ink = mapping.ops.filter((operation) => operation.kind === "bitmap" && operation.elementId === elementId);
+    assert.equal(element.boxSizing, "hug");
+    assert.ok(ink.length > 0);
+    assert.deepEqual([
+        Math.min(...ink.map((op) => op.x)), Math.min(...ink.map((op) => op.y)),
+        Math.max(...ink.map((op) => op.x + op.width)), Math.max(...ink.map((op) => op.y + op.height)),
+    ], [element.x, element.y, element.x + element.width, element.y + element.height]);
+}
+
 async function requestApi(path: string, chunks: Buffer[], headers: Record<string, string> = {}, method = "POST") {
     let middleware: Middleware | undefined;
     const plugin = garmin();
@@ -121,7 +132,7 @@ test("typography API generates canonical clock pixels from an included or upload
             const mapped = result.body as unknown as WatchMapping;
             const clock = mapped.scene.elements[0];
             assert.deepEqual(clock.typography, typography);
-            assert.equal(clock.height, 60);
+            assertFitsContent(mapped, clock.id);
             assert.match(clock.font, /^generated:[a-f0-9]{64}$/);
             assert.ok(mapped.assets[clock.font]?.startsWith("data:image/png;base64,"));
             assert.equal(mapped.ops.length, 5);
@@ -192,7 +203,7 @@ test("layout API positions divider ink within its native box and rejects invalid
     const response = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: { ...scene, elements: [] }, source: "divider" }))], headers);
     assert.equal(response.status, 200);
     const divider = (response.body as unknown as WatchMapping).scene;
-    const element = divider.elements[0];
+    const element = { ...divider.elements[0], boxSizing: "fixed" as const, height: 88 };
     const positions = [];
     for (const dividerPosition of ["top", "middle", "bottom"] as const) {
         const changed = { ...divider, elements: [{ ...element, dividerPosition }] };
@@ -343,12 +354,13 @@ test("text defaults save without resizing existing elements and apply to new or 
         const result = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source }))], headers);
         assert.equal(result.status, 200, JSON.stringify(result.body));
         const added = (result.body as unknown as WatchMapping).scene.elements.at(-1)!;
-        assert.equal(added.height, defaults.size);
+        assertFitsContent(result.body as unknown as WatchMapping, added.id);
         assert.deepEqual(added.typography, { ...defaults, family: "time" });
     }
     const applied = await requestApi("/api/garmin/apply-text-defaults", [Buffer.from(JSON.stringify({ scene: current, elementId: "time" }))], headers);
     assert.equal(applied.status, 200, JSON.stringify(applied.body));
-    assert.equal((applied.body as unknown as WatchMapping).scene.elements[0].height, defaults.size);
+    assertFitsContent(applied.body as unknown as WatchMapping, "time");
+    assert.equal((applied.body as unknown as WatchMapping).scene.elements[0].typography?.size, defaults.size);
     assert.equal((await requestApi("/api/garmin/text-defaults", [Buffer.from(JSON.stringify({ scene, defaults: { ...defaults, size: true } }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/apply-text-defaults", [], { origin: "https://attacker.example" })).status, 403);
 });
@@ -392,12 +404,13 @@ test("named text presets save independently and apply by id", async () => {
         const applied = await requestApi("/api/garmin/apply-text-preset", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", presetId }))], headers);
         assert.equal(applied.status, 200, JSON.stringify(applied.body));
         const element = (applied.body as unknown as WatchMapping).scene.elements[0];
-        assert.equal(element.height, presets.find((preset) => preset.id === presetId)!.size);
+        assertFitsContent(applied.body as unknown as WatchMapping, element.id);
+        assert.equal(element.typography?.size, presets.find((preset) => preset.id === presetId)!.size);
         assert.equal(element.source, "time");
     }
     const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: current, source: "divider" }))], headers);
     assert.equal(added.status, 200, JSON.stringify(added.body));
-    assert.equal((added.body as unknown as WatchMapping).scene.elements.at(-1)!.height, scene.elements[0].height);
+    assertFitsContent(added.body as unknown as WatchMapping, (added.body as unknown as WatchMapping).scene.elements.at(-1)!.id);
     assert.equal((await requestApi("/api/garmin/apply-text-preset", [Buffer.from(JSON.stringify({ scene: current, elementId: "time", presetId: "missing" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/text-presets", [Buffer.from(JSON.stringify({ scene, presets: [...presets, { ...presets[0], id: "other", name: "time" }], defaultPresetId: "time" }))], headers)).status, 400);
     assert.equal((await requestApi("/api/garmin/text-presets", [], { origin: "https://attacker.example" })).status, 403);
@@ -517,7 +530,8 @@ test("font refresh upgrades the initial scene and keeps strict scene-only reques
     const mapped = refreshed.body as unknown as WatchMapping;
     assert.deepEqual(mapped.scene.elements.map((element) => element.id), scene.elements.map((element) => element.id));
     assert.ok(mapped.scene.elements.every((element) => element.font.startsWith("generated:")));
-    assert.equal(mapped.scene.elements[0].height, scene.elements[0].height);
+    assertFitsContent(mapped, "time");
+    assert.equal(mapped.scene.elements[0].typography?.size, scene.elements[0].height);
     for (const payload of [{}, { scene, night: false }, { scene, elementId: "time" }]) {
         const rejected = await requestApi("/api/garmin/refresh-fonts", [Buffer.from(JSON.stringify(payload))], headers);
         assert.equal(rejected.status, 400);

@@ -8,6 +8,7 @@ import unittest
 import bridge
 import designer_model as model
 import designer_typography as typography
+from test_designer_helpers import assert_fitted_box
 import designer_export as exporter
 
 
@@ -155,6 +156,7 @@ class ClockModeTests(unittest.TestCase):
                 original = typography.add_time(original)
                 if generated:
                     original = typography.apply(original, "time", SETTINGS)
+                original["elements"][0]["boxSizing"] = "fixed"
                 original = legacy_divider(original, "time")
                 element = original["elements"][0]
                 font = model.scene_font_pack(original)["fonts"][element["font"]]
@@ -186,7 +188,7 @@ class ClockModeTests(unittest.TestCase):
         self.assertEqual(scene["elements"][0]["dividerPosition"], "bottom")
         scene = typography.set_divider_symbol(scene, "clock", ":")
         operation, = bridge.layout({"scene": scene})["ops"]
-        self.assertEqual(operation["y"] + operation["height"], scene["elements"][0]["y"] + 55)
+        self.assertEqual(operation["y"] + operation["height"], scene["elements"][0]["y"] + scene["elements"][0]["height"])
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
             shutil.copytree(model.ROOT / "source", project / "source")
@@ -247,7 +249,8 @@ class ClockModeTests(unittest.TestCase):
             self.assertEqual((element["x"], element["y"], element["width"], element["height"]), (0, 0, 416, 416))
             self.assertEqual(element["dividerPosition"], "bottom")
             text = typography.set_clock_source(changed, "clock", "seconds")
-            self.assertEqual(text["elements"][0]["height"], element["typography"]["size"])
+            self.assertEqual(text["elements"][0]["typography"], element["typography"])
+            assert_fitted_box(self, text, text["elements"][0])
             self.assertTrue(element["inheritFont"])
         custom = typography.set_inheritance(scene, "clock", False)
         custom = typography.apply(custom, "clock", {**SETTINGS, "family": "widget", "size": 55})

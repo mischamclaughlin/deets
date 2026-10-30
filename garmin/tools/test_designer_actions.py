@@ -6,6 +6,7 @@ import bridge
 import designer_actions as actions
 import designer_model as model
 import designer_typography as typography
+from test_designer_helpers import assert_fitted_box
 
 DEFAULTS = {"size": 48, "thickness": 1, "width": 105, "letterSpacing": 2}
 
@@ -26,7 +27,7 @@ class DocumentActionsTests(unittest.TestCase):
             for added in (typography.add_time(changed), typography.add_divider(changed)):
                 element = added["elements"][-1]
                 self.assertEqual(element["typography"], {"family": "time", **DEFAULTS})
-                self.assertEqual(element["height"], 48)
+                assert_fitted_box(self, added, element)
                 self.assertTrue(element["inheritFont"])
                 self.assertEqual(bridge.layout({"scene": added})["scene"], added)
             self.assertEqual(typography.scene_text_defaults(original)["size"], model.font_pack(device)["fonts"]["time"]["height"])

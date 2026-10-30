@@ -48,7 +48,7 @@ class DividerTests(unittest.TestCase):
         self.assertEqual(element["dividerSymbol"], "/")
         self.assertEqual(element["typography"]["family"], "widget")
         op, = bridge.layout({"scene": scene})["ops"]
-        self.assertEqual(op["y"] + op["height"], element["y"] + 55)
+        self.assertEqual(op["y"] + op["height"], element["y"] + element["height"])
         inherited = typography.set_inheritance(scene, "divider", False)
         changed_default = typography.set_watch_font(inherited, "time")
         self.assertEqual(changed_default["elements"], inherited["elements"])

@@ -142,7 +142,7 @@ class NativeFontTests(unittest.TestCase):
         element = scene["elements"][0]
         font = model.scene_font_pack(scene)["fonts"][element["font"]]
         operations = model.layout_text(
-            "M M", {**element, "x": 0, "width": 500, "align": "left"}, font
+            "M M", {**element, "x": 0, "width": 500, "align": "left", "boxSizing": "fixed"}, font
         )
         self.assertEqual(len(operations), 2)
         self.assertEqual(

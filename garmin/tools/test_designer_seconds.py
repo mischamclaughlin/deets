@@ -77,7 +77,8 @@ class CombinedSecondsTests(unittest.TestCase):
                             right = max(right, pen + glyph["width"])
                             pen += glyph["xadvance"]
                         reference = max(reference, right)
-            self.assertIn(element["width"] - reference, (0, 1))
+            self.assertEqual(typography._clock_width(font, "timeSeconds", seconds_size=mode), reference)
+            self.assertEqual(element["boxSizing"], "hug")
             randomiser = random.Random(42)
             for _ in range(80):
                 text = f"{randomiser.randrange(24):02d}:{randomiser.randrange(60):02d}:{randomiser.randrange(60):02d}"
@@ -170,8 +171,8 @@ class CombinedSecondsTests(unittest.TestCase):
         for generated in (False, True):
             scene = self.scene(generated=generated)
             element = scene["elements"][0]
-            centre = (2*element["x"] + element["width"], 2*element["y"] + element["height"])
+            centre = (element["x"] + element["width"]//2, element["y"] + element["height"]//2)
             for index in range(12):
                 scene = typography.set_seconds_size(scene, "time", "half" if index % 2 == 0 else "full")
                 element = scene["elements"][0]
-                self.assertEqual((2*element["x"] + element["width"], 2*element["y"] + element["height"]), centre)
+                self.assertEqual((element["x"] + element["width"]//2, element["y"] + element["height"]//2), centre)

@@ -6,6 +6,7 @@ import bridge
 import designer_actions as actions
 import designer_model as model
 import designer_typography as typography
+from test_designer_helpers import assert_fitted_box
 
 
 class TextPresetTests(unittest.TestCase):
@@ -29,7 +30,8 @@ class TextPresetTests(unittest.TestCase):
         self.assertEqual(added["elements"][-1]["height"], 88)
         self.assertEqual(added["elements"][-1]["font"], "time")
         self.assertNotIn("textPresetId", added["elements"][-1])
-        self.assertEqual(divider["elements"][-1]["height"], 88)
+        self.assertEqual(divider["elements"][-1]["typography"]["size"], 88)
+        assert_fitted_box(self, divider, divider["elements"][-1])
         presets = copy.deepcopy(changed["textPresets"])
         presets[0]["name"] = "  Display time  "
         changed = actions.set_text_presets(changed, presets, "time")
@@ -77,7 +79,9 @@ class TextPresetTests(unittest.TestCase):
         self.assertEqual(changed["textDefaults"], defaults)
         self.assertEqual(typography.scene_text_defaults(changed), defaults)
         self.assertEqual(changed["textPresets"][1], named["textPresets"][1])
-        self.assertEqual(typography.add_time(changed)["elements"][-1]["height"], 40)
+        added = typography.add_time(changed)
+        self.assertEqual(added["elements"][-1]["typography"]["size"], 40)
+        assert_fitted_box(self, added, added["elements"][-1])
 
     def test_registry_bounds_and_strict_requests_are_atomic(self):
         scene = actions.set_text_presets(self.scene(), self.presets(), "time")
@@ -144,7 +148,9 @@ class TextPresetTests(unittest.TestCase):
         presets = copy.deepcopy(scene["textPresets"])
         presets[0].update(size=45, width=110, thickness=1)
         changed = actions.set_text_presets(scene, presets, "time")
-        self.assertEqual([e["height"] for e in changed["elements"]], [45, 45, 45])
+        self.assertEqual([e["typography"]["size"] for e in changed["elements"]], [45, 45, 45])
+        for element in changed["elements"]:
+            assert_fitted_box(self, changed, element)
         self.assertTrue(all(e["textPresetId"] == "time" for e in changed["elements"]))
         self.assertEqual(changed["elements"][0]["secondsSize"], "half")
         self.assertEqual(changed["elements"][1]["typography"]["family"], "widget")

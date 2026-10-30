@@ -134,8 +134,9 @@ The included JetBrains Mono Regular and NL Thin source fonts and their licence
 are bundled in `garmin/fonts/`. Generated assets are cached by source-font content,
 renderer version, character set, device and typography settings. The editor
 prepares its editable text on startup; CLI export uses the same preparation. Edits
-preserve the element's centre to the nearest native pixel and reserve enough
-width for every live value in the selected display mode. A change that cannot fit inside the current boundary
+preserve the element's centre to the nearest native pixel. Text boxes fit their
+visible content by default, including when fonts or display formats change;
+entering a width or height creates a fixed box instead. A change that cannot fit inside the current boundary
 shows an error and leaves the last accepted scene intact. No browser text
 measurement supplies layout or export coordinates.
 

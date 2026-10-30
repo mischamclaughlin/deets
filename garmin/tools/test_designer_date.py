@@ -1,4 +1,4 @@
-"""Date elements reserve live values and share native typography and export pixels."""
+"""Date elements fit live content and share native typography and export pixels."""
 import copy
 from pathlib import Path
 import tempfile
@@ -9,6 +9,7 @@ import designer_actions as actions
 import designer_export as exporter
 import designer_model as model
 import designer_typography as typography
+from test_designer_helpers import assert_fitted_box
 
 
 class DateTests(unittest.TestCase):
@@ -28,7 +29,8 @@ class DateTests(unittest.TestCase):
             element = added["elements"][0]
             self.assertEqual(element["source"], "numericDate")
             self.assertFalse(element["inheritFont"])
-            self.assertEqual(element["height"], 24)
+            self.assertEqual(element["typography"]["size"], 24)
+            assert_fitted_box(self, added, element)
             self.assertLessEqual(abs(element["x"] + element["width"] / 2 - size / 2), .5)
             self.assertEqual(len(bridge.layout({"scene": added})["ops"]), 8)
 
@@ -59,7 +61,7 @@ class DateTests(unittest.TestCase):
                 self.assertTrue(all(str(code) in font["glyphs"] for code in codes))
                 self.assertGreater(len(bridge.layout({"scene": changed})["ops"]), 0)
 
-    def test_live_bound_reservation_survives_proportional_glyphs_and_negative_spacing(self):
+    def test_live_bounds_fit_proportional_glyphs_and_negative_spacing_without_clipping(self):
         scene = typography.add_date(self.scene())
         scene = typography.apply(scene, "date", {"family": "time", "size": 20,
             "thickness": 1, "width": 125, "letterSpacing": -4})
@@ -77,11 +79,15 @@ class DateTests(unittest.TestCase):
             element = changed["elements"][0]
             font = model.scene_font_pack(changed)["fonts"][element["font"]]
             for text in texts:
-                # An oversized, left-aligned box reveals uncut ink extents independently
-                # of the date's reserved width, so clipping cannot hide under-allocation.
-                unbounded = {**element, "x": 0, "y": 0, "width": 4096, "align": "left"}
-                operations = model.layout_text(text, unbounded, font)
-                self.assertLessEqual(max(op["x"] + op["width"] for op in operations), element["width"])
+                operations = model.layout_text(text, element, font)
+                fitted, _, _ = model.hugging_element(text, element, font)
+                bounds = (min(op["x"] for op in operations), min(op["y"] for op in operations),
+                          max(op["x"]+op["width"] for op in operations), max(op["y"]+op["height"] for op in operations))
+                self.assertEqual(bounds, (fitted["x"], fitted["y"],
+                                          fitted["x"]+fitted["width"], fitted["y"]+fitted["height"]))
+                glyphs = [font["glyphs"][str(ord(char))] for char in text]
+                self.assertEqual([op["width"] for op in operations],
+                                 [glyph["width"] for glyph in glyphs if glyph["width"] and glyph["height"]])
 
     def test_date_participates_in_inheritance_presets_copy_and_colours(self):
         scene = typography.add_date(self.scene())
@@ -93,7 +99,8 @@ class DateTests(unittest.TestCase):
         scene = actions.set_text_presets(scene, [preset], "small")
         scene = actions.apply_text_preset(scene, "date", "small")
         scene = actions.set_text_presets(scene, [{**preset, "size": 22}], "small")
-        self.assertEqual(scene["elements"][0]["height"], 22)
+        self.assertEqual(scene["elements"][0]["typography"]["size"], 22)
+        assert_fitted_box(self, scene, scene["elements"][0])
         scene = actions.set_element_colour(scene, "date", "day", 0x123456)
         scene = actions.copy_element(scene, "date")
         self.assertEqual(scene["elements"][1]["colour"], 0x123456)

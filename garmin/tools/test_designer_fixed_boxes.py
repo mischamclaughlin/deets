@@ -7,6 +7,7 @@ import bridge
 import designer_export as exporter
 import designer_model as model
 import designer_typography as typography
+from test_designer_helpers import assert_fitted_box
 import test_designer_export as export_fixtures
 import test_designer_typography as fixtures
 
@@ -70,8 +71,8 @@ class FixedBoxTests(unittest.TestCase):
         self.assertNotIn('boxSizing',ring['elements'][0])
         self.assertEqual((ring['elements'][0]['width'],ring['elements'][0]['height']),(416,416))
         text=typography.set_clock_source(ring,'clock','time')
-        self.assertNotIn('boxSizing',text['elements'][0])
-        self.assertEqual(text['elements'][0]['height'],text['elements'][0]['typography']['size'])
+        self.assertEqual(text['elements'][0]['boxSizing'], 'hug')
+        assert_fitted_box(self, text, text['elements'][0])
 
     def test_fit_action_restores_auto_bounds_atomically_for_short_and_tall_boxes(self):
         for height in (1, 120):

@@ -392,7 +392,7 @@ def _clock_target(scene, element_id):
     return target
 
 
-def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=False, **changes):
+def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
     from designer_model import validate_scene
     edited = copy.deepcopy(scene)
     element = _clock_target(edited, element_id)
@@ -404,9 +404,9 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
             size = DEVICES[scene["device"]]
             element.update(x=0, y=0, width=size, height=size)
         element.update(**changes)
-    elif element.get("boxSizing") == "hug":
+    elif element.get("boxSizing") != "fixed":
         from designer_model import scene_font_pack, hugging_element, SOURCES
-        element.update(**changes)
+        element.update(**changes, boxSizing="hug")
         future_metrics = scene_font_pack(edited)["fonts"][element["font"]]
         sample = element.get("dividerSymbol", ":") if source == "divider" else SOURCES[source]["sample"]
         fitted, _, _ = hugging_element(str(sample), element, future_metrics)
@@ -415,21 +415,6 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, preserve_parity=Fal
         # Manual boxes own their geometry independently of glyph dimensions.
         # Font refresh, presets and format edits must not silently resize them.
         element.update(**changes)
-    else:
-        seconds_size = changes.get("secondsSize", element.get("secondsSize", "full"))
-        if source == "timeSeconds" and seconds_size == "half":
-            from designer_model import scene_font_pack
-            future = copy.deepcopy(edited)
-            _clock_target(future, element_id).update(**changes)
-            metrics = scene_font_pack(future)["fonts"][changes.get("font", element["font"])]
-        width, height = _clock_width(metrics, source, changes.get("dividerSymbol", element.get("dividerSymbol", ":")), seconds_size), metrics["height"]
-        if preserve_parity and (width - element["width"]) % 2:
-            width += 1
-        # Keep the same integer centre anchor across odd/even size changes.
-        # Repeated refits must not accumulate half-pixel rounding in one direction.
-        element.update(x=element["x"] + element["width"]//2 - width//2,
-                       y=element["y"] + element["height"]//2 - height//2,
-                       width=width, height=height, **changes)
     if not validate:
         return edited
     try:
@@ -507,12 +492,12 @@ def add_time(scene):
     edited["elements"].append({
         "id": identity, "source": "time", "font": key, "inheritFont": True,
         **({"typography": value} if value else {}),
-        "x": (size - width) // 2, "y": (size - height) // 2,
+        "x": size // 2 - width // 2, "y": size // 2 - height // 2,
         "width": width, "height": height, "align": "centre",
         "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both",
     })
     try:
-        return validate_scene(edited)
+        return _fit_clock(edited, identity, font)
     except ValueError as error:
         raise ValueError("A new time element cannot fit inside this boundary. Reduce the edge clearance first.") from error
 
@@ -578,9 +563,9 @@ def add_divider(scene):
     edited = copy.deepcopy(scene)
     edited["elements"].append({"id": identity, "source": "divider", "font": key,
         "inheritFont": True, "typography": value, "dividerSymbol": ":", "dividerPosition": "middle",
-        "x": (size-width)//2, "y": (size-height)//2, "width": width, "height": height,
+        "x": size//2-width//2, "y": size//2-height//2, "width": width, "height": height,
         "align": "centre", "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both"})
-    return validate_scene(edited)
+    return _fit_clock(edited, identity, record["font"])
 
 
 def set_divider_symbol(scene, element_id, symbol):
@@ -612,7 +597,7 @@ def set_seconds_size(scene, element_id, size):
     if target["source"] != "timeSeconds":
         raise ValueError("Select an HH:MM:SS element to change its seconds size.")
     metrics = scene_font_pack(scene)["fonts"][target["font"]]
-    return _fit_clock(scene, element_id, metrics, preserve_parity=True, secondsSize=size)
+    return _fit_clock(scene, element_id, metrics, secondsSize=size)
 
 
 def add_date(scene):
@@ -633,10 +618,10 @@ def add_date(scene):
     edited = copy.deepcopy(scene)
     edited["elements"].append({"id": identity, "source": "numericDate", "font": key,
         "typography": value, "inheritFont": False,
-        "x": (size-width)//2, "y": (size-height)//2, "width": width, "height": height,
+        "x": size//2-width//2, "y": size//2-height//2, "width": width, "height": height,
         "align": "centre", "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both"})
     try:
-        return validate_scene(edited)
+        return _fit_clock(edited, identity, record["font"])
     except ValueError as error:
         raise ValueError("A new date element cannot fit inside this boundary. Reduce the edge clearance first.") from error
 

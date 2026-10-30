@@ -14,6 +14,26 @@ class HugBoxTests(unittest.TestCase):
         return (min(op['x'] for op in ops), min(op['y'] for op in ops),
                 max(op['x']+op['width'] for op in ops), max(op['y']+op['height'] for op in ops))
 
+    def test_new_text_elements_fit_content_by_default_on_every_device(self):
+        for device in model.DEVICES:
+            for add in (typography.add_time, typography.add_date, typography.add_divider):
+                with self.subTest(device=device, add=add.__name__):
+                    original = {**fixtures.TypographyTests().scene(), 'device': device, 'elements': []}
+                    scene = add(original)
+                    box = scene['elements'][0]
+                    self.assertEqual(box['boxSizing'], 'hug')
+                    self.assertEqual(self.bounds(model.render_text_ops(scene)),
+                                     (box['x'], box['y'], box['x']+box['width'], box['y']+box['height']))
+                    self.assertEqual(original['elements'], [])
+
+    def test_refresh_defaults_legacy_text_to_content_fitting(self):
+        scene = self.scene()
+        box = scene['elements'][0]
+        self.assertEqual(box['boxSizing'], 'hug')
+        self.assertEqual(self.bounds(model.render_text_ops(scene)),
+                         (box['x'], box['y'], box['x']+box['width'], box['y']+box['height']))
+        self.assertEqual(typography.refresh_fonts(scene), scene)
+
     def test_fit_hugs_preview_ink_at_all_four_edges(self):
         scene = typography.fit_text_box(self.scene(), 'clock')
         box = scene['elements'][0]
@@ -38,16 +58,14 @@ class HugBoxTests(unittest.TestCase):
         self.assertGreater(len(widths), 1)
 
     def test_date_divider_half_seconds_and_font_edits_keep_hugging(self):
-        scene = typography.fit_text_box(self.scene(), 'clock')
+        scene = self.scene()
         scene = typography.set_clock_source(scene, 'clock', 'timeSeconds')
         scene = typography.set_seconds_size(scene, 'clock', 'half')
         scene = typography.apply(scene, 'clock', {**scene['elements'][0]['typography'], 'size': 50})
         scene = typography.add_date(scene)
         scene = typography.set_date_source(scene, 'date', 'weekday')
-        scene = typography.fit_text_box(scene, 'date')
         scene = typography.add_divider(scene)
         scene = typography.set_divider_symbol(scene, 'divider', '.')
-        scene = typography.fit_text_box(scene, 'divider')
         for box in scene['elements']:
             ops = [op for op in model.render_text_ops(scene) if op['elementId'] == box['id']]
             self.assertEqual(self.bounds(ops), (box['x'],box['y'],box['x']+box['width'],box['y']+box['height']))
