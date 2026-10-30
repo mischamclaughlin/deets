@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { moveElement, type SnapOptions } from "../src/watch/snapping.ts";
 import { defaultGrid, editGridLine, gridLines, type GridLine } from "../src/watch/grid.ts";
-import { snapGridLineToElements } from "../src/watch/grid-snapping.ts";
+import { snapGridLine, snapGridLineToElements, snapGridLineToEvenGaps } from "../src/watch/grid-snapping.ts";
 import { devices, type Scene, type SceneElement } from "../shared/scene.ts";
 
 const element: SceneElement = { id: "test", source: "label", font: "widget", text: "TEST",
@@ -271,4 +271,109 @@ test("grid snaps remain bounded and mirror correctly on every device", () => {
     }
     assert.equal(snapGridLineToElements(scene, editableGrid, gridLine("rows"), 0.3, { enabled: true, threshold: -1 }), 0.3);
     assert.ok(Number.isNaN(snapGridLineToElements(scene, editableGrid, gridLine("rows"), NaN, { enabled: true })));
+});
+
+
+const emptyGapScene: Scene = { ...scene, elements: [] };
+
+test("grid equal-gap snapping bisects edited intervals and repeats adjacent spacing", () => {
+    const grid = { ...editableGrid, rows: 1, columns: 1, edits: {
+        "rows-1": -0.8, "rows-2": -0.5, "rows-3": 0.4, "rows-4": 0.8,
+    } };
+    const line = gridLines(416, 16, grid).find((item) => item.id === "rows-2")!;
+    // Removing the dragged line leaves -0.8 and 0.4: midpoint -0.2.
+    assert.ok(Math.abs(snapGridLineToEvenGaps(emptyGapScene, grid, line, -0.19,
+        { enabled: true, elementGaps: false }) + 0.2) < 1e-12);
+    // The preceding boundary interval is 0.2, so -0.6 repeats it beyond -0.8.
+    assert.ok(Math.abs(snapGridLineToEvenGaps(emptyGapScene, grid, line, -0.59,
+        { enabled: true, elementGaps: false }) + 0.6) < 1e-12);
+    const removed = editGridLine(416, 16, grid, "rows-1", null);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, removed, line, -0.19,
+        { enabled: true, elementGaps: false }), -0.19);
+});
+
+test("grid equal gaps respect switches and tolerance without snapping onto another line", () => {
+    const line = gridLines(416, 16, editableGrid).find((item) => item.id === "rows-1")!;
+    const desired = -0.49;
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, editableGrid, line, desired, { enabled: false }), desired);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, defaultGrid, line, desired, { enabled: true }), desired);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, editableGrid, line, desired,
+        { enabled: true, gridGaps: false, elementGaps: false }), desired);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, editableGrid, line, desired,
+        { enabled: true, threshold: 1 }), desired);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, editableGrid, line, -0.01,
+        { enabled: true, elementGaps: false }), -0.01);
+    assert.equal(snapGridLineToEvenGaps(emptyGapScene, editableGrid, line, NaN,
+        { enabled: true }), NaN);
+});
+
+test("mirrored equal-gap snapping solves both moving lines together", () => {
+    const grid = { ...editableGrid, rows: 3, columns: 1 };
+    const line = gridLines(416, 16, grid)[0];
+    const snapped = snapGridLineToEvenGaps(emptyGapScene, grid, line, -1 / 3 + 0.01,
+        { enabled: true, mirror: true, elementGaps: false });
+    assert.equal(snapped, -1 / 3);
+    const moved = editGridLine(416, 16, grid, line.id, snapped, true);
+    const values = [-1, ...gridLines(416, 16, moved).map((item) => item.value).sort((a, b) => a - b), 1];
+    const gaps = values.slice(1).map((value, index) => value - values[index]);
+    assert.ok(gaps.every((gap) => Math.abs(gap - 2 / 3) < 1e-12));
+});
+
+test("element gap targets use facing edges, shared bands and visible neighbours", () => {
+    const local: Scene = { ...scene, elements: [
+        { ...element, id: "upper", x: 180, y: 130, height: 20 },
+        { ...element, id: "lower", x: 180, y: 190, height: 20 },
+    ] };
+    const line = gridLine("rows");
+    const desired = (172 - 208) / 192;
+    const options = { enabled: true, gridGaps: false };
+    assert.equal(snapGridLineToEvenGaps(local, editableGrid, line, desired, options), (170 - 208) / 192);
+    const curvedTarget = (170 - 208) / (192 * Math.sqrt(1 - ((190 - 208) / 192) ** 2));
+    assert.ok(Math.abs(snapGridLineToEvenGaps(local, { ...editableGrid, curvedRows: true }, line,
+        curvedTarget + 2 / 192, options) - curvedTarget) < 1e-12);
+    const horizontal: Scene = { ...local, elements: local.elements.map((box) =>
+        ({ ...box, x: box.y, y: box.x, width: box.height, height: box.width })) };
+    assert.equal(snapGridLineToEvenGaps(horizontal, editableGrid, gridLine("columns"), desired, options), (170 - 208) / 192);
+    const hidden = { ...local, elements: local.elements.map((box) => ({ ...box, visible: "night" as const })) };
+    assert.equal(snapGridLineToEvenGaps(hidden, editableGrid, line, desired, options), desired);
+    assert.equal(snapGridLineToEvenGaps(hidden, editableGrid, line, desired, { ...options, night: true }), (170 - 208) / 192);
+    const blocked = { ...local, elements: [...local.elements,
+        { ...element, id: "blocker", x: 180, y: 158, height: 25 }] };
+    assert.equal(snapGridLineToEvenGaps(blocked, editableGrid, line, desired, options), desired);
+    const separated = { ...local, elements: [local.elements[0], { ...local.elements[1], x: 220 }] };
+    assert.equal(snapGridLineToEvenGaps(separated, editableGrid, line, desired, options), desired);
+});
+
+test("curved and radial equal-gap targets remain bounded on every device", () => {
+    for (const [device, size] of Object.entries(devices)) {
+        const local = { ...emptyGapScene, device: device as Scene["device"] };
+        const radius = size / 2 - 16;
+        const grid = { ...editableGrid, curvedRows: true, curvedColumns: true };
+        for (const axis of ["rows", "columns"] as const) {
+            const line = gridLines(size, 16, grid).find((item) => item.axis === axis)!;
+            assert.equal(snapGridLineToEvenGaps(local, grid, line, -0.5 + 2 / radius,
+                { enabled: true }), -0.5);
+        }
+        const rings = { ...grid, circumferences: 3, circumferenceStart: "inside" as const, circumferenceSpacing: 40 };
+        const line = gridLines(size, 16, rings).find((item) => item.axis === "rings")!;
+        assert.ok(Math.abs(snapGridLineToEvenGaps(local, rings, line, 42 / radius, { enabled: true }) - 40 / radius) < 1e-12);
+        const edited = editGridLine(size, 16, rings, line.id, 40 / radius);
+        assert.ok(gridLines(size, 16, edited).every((item) => item.value > -1 && item.value < 1));
+    }
+});
+
+test("combined grid snaps choose the nearest original target without chained attraction", () => {
+    const local = { ...scene, elements: [{ ...element, y: 116, height: 20 }] };
+    const line = gridLines(416, 16, editableGrid).find((item) => item.id === "rows-1")!;
+    // Direct edge is exact; a nearby equal-gap candidate must not replace it.
+    const direct = (116 - 208) / 192;
+    assert.equal(snapGridLine(local, editableGrid, line, direct,
+        { toElements: true, toEvenGaps: true }), direct);
+    // A gap target farther than 6 px cannot attract through a closer element target.
+    const desired = -0.5 + 9 / 192;
+    const result = snapGridLine(local, editableGrid, line, desired,
+        { toElements: true, toEvenGaps: true });
+    assert.ok(Math.abs(result - desired) * 192 <= 6 + 1e-9);
+    assert.equal(snapGridLine(local, editableGrid, line, desired,
+        { toElements: false, toEvenGaps: false }), desired);
 });

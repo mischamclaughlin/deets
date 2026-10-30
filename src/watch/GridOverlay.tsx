@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { editGridLine, gridLines, type GridLine, type GridSettings } from "./grid.ts";
 import type { Scene } from "../../shared/scene.ts";
-import { snapGridLineToElements } from "./grid-snapping.ts";
+import { snapGridLine } from "./grid-snapping.ts";
 import "./GridOverlay.css";
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
     scene: Scene;
     night?: boolean;
     snapToElements?: boolean;
+    snapToEvenGaps?: boolean;
     selectedId?: string;
     onSelect: (id: string | undefined) => void;
     onChange: (grid: GridSettings) => void;
@@ -31,7 +32,7 @@ function pointer(event: ReactPointerEvent<SVGSVGElement>) {
 }
 
 /** Editable annotations use native coordinates but never enter the exported scene. */
-export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedId, onSelect, onChange }: Props) {
+export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, snapToEvenGaps = false, selectedId, onSelect, onChange }: Props) {
     const drag = useRef<Drag | undefined>(undefined);
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
@@ -58,8 +59,9 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
             return;
         }
         const desired = line.value + Math.round(delta) / radius;
-        const snapped = snapGridLineToElements(scene, current.grid, line, desired, {
-            enabled: snapToElements && !event.altKey, night,
+        const snapped = snapGridLine(scene, current.grid, line, desired, {
+            toElements: snapToElements && !event.altKey,
+            toEvenGaps: snapToEvenGaps && !event.altKey, night, mirror,
         });
         current.latest = snapped === line.value ? current.grid
             : editGridLine(size, inset, current.grid, line.id, snapped, mirror);

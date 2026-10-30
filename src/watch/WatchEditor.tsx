@@ -45,6 +45,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
     const [snapGridToElements, setSnapGridToElements] = useState(true);
+    const [snapGridToEvenGaps, setSnapGridToEvenGaps] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [mirrorGrid, setMirrorGrid] = useState(false);
     const [selectedGridLineId, setSelectedGridLine] = useState<string>();
@@ -166,6 +167,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             onChange={(event) => setSnapGridToElements(event.target.checked)} />
                         Snap grid lines to elements
                     </label>
+                    <label className="guide-toggle" title="Match neighbouring grid spacing or centre a grid line in the gap between elements.">
+                        <input type="checkbox" checked={snapGridToEvenGaps}
+                            onChange={(event) => setSnapGridToEvenGaps(event.target.checked)} />
+                        Snap grid to even gaps
+                    </label>
                     <p className="control-hint">Hold Alt to move freely while snapping is on.</p>
                     <label className="font-choice">
                         Element outlines
@@ -267,6 +273,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         snapToGuides={snapToGuides}
                         snapToElements={snapToElements}
                         snapGridToElements={snapGridToElements}
+                        snapGridToEvenGaps={snapGridToEvenGaps}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({
