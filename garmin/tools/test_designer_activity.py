@@ -27,11 +27,11 @@ class ActivityTests(unittest.TestCase):
                 edited = add_activity(edited, source)
                 edited = add_activity(edited, source)
             self.assertEqual(original, self.scene(device))
-            self.assertEqual(len(edited['elements']), 18)
-            self.assertEqual(len({e['id'] for e in edited['elements']}), 18)
+            self.assertEqual(len(edited['elements']), 24)
+            self.assertEqual(len({e['id'] for e in edited['elements']}), 24)
             self.assertEqual(validate_scene(edited), edited)
             mapped = bridge.layout({'scene': edited})
-            self.assertEqual(len(mapped['areas']), 18)
+            self.assertEqual(len(mapped['areas']), 24)
             self.assertTrue(mapped['ops'])
 
     def test_icons_keep_all_pixels_inside_their_boxes_and_use_night_colour(self):
@@ -50,7 +50,7 @@ class ActivityTests(unittest.TestCase):
         self.assertNotEqual(masks[1], masks[2])
 
     def test_original_parent_icon_coverage_is_preserved_at_native_size(self):
-        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png'})
+        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png', 'stairs.png'})
         for source, name in ICON_MASKS.items():
             data = (ICON_DIRECTORY / f'{name}.png').read_bytes()
             width, height = struct.unpack('>II', data[16:24])
@@ -107,10 +107,12 @@ class ActivityTests(unittest.TestCase):
                 prepare_scene_project(project, scene, proof=proof)
                 code = (Path(project)/'source/DesignerView.mc').read_text()
                 provider = (Path(project)/'source/EpixCanvasComplications.mc').read_text()
+                self.assertIn('case "floors": return _provider.designerValue(4);', code)
+                self.assertIn('case "floorsWeek": return _snapshot.weeklyFloorCounts;', code)
                 self.assertIn('case "walkWeek": return _snapshot.weeklyWalkDistances;', code)
                 self.assertIn('case "weeklyWalk": return _provider.designerValue(-5);', code)
-                self.assertIn('_slotTypes = [-5, 2, 19];', provider)
-                self.assertIn('_widgetTypes = [-5, 2, 19];', provider)
+                self.assertIn('_slotTypes = [-5, 2, 4, 19];', provider)
+                self.assertIn('_widgetTypes = [-5, 2, 4, 19];', provider)
                 self.assertIn('|| element[10].equals("icon")', code)
                 for element in scene['elements']:
                     if element['source'] in ICON_MASKS:

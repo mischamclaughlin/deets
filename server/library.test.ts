@@ -7,9 +7,9 @@ import { scene } from "../src/watch/scene.ts";
 test("library search combines category, names and useful activity synonyms", () => {
     assert.deepEqual(matchingEntries("activity", " WALKING   graph ").map((entry) => entry.source), ["walkWeek"]);
     assert.deepEqual(matchingEntries("clock", "walking"), []);
-    assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["stepsWeek", "walkWeek", "runWeek"]);
+    assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["stepsWeek", "floorsWeek", "walkWeek", "runWeek"]);
     assert.deepEqual(matchingEntries("all", "unknown-item"), []);
-    assert.equal(matchingEntries("all", "   ").length, 12);
+    assert.equal(matchingEntries("all", "   ").length, 15);
 });
 
 test("element names distinguish values, symbols and graphs and number duplicates", () => {
@@ -18,4 +18,10 @@ test("element names distinguish values, symbols and graphs and number duplicates
     assert.deepEqual(design.elements.map((element) => elementName(design, element.id)),
         ["Time 1", "Time 2", "Date 1", "Date 2", "Divider 1", "Steps 1", "Steps icon 1", "Steps icon 2", "Walking graph 1", "Walking graph 2"]);
     assert.equal(elementName(design, "unknown"), "unknown");
+});
+
+test("flights of stairs exposes its value, original icon and weekly graph", () => {
+    for (const query of ["stairs", "floors", "flights of stairs"]) {
+        assert.deepEqual(matchingEntries("activity", query).map((entry) => entry.source), ["floors", "floorsIcon", "floorsWeek"]);
+    }
 });

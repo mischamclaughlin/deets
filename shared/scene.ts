@@ -17,7 +17,7 @@ export const isDateSource = (source: string): source is DateSource =>
     source === "day" || source === "month" || source === "year";
 export const isEditableTextSource = (source: string): boolean =>
     isClockSource(source) || isDateSource(source) || source === "divider";
-export type ActivitySource = "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
+export type ActivitySource = "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {
     family: string;

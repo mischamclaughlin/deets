@@ -7,9 +7,9 @@ import subprocess
 
 # Original colour-ready Tabler assets from the parent Garmin watch face.
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
-ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run"}
+ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs"}
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
-ACTIVITY_SOURCES = {"steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
+ACTIVITY_SOURCES = {"floors", "floorsWeek", "steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
 
 
 def icon_asset_paths():

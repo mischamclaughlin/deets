@@ -70,6 +70,7 @@ CATALOG = [
     _source("label", "Text label", "Design", "EPIX CANVAS"),
     _source("stepsWeek", "Weekly steps", "Charts", [4200, 8642, 6300, 9500, 7100, 11100, 5200], "bars", 2),
     _source("walkWeek", "Weekly walking", "Charts", [2, 4, 3, 0, 5, 1, 3.6], "bars"),
+    _source("floorsIcon", "Stairs icon", "Activity icons", 0, "icon"),
     _source("stepsIcon", "Steps icon", "Activity icons", 0, "icon"),
     _source("walkIcon", "Walking icon", "Activity icons", 0, "icon"),
     _source("runIcon", "Running icon", "Activity icons", 0, "icon"),
