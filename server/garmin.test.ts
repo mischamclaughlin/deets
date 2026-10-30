@@ -557,3 +557,19 @@ test("manual text boxes retain independent dimensions and can return to automati
     const crossOrigin = await requestApi("/api/garmin/fit-box", [Buffer.from(JSON.stringify({ scene: fixed.scene, elementId: "time" }))], { ...headers, origin: "https://example.com" });
     assert.equal(crossOrigin.status, 403);
 });
+
+test("adding activity extras passes the API boundary as one atomic scene edit", async () => {
+    const headers = { "content-type": "application/json" };
+    const result = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "steps", options: { icon: true, graph: true } }))], headers);
+    assert.equal(result.status, 200);
+    const updated = result.body.scene as typeof scene;
+    assert.equal(updated.elements.length, scene.elements.length + 3);
+    assert.deepEqual(updated.elements.slice(scene.elements.length).map((element) => element.source), ["steps", "stepsIcon", "stepsWeek"]);
+    assert.deepEqual(updated.elements.slice(0, scene.elements.length), scene.elements);
+    for (const options of [{ icon: "yes" }, { unexpected: true }]) {
+        const invalid = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "steps", options }))], headers);
+        assert.equal(invalid.status, 400);
+    }
+    const origin = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene, source: "steps", options: { graph: true } }))], { ...headers, origin: "https://attacker.example" });
+    assert.equal(origin.status, 403);
+});

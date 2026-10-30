@@ -1,4 +1,4 @@
-import type { ActivitySource, ClockSource, DateSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 import { preparedMapping, rememberMapping } from "./mapping-cache.ts";
 
 async function post<T>(
@@ -137,5 +137,5 @@ export const refreshFonts = (scene: Scene, signal?: AbortSignal) =>
 export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSignal) =>
     post<WatchMapping>("fit-box", { scene, elementId }, signal);
 
-export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider", signal?: AbortSignal) =>
-    post<WatchMapping>("add", { scene, source }, signal);
+export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider", signal?: AbortSignal, options?: ActivityAddOptions) =>
+    post<WatchMapping>("add", { scene, source, ...(options ? { options } : {}) }, signal);

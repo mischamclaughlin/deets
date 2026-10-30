@@ -119,3 +119,65 @@ class ActivityTests(unittest.TestCase):
                         from designer_export import _mc
                         rectangles = [[op[k] for k in ('x','y','width','height','colour')] for op in chart_ops(element)]
                         self.assertIn(_mc(rectangles), code)
+
+    def test_activity_companions_are_atomic_native_layouts_on_every_device(self):
+        from itertools import product
+        from designer_activity import ACTIVITY_GROUPS
+        for device, (source, companions), icon, graph in product(
+                DEVICES, ACTIVITY_GROUPS.items(), (False, True), (False, True)):
+            with self.subTest(device=device, source=source, icon=icon, graph=graph):
+                original = add_activity(self.scene(device), 'steps')
+                saved = copy.deepcopy(original)
+                edited = add_activity(original, source, dict(icon=icon, graph=graph))
+                self.assertEqual(original, saved)
+                self.assertEqual(edited['elements'][:len(original['elements'])], original['elements'])
+                added = edited['elements'][len(original['elements']):]
+                expected = [source] + ([companions[0]] if icon else []) + ([companions[1]] if graph else [])
+                self.assertEqual([element['source'] for element in added], expected)
+                self.assertEqual(len({element['id'] for element in edited['elements']}), len(edited['elements']))
+                for i, first in enumerate(added):
+                    for second in added[i+1:]:
+                        self.assertTrue(first['x']+first['width'] <= second['x'] or
+                            second['x']+second['width'] <= first['x'] or
+                            first['y']+first['height'] <= second['y'] or
+                            second['y']+second['height'] <= first['y'])
+                left = min(element['x'] for element in added)
+                right = max(element['x']+element['width'] for element in added)
+                top = min(element['y'] for element in added)
+                bottom = max(element['y']+element['height'] for element in added)
+                self.assertLessEqual(abs(left+right-DEVICES[device]), 1)
+                self.assertLessEqual(abs(top+bottom-DEVICES[device]), 1)
+                self.assertEqual(validate_scene(edited), edited)
+
+    def test_activity_options_enforce_capacity_before_adding_any_companion(self):
+        scene = self.scene()
+        for _ in range(38):
+            scene = add_activity(scene, 'stepsIcon')
+        original = copy.deepcopy(scene)
+        with self.assertRaisesRegex(ValueError, 'needs 3 element slots'):
+            add_activity(scene, 'floors', dict(icon=True, graph=True))
+        self.assertEqual(scene, original)
+        edited = add_activity(scene, 'floors', dict(icon=True))
+        self.assertEqual(len(edited['elements']), 40)
+        self.assertEqual([item['source'] for item in edited['elements'][-2:]], ['floors', 'floorsIcon'])
+        self.assertEqual(scene, original)
+
+    def test_bridge_accepts_partial_options_and_rejects_invalid_option_payloads(self):
+        for options, sources in (({}, ['steps']), ({'icon': True}, ['steps', 'stepsIcon']),
+                                 ({'graph': True}, ['steps', 'stepsWeek'])):
+            mapped = bridge.dispatch(dict(operation='add', payload=dict(scene=self.scene(), source='steps', options=options)))
+            self.assertEqual([item['source'] for item in mapped['scene']['elements']], sources)
+        for options in (None, [], True, {'icon': 1}, {'graph': 'true'}, {'extra': False}, {'icon': None}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                bridge.dispatch(dict(operation='add', payload=dict(scene=self.scene(), source='steps', options=options)))
+        for source in ('time', 'numericDate', 'divider', 'stepsIcon', 'stepsWeek'):
+            with self.subTest(source=source), self.assertRaises(ValueError):
+                bridge.dispatch(dict(operation='add', payload=dict(scene=self.scene(), source=source, options={})))
+
+    def test_boundary_failure_never_changes_the_original_scene(self):
+        scene = self.scene()
+        scene['edgeInset'] = DEVICES[scene['device']] // 2 - 30
+        saved = copy.deepcopy(scene)
+        with self.assertRaises(ValueError):
+            add_activity(scene, 'weeklyRun', dict(icon=True, graph=True))
+        self.assertEqual(scene, saved)

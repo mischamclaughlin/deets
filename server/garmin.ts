@@ -213,7 +213,7 @@ export function garmin(): Plugin {
                         : secondsSize ? ["scene", "elementId", "size"]
                         : divider ? ["scene", "elementId", "symbol"]
                         : clock || date ? ["scene", "elementId", "source"]
-                            : adding ? ["scene", "source"]
+                            : adding ? ["scene", "source", "options"]
                                 : watchFont ? ["scene", "family"]
                                     : inheritFont ? ["scene", "elementId", "inherit"] : ["scene", "night"];
                 if (

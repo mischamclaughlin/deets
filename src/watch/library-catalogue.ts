@@ -28,8 +28,23 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "runWeek", label: "Running graph", detail: "Daily distance · Monday–Sunday", category: "activity", keywords: "weekly run chart bars" },
 ];
 
+export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph: LibrarySource }>> = {
+    steps: { icon: "stepsIcon", graph: "stepsWeek" },
+    floors: { icon: "floorsIcon", graph: "floorsWeek" },
+    weeklyWalk: { icon: "walkIcon", graph: "walkWeek" },
+    weeklyRun: { icon: "runIcon", graph: "runWeek" },
+};
+
+/** Present data first; its icon and graph are choices made when adding it. */
+export const libraryItems = libraryEntries.filter((entry) => entry.category === "clock" || activityParts[entry.source]);
+
 export function matchingEntries(category: LibraryCategory, query: string): readonly LibraryEntry[] {
-    const terms = query.trim().toLocaleLowerCase("en-GB").split(/\s+/).filter(Boolean);
-    return libraryEntries.filter((entry) => (category === "all" || entry.category === category) &&
-        terms.every((term) => `${entry.label} ${entry.detail} ${entry.keywords}`.toLocaleLowerCase("en-GB").includes(term)));
+    const terms = query.trim().toLocaleLowerCase("en-GB").split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    return libraryItems.filter((entry) => {
+        const parts = activityParts[entry.source];
+        const related = libraryEntries.filter((item) => item.source === entry.source ||
+            item.source === parts?.icon || item.source === parts?.graph);
+        const searchable = related.map((item) => `${item.label} ${item.detail} ${item.keywords}`).join(" ").toLocaleLowerCase("en-GB").split(/[^\p{L}\p{N}]+/u);
+        return (category === "all" || entry.category === category) && terms.every((term) => searchable.some((word) => word.startsWith(term)));
+    });
 }

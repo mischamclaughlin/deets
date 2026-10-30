@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Scene } from "../../shared/scene.ts";
+import type { ActivityAddOptions, Scene } from "../../shared/scene.ts";
 import { addElement } from "./api.ts";
+import { LibraryList } from "./LibraryList.tsx";
 import { ElementPicker } from "./ElementPicker.tsx";
 import { libraryEntries, type LibrarySource } from "./library-catalogue.ts";
 import "./ElementPicker.css";
@@ -27,7 +28,7 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
         setAdding(undefined);
         setOpen(false);
     }
-    async function add(source: LibrarySource) {
+    async function add(source: LibrarySource, options?: ActivityAddOptions) {
         if (request.current || scene.elements.length >= 40) return;
         const controller = new AbortController();
         request.current = controller;
@@ -35,11 +36,11 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
         setAdding(source);
         setError(undefined);
         try {
-            const mapped = await addElement(snapshot, source, controller.signal);
+            const mapped = await addElement(snapshot, source, controller.signal, options);
             if (controller.signal.aborted) return;
             if (currentScene.current !== snapshot) throw new Error("Your canvas changed while adding. Choose the element again.");
             onSceneChange(mapped.scene);
-            onSelect(mapped.scene.elements[mapped.scene.elements.length - 1].id);
+            onSelect(mapped.scene.elements[snapshot.elements.length].id);
             setAnnouncement(`${libraryEntries.find((entry) => entry.source === source)!.label} added`);
             dismiss();
         } catch (failure) {
@@ -52,11 +53,14 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
         }
     }
     return <section className="element-library-launcher" aria-label="Element library">
-        <button type="button" className="library-launch-button" onClick={() => { setError(undefined); setAnnouncement(""); setOpen(true); }}
-            aria-haspopup="dialog" aria-expanded={open}>
-            <span aria-hidden="true">+</span> Add element <span className="library-launch-arrow" aria-hidden="true">↗</span>
-        </button>
-        <p className="library-announcement" role="status">{announcement || "Time, activity, icons & graphs"}</p>
-        {open && <ElementPicker scene={scene} adding={adding} error={error} onAdd={(source) => void add(source)} onDismiss={dismiss} />}
+        <div className="compact-library-header"><h2>Library</h2>
+            <button type="button" className="library-browse-button" disabled={adding !== undefined} onClick={() => { setError(undefined); setAnnouncement(""); setOpen(true); }}
+                aria-haspopup="dialog" aria-expanded={open} aria-label="Browse element library">Browse <span aria-hidden="true">↗</span></button>
+        </div>
+        <LibraryList key={scene.elements.length} onAdd={(source, options) => void add(source, options)} adding={adding} remaining={Math.max(0, 40-scene.elements.length)} />
+        <p className="library-announcement" role="status">{announcement}</p>
+        {!open && error && <p className="typography-status" role="alert">{error}</p>}
+        {scene.elements.length >= 40 && <p className="library-announcement">All 40 slots are in use. Delete an element to add another.</p>}
+        {open && <ElementPicker scene={scene} adding={adding} error={error} onAdd={(source, options) => void add(source, options)} onDismiss={dismiss} />}
     </section>;
 }

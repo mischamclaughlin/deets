@@ -9,6 +9,13 @@ import subprocess
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
 ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs"}
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
+ACTIVITY_GROUPS = {
+    "steps": ("stepsIcon", "stepsWeek"),
+    "floors": ("floorsIcon", "floorsWeek"),
+    "weeklyWalk": ("walkIcon", "walkWeek"),
+    "weeklyRun": ("runIcon", "runWeek"),
+}
+_NO_OPTIONS = object()
 ACTIVITY_SOURCES = {"floors", "floorsWeek", "steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
 
 
@@ -70,26 +77,69 @@ def icon_ops(element):
             for x, y, width, height in _icon_rectangles(data, element["width"], element["height"])]
 
 
-def add_activity(scene, source):
-    from designer_model import validate_scene, DEVICES, font_pack
-    scene = validate_scene(scene)
-    if source not in ACTIVITY_SOURCES:
-        raise ValueError("Choose a supported activity element.")
-    if len(scene["elements"]) >= 40:
-        raise ValueError("A design can contain at most 40 elements.")
+def _new_activity_element(scene, source, identities):
+    from designer_model import DEVICES, font_pack
     size = DEVICES[scene["device"]]
     width, height = ((112, 24) if source.endswith("Week") else
                      (112, font_pack(scene["device"])["fonts"]["widget"]["height"]))
     if source in ICON_MASKS:
         data = (ICON_DIRECTORY / f"{ICON_MASKS[source]}.png").read_bytes()
         width, height, _ = _icon_mask(data)
-    identities = {element["id"] for element in scene["elements"]}
     identity, suffix = source, 2
     while identity in identities:
         identity = f"{source}-{suffix}"
         suffix += 1
-    edited = copy.deepcopy(scene)
-    edited["elements"].append(dict(id=identity, source=source, font="widget", x=(size-width)//2,
+    identities.add(identity)
+    return dict(id=identity, source=source, font="widget", x=(size-width)//2,
         y=(size-height)//2, width=width, height=height, align="centre", colour=0xdceccf,
-        nightColour=0x8d99ae, visible="both"))
+        nightColour=0x8d99ae, visible="both")
+
+
+def _arrange_activity_group(scene, elements):
+    """Centre native boxes as one layout: icon beside value, graph underneath."""
+    from designer_model import DEVICES
+    value = elements[0]
+    icon = next((element for element in elements[1:] if element["source"] in ICON_MASKS), None)
+    graph = next((element for element in elements[1:] if element["source"].endswith("Week")), None)
+    gap = 8
+    row_width = value["width"] + (icon["width"] + gap if icon else 0)
+    row_height = max(value["height"], icon["height"] if icon else 0)
+    group_width = max(row_width, graph["width"] if graph else 0)
+    group_height = row_height + (gap + graph["height"] if graph else 0)
+    size = DEVICES[scene["device"]]
+    left, top = (size-group_width)//2, (size-group_height)//2
+    row_left = left + (group_width-row_width)//2
+    if icon:
+        icon.update(x=row_left, y=top+(row_height-icon["height"])//2)
+    value.update(x=row_left+(icon["width"]+gap if icon else 0), y=top+(row_height-value["height"])//2)
+    if graph:
+        graph.update(x=left+(group_width-graph["width"])//2, y=top+row_height+gap)
+
+
+def add_activity(scene, source, options=_NO_OPTIONS):
+    """Add a value and its optional companions atomically, retaining legacy adds."""
+    from designer_model import validate_scene
+    scene = validate_scene(scene)
+    if source not in ACTIVITY_SOURCES:
+        raise ValueError("Choose a supported activity element.")
+    sources = [source]
+    if options is not _NO_OPTIONS:
+        if source not in ACTIVITY_GROUPS:
+            raise ValueError("Icon and graph options belong to an activity data value.")
+        if (not isinstance(options, dict) or set(options) - {"icon", "graph"}
+                or any(type(value) is not bool for value in options.values())):
+            raise ValueError("Choose boolean icon and graph options for the activity value.")
+        icon, graph = ACTIVITY_GROUPS[source]
+        if options.get("icon", False):
+            sources.append(icon)
+        if options.get("graph", False):
+            sources.append(graph)
+    if len(scene["elements"]) + len(sources) > 40:
+        raise ValueError(f"This addition needs {len(sources)} element slots; a design can contain at most 40 elements.")
+    edited = copy.deepcopy(scene)
+    identities = {element["id"] for element in scene["elements"]}
+    additions = [_new_activity_element(scene, item, identities) for item in sources]
+    if options is not _NO_OPTIONS:
+        _arrange_activity_group(scene, additions)
+    edited["elements"].extend(additions)
     return validate_scene(edited)

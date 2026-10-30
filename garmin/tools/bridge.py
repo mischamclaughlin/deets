@@ -179,10 +179,14 @@ def dispatch(request):
         return layout({"scene": set_text_defaults(payload["scene"], payload["defaults"])})
     if operation == "add":
         from designer_typography import add_time, add_divider, add_date
-        from designer_activity import ACTIVITY_SOURCES, add_activity
-        if set(payload) != {"scene", "source"} or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"} | ACTIVITY_SOURCES:
+        from designer_activity import ACTIVITY_SOURCES, ACTIVITY_GROUPS, add_activity
+        if set(payload) not in ({"scene", "source"}, {"scene", "source", "options"}) or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"} | ACTIVITY_SOURCES:
             raise ValueError("Choose a scene and a supported element to add.")
         source = payload["source"]
+        if "options" in payload:
+            if source not in ACTIVITY_GROUPS:
+                raise ValueError("Icon and graph options belong to an activity data value.")
+            return layout({"scene": add_activity(payload["scene"], source, payload["options"])})
         edited = (add_activity(payload["scene"], source) if source in ACTIVITY_SOURCES else
                   {"divider": add_divider, "time": add_time, "numericDate": add_date}[source](payload["scene"]))
         return layout({"scene": edited})
