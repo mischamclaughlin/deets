@@ -1,3 +1,4 @@
+import { activityName } from "./element-name.ts";
 import { useEffect, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
 import { copyElement, deleteElement } from "./api.ts";
@@ -31,7 +32,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect 
         return () => controller.abort();
     }, [action, scene, elementId, onSceneChange, onSelect]);
     return <section aria-labelledby="element-actions-heading">
-        <h2 id="element-actions-heading">Element</h2>
+        <h2 id="element-actions-heading">{activityName(scene, elementId) ?? "Element"}</h2>
         <button type="button" className="add-element" disabled={action !== undefined || scene.elements.length >= 40}
             onClick={() => { setError(undefined); setAction("copy"); }}>
             {action === "copy" ? "Copying…" : "Copy"}
