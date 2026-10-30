@@ -1,0 +1,27 @@
+.content-label { overflow: visible; }
+.area-label-content {
+    box-sizing: border-box;
+    width: max-content;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: rgb(23 61 51 / 96%);
+    color: #d2f3e4;
+    font: 400 9px/16px ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+}
+.area > .ring-outline {
+    fill: none;
+    stroke: #b8ead4;
+    stroke-width: 0.5;
+    stroke-dasharray: 2 4;
+    pointer-events: none;
+}
+.watch-areas[data-outline-mode="all"] .area-outline { stroke-opacity: 0.55; }
+.watch-areas[data-outline-mode="selected"] .area:not(.selected) .area-outline,
+.watch-areas[data-outline-mode="off"] .area-outline { stroke-opacity: 0; }
+.watch-areas:not([data-outline-mode="off"]) .area.selected .area-outline {
+    stroke-opacity: 0.8;
+    stroke-width: 0.75;
+    stroke-dasharray: none;
+}

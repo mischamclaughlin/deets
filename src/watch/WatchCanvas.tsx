@@ -7,6 +7,7 @@ import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
+import "./WatchAnnotations.css";
 
 interface Props {
     scene: Scene;
@@ -23,6 +24,7 @@ interface Props {
     snapToGuides?: boolean;
     snapToElements?: boolean;
     snapGridToElements?: boolean;
+    outlineMode?: "all" | "selected" | "off";
     selectedElementId?: string;
     onSelectElement?: (id: string | undefined) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
@@ -50,7 +52,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineId, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineId, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -214,6 +216,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
             {mapping && ready && (
                 <svg
                     ref={areas}
+                    data-outline-mode={outlineMode}
                     className={onMoveElement ? "watch-areas editable" : "watch-areas"}
                     onPointerDown={(event) => {
                         if (!onMoveElement || event.button !== 0 || drag.current) return;
@@ -256,11 +259,6 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                             : (ring?.ringTicksToCircumference ? clearance : 4) + 7.5;
                         const tickHitWidth = ring?.ringTicksStretchToCircumference ? Math.max(24, clearance) : 24;
                         const label = `${area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
-                        const labelX = Math.max(
-                            8,
-                            Math.min(position.x, mapping.size - 235),
-                        );
-                        const labelY = Math.max(16, position.y - 8);
                         return (
                             <g
                                 key={area.id}
@@ -305,28 +303,23 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                     }
                                 }}
                             >
-                                {area.source === "secondsRing" ? <circle className="ring-hit-area" cx={position.x + area.width / 2}
-                                    cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - tickHitInset)} style={{ strokeWidth: tickHitWidth }} /> : <rect
+                                {area.source === "secondsRing" ? <><circle className="ring-hit-area" cx={position.x + area.width / 2}
+                                    cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - tickHitInset)} style={{ strokeWidth: tickHitWidth }} />
+                                    <circle className="area-outline ring-outline" cx={position.x + area.width / 2}
+                                        cy={position.y + area.height / 2} r={Math.max(0, area.width / 2 - tickHitInset)} /></> : <rect
+                                    className="area-outline"
                                     x={position.x}
                                     y={position.y}
                                     width={area.width}
                                     height={area.height}
                                 />}
                                 {selected && (
-                                    <g
-                                        className="area-label"
-                                        aria-hidden="true"
-                                    >
-                                        <rect
-                                            x={labelX - 3}
-                                            y={labelY - 11}
-                                            width={235}
-                                            height={16}
-                                        />
-                                        <text x={labelX} y={labelY}>
+                                    <foreignObject className="area-label content-label" aria-hidden="true"
+                                        x={position.x} y={Math.max(0, position.y - 19)} width={mapping.size} height={16}>
+                                        <div className="area-label-content" style={{ minWidth: area.width }}>
                                             {label}
-                                        </text>
-                                    </g>
+                                        </div>
+                                    </foreignObject>
                                 )}
                             </g>
                         );

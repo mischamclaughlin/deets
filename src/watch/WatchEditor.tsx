@@ -38,6 +38,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     }, [scene, fontsReady]);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
+    const [outlineMode, setOutlineMode] = useState<"all" | "selected" | "off">("selected");
     const [selectedId, setSelectedElement] = useState<string | undefined>(initialScene.elements[0]?.id);
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(true);
@@ -161,16 +162,24 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         </label>
                     ))}
                     <label className="guide-toggle">
-                        <input type="checkbox" checked={mirrorGrid}
-                            onChange={(event) => setMirrorGrid(event.target.checked)} />
-                        Mirror grid edits
-                    </label>
-                    <label className="guide-toggle">
                         <input type="checkbox" checked={snapGridToElements}
                             onChange={(event) => setSnapGridToElements(event.target.checked)} />
                         Snap grid lines to elements
                     </label>
-                    <p className="control-hint">Uses the Snap switch. Hold Alt to move freely.</p>
+                    <p className="control-hint">Hold Alt to move freely while snapping is on.</p>
+                    <label className="font-choice">
+                        Element outlines
+                        <select value={outlineMode} onChange={(event) => setOutlineMode(event.target.value as typeof outlineMode)}>
+                            <option value="all">Always show all</option>
+                            <option value="selected">Selected element only</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </label>
+                    <label className="guide-toggle">
+                        <input type="checkbox" checked={mirrorGrid}
+                            onChange={(event) => setMirrorGrid(event.target.checked)} />
+                        Mirror grid edits
+                    </label>
                     <p className="control-hint">Click a grid line to select it. Drag or use arrow keys to move it; Delete removes it. Mirror reflects row and column edits across the centre. Changing counts or ring spacing regenerates the grid.</p>
                     <button type="button" className="snap-button"
                         disabled={!grid.visible || !gridLines(size, inset, grid).some((line) => line.id === selectedGridLineId)}
@@ -247,6 +256,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         scene={scene}
                         showCircumference={showCircumference}
                         showGuideLines={showGuideLines}
+                        outlineMode={outlineMode}
                         grid={grid}
                         mirrorGrid={mirrorGrid}
                         selectedGridLineId={selectedGridLineId}
