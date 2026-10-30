@@ -15,6 +15,7 @@ import { TextPresetsPanel } from "./TextPresetsPanel.tsx";
 import { WatchFontPanel } from "./WatchFontPanel.tsx";
 import type { UploadedFont } from "./FontPicker.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
+import { GridLinePanel } from "./GridLinePanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
 /** Keep scene constraints separate from browser-only guide visibility. */
@@ -45,27 +46,30 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [snapToGuides, setSnapToGuides] = useState(true);
     const [snapToElements, setSnapToElements] = useState(true);
     const [snapGridToElements, setSnapGridToElements] = useState(true);
-    const [snapGridToEvenGaps, setSnapGridToEvenGaps] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [mirrorGrid, setMirrorGrid] = useState(false);
-    const [selectedGridLineId, setSelectedGridLine] = useState<string>();
+    const [selectedGridLineIds, setSelectedGridLines] = useState<string[]>([]);
     const setSelectedId = useCallback((id: string | undefined) => {
         setSelectedElement(id);
-        setSelectedGridLine(undefined);
+        setSelectedGridLines([]);
     }, []);
-    const setSelectedGridLineId = useCallback((id: string | undefined) => {
-        setSelectedGridLine(id);
+    const setSelectedGridLineId = useCallback((id: string | undefined, additive = false) => {
+        setSelectedGridLines((current) => id === undefined ? [] : additive
+            ? current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+            : current.includes(id) ? current : [id]);
         setSelectedElement(undefined);
     }, []);
     function clearSelection() {
         setSelectedElement(undefined);
-        setSelectedGridLine(undefined);
+        setSelectedGridLines([]);
     }
     const [uploads, setUploads] = useState<UploadedFont[]>([]);
     const rememberFont = (font: UploadedFont) => setUploads((current) => [...current.filter((item) => item.id !== font.id), font]);
     const selected = scene.elements.find((element) => element.id === selectedId);
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
+    const gridIds = new Set(gridLines(size, inset, grid).map((line) => line.id));
+    const selectedGridLines = selectedGridLineIds.filter((id) => gridIds.has(id));
 
     return (
         <div className="watch-editor" tabIndex={-1}
@@ -167,11 +171,6 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             onChange={(event) => setSnapGridToElements(event.target.checked)} />
                         Snap grid lines to elements
                     </label>
-                    <label className="guide-toggle" title="Match neighbouring grid spacing or centre a grid line in the gap between elements.">
-                        <input type="checkbox" checked={snapGridToEvenGaps}
-                            onChange={(event) => setSnapGridToEvenGaps(event.target.checked)} />
-                        Snap grid to even gaps
-                    </label>
                     <p className="control-hint">Hold Alt to move freely while snapping is on.</p>
                     <label className="font-choice">
                         Element outlines
@@ -188,19 +187,19 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     </label>
                     <p className="control-hint">Click a grid line to select it. Drag or use arrow keys to move it; Delete removes it. Mirror reflects row and column edits across the centre. Changing counts or ring spacing regenerates the grid.</p>
                     <button type="button" className="snap-button"
-                        disabled={!grid.visible || !gridLines(size, inset, grid).some((line) => line.id === selectedGridLineId)}
+                        disabled={selectedGridLines.length === 0}
                         onClick={() => {
-                            if (selectedGridLineId) setGrid((current) => editGridLine(size, inset, current, selectedGridLineId, null, mirrorGrid));
+                            setGrid((current) => selectedGridLines.reduce((next, id) => editGridLine(size, inset, next, id, null, mirrorGrid), current));
                             setSelectedGridLineId(undefined);
-                        }}>Delete selected grid line</button>
-                    <button type="button" className="snap-button" disabled={!grid.edits}
-                        onClick={() => { setGrid((current) => ({ ...current, edits: undefined })); setSelectedGridLineId(undefined); }}>Reset grid edits</button>
+                        }}>Delete selected grid {selectedGridLines.length > 1 ? "lines" : "line"}</button>
+                    <button type="button" className="snap-button" disabled={!grid.edits && !grid.gaps}
+                        onClick={() => { setGrid((current) => ({ ...current, edits: undefined, gaps: undefined })); setSelectedGridLineId(undefined); }}>Reset grid edits</button>
                     <div className="grid-counts">
                         {(["rows", "columns"] as const).map((axis) => (
                             <label key={axis}>
                                 {axis === "rows" ? "Rows" : "Columns"}
                                 <select value={grid[axis]}
-                                    onChange={(event) => setGrid((current) => ({ ...current, [axis]: Number(event.target.value), edits: undefined }))}>
+                                    onChange={(event) => setGrid((current) => ({ ...current, [axis]: Number(event.target.value), edits: undefined, gaps: undefined }))}>
                                     {Array.from({ length: 24 }, (_, index) => (
                                         <option key={index + 1} value={index + 1}>{index + 1}</option>
                                     ))}
@@ -214,7 +213,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             <select
                                 id="extra-circumferences"
                                 value={grid.circumferences}
-                                onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value), edits: undefined }))}
+                                onChange={(event) => setGrid((current) => ({ ...current, circumferences: Number(event.target.value), edits: undefined, gaps: undefined }))}
                                 title="Spacing reduces automatically to fit all rings."
                             >
                                 {Array.from({ length: 25 }, (_, count) => (
@@ -229,7 +228,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                                 onClick={() => setGrid((current) => ({
                                     ...current,
                                     circumferenceStart: current.circumferenceStart === "inside" ? "outside" : "inside",
-                                    edits: undefined,
+                                    edits: undefined, gaps: undefined,
                                 }))}
                             >
                                 {grid.circumferenceStart === "inside" ? "in" : "out"}
@@ -242,7 +241,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     </div>
                     <input id="circumference-spacing" type="range" min={1} max={100} step={1}
                         value={grid.circumferenceSpacing}
-                        onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value), edits: undefined }))}
+                        onChange={(event) => setGrid((current) => ({ ...current, circumferenceSpacing: Number(event.target.value), edits: undefined, gaps: undefined }))}
                         title="Spacing reduces automatically to fit all rings." />
                     <label className="guide-toggle">
                         <input type="checkbox" checked={grid.curvedRows}
@@ -265,7 +264,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         outlineMode={outlineMode}
                         grid={grid}
                         mirrorGrid={mirrorGrid}
-                        selectedGridLineId={selectedGridLineId}
+                        selectedGridLineIds={selectedGridLines}
                         onSelectGridLine={setSelectedGridLineId}
                         onChangeGrid={setGrid}
                         snapEnabled={snapEnabled}
@@ -273,7 +272,6 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         snapToGuides={snapToGuides}
                         snapToElements={snapToElements}
                         snapGridToElements={snapGridToElements}
-                        snapGridToEvenGaps={snapGridToEvenGaps}
                         selectedElementId={selectedId}
                         onSelectElement={setSelectedId}
                         onMoveElement={(id, desired) => setScene((current) => ({
@@ -289,6 +287,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </p>
             </main>
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
+                {selectedGridLines.length > 0 && <GridLinePanel key={selectedGridLines.join("|")} size={size} inset={inset} grid={grid}
+                    selectedIds={selectedGridLines} mirror={mirrorGrid} onChange={setGrid} />}
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                     onSceneChange={setScene} onSelect={setSelectedId} />}
                 {selected && <ElementBoxPanel key={selected.id}

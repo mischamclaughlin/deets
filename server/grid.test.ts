@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { defaultGrid, gridPaths, gridRadii, gridLines, editGridLine } from "../src/watch/grid.ts";
+import { defaultGrid, gridPaths, gridRadii, gridLines, editGridLine, gridLineValues, gridLineGap, maxGridLineGap, setGridLineGaps, moveGridLines } from "../src/watch/grid.ts";
 
 test("grid counts describe cells rather than dividers and visibility preserves settings", () => {
     const grid = { ...defaultGrid, rows: 3, columns: 5 };
@@ -165,4 +165,104 @@ test("edits stay bounded across device sizes, curved paths, tiny circles and inv
     assert.equal(editGridLine(416, 16, grid, "missing", 0.5), grid);
     assert.throws(() => gridLines(416, 16, { ...grid, edits: { "rows-1": NaN } }), RangeError);
     assert.throws(() => gridLines(416, 16, { ...grid, edits: { "rings-1": 0 } }), RangeError);
+});
+
+
+const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
+
+test("grid gaps split logical lines symmetrically without adding selectable identities", () => {
+    for (const size of [390, 416, 454]) {
+        for (const curved of [false, true]) {
+            const original = { ...defaultGrid, visible: true, curvedRows: curved, curvedColumns: curved, circumferences: 1 };
+            const changed = setGridLineGaps(size, 16, original, ["rows-1", "columns-2", "rings-1"], 13);
+            const radius = size / 2 - 16;
+            assert.equal(gridLines(size, 16, changed).length, gridLines(size, 16, original).length);
+            for (const id of ["rows-1", "columns-2", "rings-1"]) {
+                const line = gridLines(size, 16, changed).find((item) => item.id === id)!;
+                const values = gridLineValues(size, 16, changed, line);
+                assert.equal(values.length, 2);
+                close((values[1] - values[0]) * radius, 13);
+                close((values[1] + values[0]) / 2, line.value);
+                assert.equal(line.path.split("M ").length - 1, 2);
+                assert.equal(gridLineGap(size, 16, changed, id), 13);
+                assert.ok(!line.path.includes("NaN"));
+            }
+            const radii = gridRadii(size, 16, changed);
+            close(radii[1] - radii[0], 13);
+            assert.equal("gaps" in original, false);
+            const restored = setGridLineGaps(size, 16, changed, ["rows-1", "columns-2", "rings-1"], 0);
+            assert.deepEqual(gridPaths(size, 16, restored), gridPaths(size, 16, original));
+            assert.deepEqual(gridRadii(size, 16, restored), gridRadii(size, 16, original));
+        }
+    }
+});
+
+test("one gap width applies atomically to a selection and respects the tightest boundary", () => {
+    const original = { ...defaultGrid, visible: true, circumferences: 1 };
+    const maximum = maxGridLineGap(416, 16, original, ["rows-1", "rings-1"]);
+    const changed = setGridLineGaps(416, 16, original, ["rows-1", "rings-1"], 1000);
+    assert.equal(gridLineGap(416, 16, changed, "rows-1"), maximum);
+    assert.equal(gridLineGap(416, 16, changed, "rings-1"), maximum);
+    for (const line of gridLines(416, 16, changed)) {
+        const values = gridLineValues(416, 16, changed, line);
+        assert.ok(values.every((value) => value > (line.axis === "rings" ? 0 : -1) && value < 1));
+    }
+    assert.equal(setGridLineGaps(416, 16, original, ["missing"], 20), original);
+    for (const width of [-1, 0.5, NaN, Infinity])
+        assert.throws(() => setGridLineGaps(416, 16, original, ["rows-1"], width), RangeError);
+    assert.throws(() => gridLines(416, 16, { ...original, gaps: { "wrong": 1 } }), RangeError);
+    assert.throws(() => gridLines(416, 16, { ...original, gaps: { "rows-1": -1 } }), RangeError);
+    assert.throws(() => gridLines(416, 16, { ...original,
+        gaps: Object.fromEntries(Array.from({ length: 257 }, (_, index) => [`rows-${index + 1}`, 1])) }), RangeError);
+});
+
+test("moving split lines preserves width and clamping never moves one edge independently", () => {
+    for (const size of [390, 416, 454]) {
+        const original = setGridLineGaps(size, 16, { ...defaultGrid, visible: true, circumferences: 1 },
+            ["rows-1", "columns-1", "rings-1"], 20);
+        for (const id of ["rows-1", "columns-1", "rings-1"]) {
+            for (const desired of [-100, 100]) {
+                const moved = editGridLine(size, 16, original, id, desired);
+                const line = gridLines(size, 16, moved).find((item) => item.id === id)!;
+                const edges = gridLineValues(size, 16, moved, line);
+                close((edges[1] - edges[0]) * (size / 2 - 16), 20);
+                assert.ok(edges.every((value) => value > (line.axis === "rings" ? 0 : -1) && value < 1));
+            }
+        }
+    }
+});
+
+test("mirrored gap edits copy widths, create missing reflections and remove metadata on delete", () => {
+    const original = { ...defaultGrid, visible: true };
+    const changed = setGridLineGaps(416, 16, original, ["rows-1"], 17, true);
+    assert.equal(gridLineGap(416, 16, changed, "rows-1"), 17);
+    assert.equal(gridLineGap(416, 16, changed, "rows-3"), 17);
+    const moved = editGridLine(416, 16, changed, "rows-1", -0.3, true);
+    assert.equal(gridLineGap(416, 16, moved, "rows-3"), 17);
+    const removed = editGridLine(416, 16, moved, "rows-1", null, true);
+    assert.equal(removed.gaps, undefined);
+    const missing = editGridLine(416, 16, original, "rows-3", null);
+    const restored = setGridLineGaps(416, 16, missing, ["rows-1"], 12, true);
+    assert.equal(gridLineGap(416, 16, restored, "rows-1-mirror"), 12);
+    assert.deepEqual(gridPaths(416, 16, { ...changed, gaps: undefined }), gridPaths(416, 16, original));
+});
+
+test("group movement preserves distances and mirrored pairs are processed once", () => {
+    const original = setGridLineGaps(416, 16, { ...defaultGrid, visible: true }, ["rows-1", "rows-2"], 20);
+    const moved = moveGridLines(416, 16, original, ["rows-1", "rows-2"], 0.1);
+    const lines = gridLines(416, 16, moved);
+    close(lines.find((line) => line.id === "rows-1")!.value, -0.4);
+    close(lines.find((line) => line.id === "rows-2")!.value, 0.1);
+    const clamped = moveGridLines(416, 16, original, ["rows-1", "rows-2"], 100);
+    const clampedLines = gridLines(416, 16, clamped);
+    close(clampedLines.find((line) => line.id === "rows-2")!.value - clampedLines.find((line) => line.id === "rows-1")!.value, 0.5);
+    assert.equal(gridLineGap(416, 16, clamped, "rows-2"), 20);
+    const reflected = moveGridLines(416, 16, original, ["rows-1", "rows-3"], 0.1, true);
+    const reflectedLines = gridLines(416, 16, reflected);
+    close(reflectedLines.find((line) => line.id === "rows-1")!.value, -0.4);
+    close(reflectedLines.find((line) => line.id === "rows-3")!.value, 0.4);
+    assert.equal(gridLineGap(416, 16, reflected, "rows-3"), 20);
+    assert.equal(moveGridLines(416, 16, original, ["missing"], 1), original);
+    assert.equal(moveGridLines(416, 16, original, ["rows-1"], 0), original);
+    assert.throws(() => moveGridLines(416, 16, original, ["rows-1"], NaN), RangeError);
 });

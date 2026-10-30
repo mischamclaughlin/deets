@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { editGridLine, gridLines, type GridLine, type GridSettings } from "./grid.ts";
+import { editGridLine, gridLines, moveGridLines, type GridLine, type GridSettings } from "./grid.ts";
 import type { Scene } from "../../shared/scene.ts";
-import { snapGridLine } from "./grid-snapping.ts";
+import { snapGridLineToElements } from "./grid-snapping.ts";
 import "./GridOverlay.css";
 
 interface Props {
@@ -12,14 +12,14 @@ interface Props {
     scene: Scene;
     night?: boolean;
     snapToElements?: boolean;
-    snapToEvenGaps?: boolean;
-    selectedId?: string;
-    onSelect: (id: string | undefined) => void;
+    selectedIds?: string[];
+    onSelect: (id: string | undefined, additive?: boolean) => void;
     onChange: (grid: GridSettings) => void;
 }
 interface Drag {
     pointerId: number;
     line: GridLine;
+    ids: string[];
     start: { x: number; y: number };
     grid: GridSettings;
     latest: GridSettings;
@@ -32,8 +32,9 @@ function pointer(event: ReactPointerEvent<SVGSVGElement>) {
 }
 
 /** Editable annotations use native coordinates but never enter the exported scene. */
-export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, snapToEvenGaps = false, selectedId, onSelect, onChange }: Props) {
+export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedIds = [], onSelect, onChange }: Props) {
     const drag = useRef<Drag | undefined>(undefined);
+    const pointerFocus = useRef(false);
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
     function move(event: ReactPointerEvent<SVGSVGElement>) {
@@ -59,12 +60,11 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
             return;
         }
         const desired = line.value + Math.round(delta) / radius;
-        const snapped = snapGridLine(scene, current.grid, line, desired, {
-            toElements: snapToElements && !event.altKey,
-            toEvenGaps: snapToEvenGaps && !event.altKey, night, mirror,
+        const snapped = snapGridLineToElements(scene, current.grid, line, desired, {
+            enabled: snapToElements && !event.altKey, night,
         });
         current.latest = snapped === line.value ? current.grid
-            : editGridLine(size, inset, current.grid, line.id, snapped, mirror);
+            : moveGridLines(size, inset, current.grid, current.ids, snapped - line.value, mirror);
         setPreview(current.latest);
     }
     function finish(event: ReactPointerEvent<SVGSVGElement>, commit: boolean) {
@@ -77,7 +77,7 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
         if (commit && current) onChange(current.latest);
     }
     return <svg className="watch-grid grid-editor" viewBox={`0 0 ${size} ${size}`}
-        role="group" aria-label="Editable grid. Select a line, drag or use arrow keys to move; Delete removes it."
+        role="group" aria-label="Editable grid. Shift-click to select several lines. Drag or use arrow keys to move; Delete removes the selection."
         onPointerDown={(event) => {
             if (event.button !== 0 || drag.current) return;
             const target = event.target instanceof Element ? event.target.closest<SVGGElement>("[data-grid-id]") : null;
@@ -85,20 +85,27 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
             const start = pointer(event);
             if (!line || !start) return;
             event.preventDefault();
-            onSelect(line.id);
+            const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+            pointerFocus.current = true;
             target?.focus();
+            pointerFocus.current = false;
+            onSelect(line.id, additive);
+            if (additive && selectedIds.includes(line.id)) { target?.blur(); return; }
             event.currentTarget.setPointerCapture(event.pointerId);
-            drag.current = { pointerId: event.pointerId, line, start, grid, latest: grid };
+            const ids = additive || selectedIds.includes(line.id)
+                ? [line.id, ...selectedIds.filter((id) => id !== line.id)] : [line.id];
+            drag.current = { pointerId: event.pointerId, line, ids, start, grid, latest: grid };
         }}
         onPointerMove={move} onPointerUp={(event) => finish(event, true)}
         onPointerCancel={(event) => finish(event, false)}
         onLostPointerCapture={() => { drag.current = undefined; setPreview(undefined); }}>
         {gridLines(size, inset, preview ?? grid).map((line) => <g key={line.id} data-grid-id={line.id}
-            className={selectedId === line.id ? "grid-line selected" : "grid-line"}
-            tabIndex={0} role="button" aria-pressed={selectedId === line.id}
+            className={selectedIds.includes(line.id) ? "grid-line selected" : "grid-line"}
+            tabIndex={0} role="button" aria-pressed={selectedIds.includes(line.id)}
             aria-label={`${line.axis === "rings" ? "Circumference" : line.axis === "rows" ? "Row" : "Column"} ${line.id.split("-").slice(1).join("-")}`}
             aria-keyshortcuts="Escape Delete Backspace ArrowLeft ArrowRight ArrowUp ArrowDown"
-            onFocus={() => onSelect(line.id)} onClick={() => onSelect(line.id)}
+            onFocus={() => { if (!pointerFocus.current) onSelect(line.id); }}
+            onClick={(event) => { if (event.detail === 0) onSelect(line.id, event.shiftKey || event.metaKey || event.ctrlKey); }}
             onKeyDown={(event) => {
                 if (event.key === "Escape") {
                     event.preventDefault();
@@ -114,17 +121,23 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
                 if (drag.current) return;
                 if (["Delete", "Backspace"].includes(event.key)) {
                     event.preventDefault();
-                    onChange(editGridLine(size, inset, grid, line.id, null, mirror));
+                    const ids = selectedIds.includes(line.id) ? selectedIds : [line.id];
+                    onChange(ids.reduce((next, id) => editGridLine(size, inset, next, id, null, mirror), grid));
+                    onSelect(undefined);
                     return;
                 }
-                if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(line.id); }
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(line.id, event.shiftKey || event.metaKey || event.ctrlKey);
+                }
                 const direction = line.axis === "rows" ? { ArrowUp: -1, ArrowDown: 1 }
                     : line.axis === "columns" ? { ArrowLeft: -1, ArrowRight: 1 }
                     : { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 };
                 const step = direction[event.key as keyof typeof direction];
                 if (step && radius > 0) {
                     event.preventDefault();
-                    onChange(editGridLine(size, inset, grid, line.id, line.value + step * (event.shiftKey ? 10 : 1) / radius, mirror));
+                    const ids = [line.id, ...selectedIds.filter((id) => id !== line.id)];
+                    onChange(moveGridLines(size, inset, grid, ids, step * (event.shiftKey ? 10 : 1) / radius, mirror));
                 }
             }}>
             <path className="grid-line-visible" d={line.path} />

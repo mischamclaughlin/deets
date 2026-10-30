@@ -1,5 +1,5 @@
 import { devices, type Scene, type SceneElement } from "../../shared/scene.ts";
-import { gridLines, gridRadii, type GridSettings } from "./grid.ts";
+import { gridLines, gridLineValues, gridRadii, type GridSettings } from "./grid.ts";
 
 interface Point { x: number; y: number }
 export interface SnapOptions {
@@ -73,9 +73,11 @@ export function moveElement(scene: Scene, element: SceneElement, desired: Point,
                 const factor = Math.sqrt(Math.max(0, 1 - (cross / radius) ** 2));
                 for (const line of gridLines(size, scene.edgeInset ?? 0, grid)) {
                     if (line.axis !== (vertical ? "columns" : "rows")) continue;
-                    const offset = radius * line.value;
-                    if (curved) result.push(centre + offset * factor);
-                    else if (offset ** 2 + cross ** 2 <= radius ** 2) result.push(centre + offset);
+                    for (const value of gridLineValues(size, scene.edgeInset ?? 0, grid, line)) {
+                        const offset = radius * value;
+                        if (curved) result.push(centre + offset * factor);
+                        else if (offset ** 2 + cross ** 2 <= radius ** 2) result.push(centre + offset);
+                    }
                 }
             }
             for (const ring of gridRadii(size, scene.edgeInset ?? 0, grid)) {
