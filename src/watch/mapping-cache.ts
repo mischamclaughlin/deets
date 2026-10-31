@@ -54,7 +54,8 @@ export function preparedMapping(scene: Scene, night = false): WatchMapping | und
         }
         offsets.set(element.id, offset);
     }
-    if (source.ops.some((operation) => operation.kind === "rect" ? moved : !offsets.has(operation.elementId))) return;
+    if (source.ops.some((operation) => operation.elementId === undefined
+        ? moved : !offsets.has(operation.elementId))) return;
     const translated: WatchMapping = {
         ...source,
         scene,
@@ -65,7 +66,7 @@ export function preparedMapping(scene: Scene, night = false): WatchMapping | und
             return { ...area, x: area.x + offset.x, y: area.y + offset.y };
         }),
         ops: source.ops.map((operation) => {
-            if (operation.kind === "rect") return operation;
+            if (operation.elementId === undefined) return operation;
             const offset = offsets.get(operation.elementId)!;
             return { ...operation, x: operation.x + offset.x, y: operation.y + offset.y };
         }),

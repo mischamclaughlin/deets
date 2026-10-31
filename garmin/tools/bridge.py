@@ -52,7 +52,8 @@ def layout(payload):
             operations.extend(model.render_text_ops({**scene, "elements": [element]}, night=night))
             fonts.add(element["font"])
         else:
-            operations.extend(chart_ops(element, night=night, ring_radius=ring_tick_radius(scene, element),
+            operations.extend({**operation, "elementId": element["id"]} for operation in
+                              chart_ops(element, night=night, ring_radius=ring_tick_radius(scene, element),
                                         ring_inner_radius=ring_tick_inner_radius(scene, element)))
     pack = model.scene_font_pack(scene)
     images = dict(pack["images"])

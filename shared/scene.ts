@@ -109,6 +109,8 @@ export interface MappedArea {
 }
 export interface RectOp {
     kind: "rect";
+    /** Native element that owns this primitive, for browser-only movement previews. */
+    elementId?: string;
     x: number;
     y: number;
     width: number;

@@ -4,6 +4,47 @@ import { callBridge } from "./bridge.ts";
 import { devices, type Scene, type WatchMapping } from "../shared/scene.ts";
 import { scene as initialScene } from "../src/watch/scene.ts";
 import { preparedMapping, rememberMapping } from "../src/watch/mapping-cache.ts";
+import { moveSceneElement } from "../src/watch/snapping.ts";
+
+test("icons move immediately with canonical day and night pixels on every device", async (context) => {
+    context.mock.method(globalThis, "fetch", () => { throw new Error("Icon movement must not fetch."); });
+    for (const device of Object.keys(devices) as Array<keyof typeof devices>) {
+        for (const source of ["floorsIcon", "stepsIcon", "walkIcon", "runIcon"]) {
+            for (const night of [false, true]) {
+                const scene: Scene = { ...initialScene, name: `Live ${source} ${device}`, device, edgeInset: undefined,
+                    elements: [
+                        { ...initialScene.elements[0], id: "icon", source, font: "widget", x: 90, y: 140, width: 30, height: 30 },
+                        { ...initialScene.elements[0], id: "overlap", x: 95, y: 145, width: 60, height: 40, boxSizing: "fixed" },
+                    ] };
+                const original = rememberMapping(await callBridge<WatchMapping>("layout", { scene, night }), night);
+                assert.ok(original.ops.some((operation) => operation.kind === "rect" && operation.elementId === "icon"));
+                const moved = moveSceneElement(original.scene, "icon", { x: 170, y: 200 }, { enabled: false, showGuideLines: false });
+                const local = preparedMapping(moved, night);
+                assert.ok(local, `${source} ${device} ${night ? "night" : "day"}`);
+                assert.match(local.mapping, /^preview:/);
+                const canonical = await callBridge<WatchMapping>("layout", { scene: moved, night });
+                assert.deepEqual({ ...local, mapping: canonical.mapping }, canonical);
+                assert.deepEqual(local.ops.filter((operation) => operation.elementId === "overlap"),
+                    original.ops.filter((operation) => operation.elementId === "overlap"));
+            }
+        }
+    }
+});
+
+test("linked activity values, icons and graphs share immediate movement", async () => {
+    const original = rememberMapping(await callBridge<WatchMapping>("add", {
+        scene: { ...initialScene, name: "Live linked activity", elements: [] },
+        source: "steps", options: { value: true, icon: true, graph: true },
+    }));
+    const icon = original.scene.elements.find((element) => element.source === "stepsIcon")!;
+    const moved = moveSceneElement(original.scene, icon.id, { x: icon.x + 15, y: icon.y + 20 },
+        { enabled: false, showGuideLines: false });
+    assert.notDeepEqual(moved, original.scene);
+    const local = preparedMapping(moved);
+    assert.ok(local);
+    const canonical = await callBridge<WatchMapping>("layout", { scene: moved });
+    assert.deepEqual({ ...local, mapping: canonical.mapping }, canonical);
+});
 
 test("prepared movement matches canonical clipped pixels on every device without fetching", async (context) => {
     context.mock.method(globalThis, "fetch", () => { throw new Error("Movement must not fetch."); });
