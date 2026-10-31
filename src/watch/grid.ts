@@ -10,6 +10,8 @@ export interface GridSettings {
     edits?: Record<string, number | null>;
     /** Full native-pixel width of a symmetric gap around each logical line. */
     gaps?: Record<string, number>;
+    /** True keeps stretched guides as unfilled mirrored edges. */
+    gapMirrors?: Record<string, boolean>;
 }
 
 export const defaultGrid: GridSettings = {
@@ -27,9 +29,35 @@ export interface GridLine {
     /** Signed offset from the centre, or radius for rings, divided by the content radius. */
     value: number;
     path: string;
+    /** Two closed, nested caps; render with SVG evenodd filling. */
+    bandPath?: string;
 }
 
-type LinePosition = Omit<GridLine, "path">;
+type LinePosition = Omit<GridLine, "path" | "bandPath">;
+
+const lineIdPattern = /^(rows|columns|rings)-[1-9]\d*(?:-mirror)*$/;
+
+function validateGapMirrors(mirrors: Record<string, boolean> | undefined) {
+    const entries = Object.entries(mirrors ?? {});
+    if (entries.length > 256) throw new RangeError("Too many grid mirror settings.");
+    for (const [id, enabled] of entries) {
+        if (!lineIdPattern.test(id) || typeof enabled !== "boolean")
+            throw new RangeError("Grid mirror settings require valid line IDs and boolean values.");
+    }
+}
+
+/** Change only the band presentation, preserving stretch width and guide positions. */
+export function setGridLineMirrors(grid: GridSettings, ids: readonly string[], enabled: boolean): GridSettings {
+    if (typeof enabled !== "boolean") throw new RangeError("Choose a boolean grid mirror setting.");
+    const gapMirrors = { ...grid.gapMirrors };
+    for (const id of ids) {
+        if (!lineIdPattern.test(id)) throw new RangeError("Choose a valid grid line ID.");
+        if (enabled) gapMirrors[id] = true;
+        else delete gapMirrors[id];
+    }
+    validateGapMirrors(gapMirrors);
+    return { ...grid, gapMirrors: Object.keys(gapMirrors).length ? gapMirrors : undefined };
+}
 
 function positions(size: number, inset: number, grid: GridSettings): LinePosition[] {
     const radius = size / 2 - inset;
@@ -65,6 +93,7 @@ function positions(size: number, inset: number, grid: GridSettings): LinePositio
         if (!/^(rows|columns|rings)-[1-9]\d*(?:-mirror)*$/.test(id) || !Number.isSafeInteger(gap) || gap < 0)
             throw new RangeError("Grid gaps must be non-negative whole native pixels with valid line IDs.");
     }
+    validateGapMirrors(grid.gapMirrors);
     return result;
 }
 
@@ -86,7 +115,7 @@ export function configureGridRings(grid: GridSettings,
         const remaining = Object.entries(entries ?? {}).filter(([id]) => !id.startsWith("rings-"));
         return remaining.length ? Object.fromEntries(remaining) : undefined;
     };
-    return { ...grid, ...settings, edits: keep(grid.edits), gaps: keep(grid.gaps) };
+    return { ...grid, ...settings, edits: keep(grid.edits), gaps: keep(grid.gaps), gapMirrors: keep(grid.gapMirrors) };
 }
 
 function bounds(radius: number, line: LinePosition, gap = 0): [number, number] {
@@ -187,10 +216,28 @@ export function gridLines(size: number, inset: number, grid: GridSettings): Grid
             ? `M ${coordinate} ${centre - span} L ${coordinate} ${centre + span}`
             : `M ${centre - span} ${coordinate} L ${centre + span} ${coordinate}`;
     };
-    return positions(size, inset, grid).map((line) => ({
-        ...line,
-        path: gridLineValues(size, inset, grid, line).map((value) => path(line, value)).join(" "),
-    }));
+    // Close every boundary on the same side of the content circle. The two caps
+    // are nested even across the centre, so evenodd filling leaves only the band.
+    const cap = (line: LinePosition, value: number) => {
+        const boundary = path(line, value);
+        if (line.axis === "rings") return `${boundary} Z`;
+        const vertical = line.axis === "columns";
+        const curved = vertical ? grid.curvedColumns : grid.curvedRows;
+        const offset = radius * value;
+        const span = Math.sqrt(Math.max(0, radius * radius - offset * offset));
+        const startX = curved ? vertical ? centre : inset : vertical ? centre + offset : centre - span;
+        const startY = curved ? vertical ? inset : centre : vertical ? centre - span : centre + offset;
+        const large = !curved && value < 0 ? 1 : 0;
+        return `${boundary} A ${radius} ${radius} 0 ${large} ${vertical ? 0 : 1} ${startX} ${startY} Z`;
+    };
+    return positions(size, inset, grid).map((line) => {
+        const values = gridLineValues(size, inset, grid, line);
+        return {
+            ...line,
+            path: values.map((value) => path(line, value)).join(" "),
+            ...(values.length === 2 ? { bandPath: values.map((value) => cap(line, value)).join(" ") } : {}),
+        };
+    });
 }
 
 export function gridPaths(size: number, inset: number, grid: GridSettings): string[] {
@@ -222,6 +269,8 @@ export function editGridLine(size: number, inset: number, grid: GridSettings, id
     const next = value === null ? null : Math.max(minimum, Math.min(maximum, value));
     const edits = { ...grid.edits, [id]: next };
     const gaps = { ...grid.gaps };
+    const gapMirrors = { ...grid.gapMirrors };
+    if (next === null) delete gapMirrors[id];
     if (next === null || !gap) delete gaps[id];
     else gaps[id] = gap;
     if (mirror && line.axis !== "rings") {
@@ -229,13 +278,17 @@ export function editGridLine(size: number, inset: number, grid: GridSettings, id
         const partnerId = reflectedId(line, partner);
         if (partner || (next !== null && Math.abs(next) > 1e-9)) {
             edits[partnerId] = next === null || Math.abs(next) < 1e-9 ? null : -next;
+            if (edits[partnerId] === null) delete gapMirrors[partnerId];
+            else if (gapMirrors[id]) gapMirrors[partnerId] = true;
             if (edits[partnerId] === null || !gap) delete gaps[partnerId];
             else gaps[partnerId] = gap;
         }
     }
     if (Object.keys(edits).length > 256) throw new RangeError("Too many grid edits.");
     if (Object.keys(gaps).length > 256) throw new RangeError("Too many grid gaps.");
-    return { ...grid, edits, ...(grid.gaps || Object.keys(gaps).length ? { gaps: Object.keys(gaps).length ? gaps : undefined } : {}) };
+    validateGapMirrors(gapMirrors);
+    return { ...grid, edits, ...(grid.gaps || Object.keys(gaps).length ? { gaps: Object.keys(gaps).length ? gaps : undefined } : {}),
+        ...(grid.gapMirrors || Object.keys(gapMirrors).length ? { gapMirrors: Object.keys(gapMirrors).length ? gapMirrors : undefined } : {}) };
 }
 
 /** Move selected logical lines by a shared displacement, treating mirrored pairs once. */
@@ -268,16 +321,23 @@ export function moveGridLines(size: number, inset: number, grid: GridSettings,
     }
     if (minimumDelta > maximumDelta) return grid;
     const displacement = Math.max(minimumDelta, Math.min(maximumDelta, delta));
-    const edits = { ...grid.edits }, gaps = { ...grid.gaps };
+    const edits = { ...grid.edits }, gaps = { ...grid.gaps }, gapMirrors = { ...grid.gapMirrors };
     for (const [id, { line, direction, gap }] of plan) {
         const value = line.value + direction * displacement;
         // A reflected centre collapses to its single original logical line.
         const duplicate = direction === -1 && Math.abs(value) < 1e-9;
         edits[id] = duplicate ? null : value;
+        if (duplicate) delete gapMirrors[id];
+        else if (direction === -1) {
+            const source = lines.find((candidate) => candidate.axis === line.axis && Math.abs(candidate.value + line.value) < 1e-9);
+            if (source && grid.gapMirrors?.[source.id]) gapMirrors[id] = true;
+        }
         if (duplicate || !gap) delete gaps[id];
         else gaps[id] = gap;
     }
     if (Object.keys(edits).length > 256) throw new RangeError("Too many grid edits.");
     if (Object.keys(gaps).length > 256) throw new RangeError("Too many grid gaps.");
-    return { ...grid, edits, ...(grid.gaps || Object.keys(gaps).length ? { gaps: Object.keys(gaps).length ? gaps : undefined } : {}) };
+    validateGapMirrors(gapMirrors);
+    return { ...grid, edits, ...(grid.gaps || Object.keys(gaps).length ? { gaps: Object.keys(gaps).length ? gaps : undefined } : {}),
+        ...(grid.gapMirrors || Object.keys(gapMirrors).length ? { gapMirrors: Object.keys(gapMirrors).length ? gapMirrors : undefined } : {}) };
 }

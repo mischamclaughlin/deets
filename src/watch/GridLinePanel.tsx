@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { editGridLine, gridLineGap, maxGridLineGap, setGridLineGaps, type GridSettings } from "./grid.ts";
+import { editGridLine, gridLineGap, maxGridLineGap, setGridLineGaps, setGridLineMirrors, type GridSettings } from "./grid.ts";
 import "./GridLinePanel.css";
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
     onDelete: () => void;
 }
 
-/** Mirrored edges stretch equally around each independent browser-only guide. */
+/** Stretch stays independent of the selected guide's shaded or mirrored presentation. */
 export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDelete }: Props) {
     const [draft, setDraft] = useState<string>();
     const cancelled = useRef(false);
@@ -19,15 +19,16 @@ export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDele
     const width = widths.every((value) => value === widths[0]) ? widths[0] : undefined;
     const maximum = maxGridLineGap(size, inset, grid, selectedIds);
     const change = (value: number) => onChange(setGridLineGaps(size, inset, grid, selectedIds, value));
-    return <section className="element-box-panel" aria-labelledby="grid-line-heading">
-        <h2 id="grid-line-heading">{selectedIds.length === 1 ? "Grid line" : `${selectedIds.length} grid lines`}</h2>
-        <p className="control-hint">Mirror creates two lines around the selected line’s position. Stretch moves them equally apart. Drag to move them together.</p>
-        <label className="guide-toggle">
-            <input type="checkbox" checked={widths.every((value) => value > 0)}
-                disabled={maximum === 0}
-                onChange={(event) => { setDraft(undefined); change(event.target.checked ? Math.min(8, maximum) : 0); }} />
-            Mirror
-        </label>
+    return <section className="element-box-panel grid-line-panel" aria-labelledby="grid-line-heading">
+        <div className="section-heading">
+            <h2 id="grid-line-heading">{selectedIds.length === 1 ? "Grid line" : `${selectedIds.length} grid lines`}</h2>
+            <label className="guide-toggle">
+                <input type="checkbox" checked={selectedIds.every((id) => grid.gapMirrors?.[id] === true)}
+                    onChange={(event) => onChange(setGridLineMirrors(grid, selectedIds, event.target.checked))} />
+                Mirror
+            </label>
+        </div>
+        <p className="control-hint">Stretch a shaded band, or enable Mirror for two clear edges. Drag to move them together.</p>
         <div className="control-heading">
             <label htmlFor="grid-gap-width">Stretch</label>
             <label className="grid-gap-value" title="Edit stretch">

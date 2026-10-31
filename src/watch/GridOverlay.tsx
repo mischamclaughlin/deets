@@ -140,6 +140,8 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
                     onChange(moveGridLines(size, inset, grid, ids, step * (event.shiftKey ? 10 : 1) / radius, mirror));
                 }
             }}>
+            {selectedIds.includes(line.id) && !grid.gapMirrors?.[line.id] && line.bandPath &&
+                <path className="grid-line-band" d={line.bandPath} fillRule="evenodd" />}
             <path className="grid-line-visible" d={line.path} />
             <path className="grid-line-hit" d={line.path} />
         </g>)}

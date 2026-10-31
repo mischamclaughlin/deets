@@ -26,3 +26,7 @@
     outline: 2px solid #b8ead4;
     outline-offset: 2px;
 }
+.grid-line-panel .section-heading { margin-bottom: 12px; }
+.grid-line-panel .section-heading h2 { margin: 0; }
+.grid-line-panel .section-heading .guide-toggle { font-size: 11px; }
+.grid-line-panel .control-hint { margin-bottom: 12px; }

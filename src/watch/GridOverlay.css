@@ -1,6 +1,7 @@
 .grid-editor { z-index: 2; touch-action: none; }
 .grid-editor .grid-line { outline: none; }
 .grid-editor .grid-line-visible { pointer-events: none; }
+.watch-grid.grid-editor .grid-line-band { fill: #a0a0a0; fill-opacity: .24; stroke: none; pointer-events: none; }
 .watch-grid.grid-editor .grid-line-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: grab; }
 .watch-grid.grid-editor .grid-line-hit:active { cursor: grabbing; }
 .watch-grid.grid-editor .grid-line.selected .grid-line-visible,
