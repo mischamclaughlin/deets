@@ -16,7 +16,10 @@ export const isDateSource = (source: string): source is DateSource =>
     source === "numericDate" || source === "date" || source === "weekday" ||
     source === "day" || source === "month" || source === "year";
 export const isEditableTextSource = (source: string): boolean =>
-    isClockSource(source) || isDateSource(source) || source === "divider";
+    isClockSource(source) || isDateSource(source) || source === "divider" || isDataTextSource(source);
+export const isDataTextSource = (source: string): boolean =>
+    ["heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature", "highLow",
+        "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label"].includes(source);
 export type ActivitySource = "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
 export interface ActivityAddOptions { value?: boolean; icon?: boolean; graph?: boolean; }
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
@@ -63,7 +66,7 @@ export interface SceneElement {
     typography?: Typography;
     /** Size of the trailing :SS in HH:MM:SS; defaults to full. */
     secondsSize?: "full" | "half";
-    /** When omitted, legacy dates and text with typography stay custom; other text inherits. */
+    /** When omitted, legacy dates, data and text with typography stay custom; clocks inherit. */
     inheritFont?: boolean;
     /** Character drawn by an independent divider element. Defaults to colon. */
     dividerSymbol?: DividerSymbol;
@@ -74,9 +77,9 @@ export interface SceneElement {
     /** Keep outer tips fixed and stretch all tick inner ends to edge clearance. */
     ringTicksStretchToCircumference?: boolean;
 }
-/** Preserve legacy date fonts unless inheritance is explicitly selected. */
+/** Preserve legacy date and data fonts unless inheritance is explicitly selected. */
 export const inheritsFont = (element: Pick<SceneElement, "source" | "inheritFont" | "typography">): boolean =>
-    element.inheritFont ?? (!isDateSource(element.source) && !element.typography);
+    element.inheritFont ?? (!isDateSource(element.source) && !isDataTextSource(element.source) && !element.typography);
 
 export interface Scene {
     version: 2;

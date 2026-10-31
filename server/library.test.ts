@@ -3,6 +3,25 @@ import assert from "node:assert/strict";
 import { matchingEntries } from "../src/watch/library-catalogue.ts";
 import { elementName } from "../src/watch/element-name.ts";
 import { scene } from "../src/watch/scene.ts";
+import { inheritsFont, isEditableTextSource } from "../shared/scene.ts";
+import { libraryEntries } from "../src/watch/library-catalogue.ts";
+
+test("activity values share text controls while icons and graphs retain geometry controls", () => {
+    for (const entry of libraryEntries.filter((item) => item.category === "activity")) {
+        const value = ["steps", "floors", "weeklyWalk", "weeklyRun"].includes(entry.source);
+        assert.equal(isEditableTextSource(entry.source), value, entry.source);
+        if (value) {
+            const element = { source: entry.source };
+            assert.equal(inheritsFont(element), false, "Legacy data retains its own font");
+            assert.equal(inheritsFont({ ...element, inheritFont: true }), true);
+            assert.equal(inheritsFont({ ...element, inheritFont: false }), false);
+        }
+    }
+    assert.equal(isEditableTextSource("battery"), true);
+    assert.equal(isEditableTextSource("unknown"), false);
+    assert.equal(inheritsFont({ source: "time" }), true);
+    assert.equal(inheritsFont({ source: "numericDate" }), false);
+});
 
 test("library search combines category, names and useful activity synonyms", () => {
     assert.deepEqual(matchingEntries("activity", " WALKING   graph ").map((entry) => entry.source), ["weeklyWalk"]);

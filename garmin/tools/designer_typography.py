@@ -1,4 +1,4 @@
-"""Bounded, local native glyph generation for editable clock typography."""
+"""Bounded, local native glyph generation for editable watch typography."""
 import base64
 import copy
 import hashlib
@@ -22,7 +22,11 @@ DIVIDER_CODES = CODES + "./|"
 DIVIDER_SYMBOLS = {":", ".", "-", "/", "|"}
 DATE_SOURCES = {"date", "numericDate", "weekday", "day", "month", "year"}
 CLOCK_SOURCES = {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
-TEXT_SOURCES = CLOCK_SOURCES | DATE_SOURCES
+DATA_SOURCES = {"heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature",
+                "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label"}
+TEXT_SOURCES = CLOCK_SOURCES | DATE_SOURCES | DATA_SOURCES
+DATA_CODES = "0123456789-./:%?°ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+LABEL_CODES = "".join(chr(code) for code in range(33, 127)) + "°"
 DATE_CODES = "0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZ?"
 WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
@@ -35,7 +39,7 @@ def family_setting(family):
 
 
 def inherits(element):
-    return element.get("inheritFont", element.get("source") not in DATE_SOURCES and "typography" not in element)
+    return element.get("inheritFont", element.get("source") in CLOCK_SOURCES and "typography" not in element)
 
 
 def element_settings(element, device):
@@ -165,7 +169,7 @@ def _vector_cells(path, codes, pointsize):
     for char in codes:
         arguments.extend(["(", "-size", f"{extent}x{extent}", "xc:none", "-font", str(path),
                           "-pointsize", str(pointsize), "-antialias", "-fill", "white",
-                          "-annotate", f"+{x}+{baseline}", char, ")"])
+                          "-annotate", f"+{x}+{baseline}", char.replace("\\", "\\\\"), ")"])
     raw = _magick([*arguments, "-alpha", "extract", "-depth", "8", "gray:-"])
     stride = extent * extent
     if len(raw) != stride * len(codes):
@@ -204,12 +208,12 @@ def _native_cells(path, codes, height):
     return best[1]
 
 
-def generate(device, value, *, divider=False, date=False):
+def generate(device, value, *, divider=False, date=False, data=False, label=False):
     from designer_model import DEVICES, _png_rgba
     if device not in DEVICES:
         raise ValueError("Choose a supported epix Pro device.")
     value = settings(value)
-    codes = DATE_CODES if date else DIVIDER_CODES if divider else CODES
+    codes = LABEL_CODES if label else DATA_CODES if data else DATE_CODES if date else DIVIDER_CODES if divider else CODES
     path, source_hash = _source_font(value["family"])
     signature = {"rasteriser": RASTER_VERSION, "sourceHash": source_hash, "device": device,
                  "typography": value, "codes": codes}
@@ -268,7 +272,7 @@ def generate(device, value, *, divider=False, date=False):
                     start = ((y + offset) * atlas_width + cursor + x) * 4
                     pixels[start:start+4] = bytes((255, 255, 255, ink))
         cursor += width + 1
-    if date:
+    if date or data or label:
         glyphs["32"] = {"x": 0, "y": 0, "width": 0, "height": 0, "xoffset": 0, "yoffset": 0,
                         "xadvance": max(1, round(value["size"] / 3) + value["letterSpacing"])}
     font = {"height": value["size"], "atlasWidth": atlas_width, "atlasHeight": value["size"], "glyphs": glyphs, "label": "Custom text", "inkBounds": True, "coverageBits": 4}
@@ -388,7 +392,7 @@ def _clock_width(font, source, symbol=":", seconds_size="full"):
 def _clock_target(scene, element_id):
     target = next((element for element in scene["elements"] if element["id"] == element_id), None)
     if not target or target["source"] not in TEXT_SOURCES:
-        raise ValueError("Select a time element or date element to edit its text settings.")
+        raise ValueError("Select a text element to edit its text settings.")
     return target
 
 
@@ -408,7 +412,8 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
         from designer_model import scene_font_pack, hugging_element, SOURCES
         element.update(**changes, boxSizing="hug")
         future_metrics = scene_font_pack(edited)["fonts"][element["font"]]
-        sample = element.get("dividerSymbol", ":") if source == "divider" else SOURCES[source]["sample"]
+        sample = (element.get("dividerSymbol", ":") if source == "divider" else
+                  element.get("text", "EPIX CANVAS") if source == "label" else SOURCES[source]["sample"])
         fitted, _, _ = hugging_element(str(sample), element, future_metrics)
         element.update(**fitted)
     elif element.get("boxSizing") == "fixed":
@@ -429,7 +434,7 @@ def fit_text_box(scene, element_id):
     scene = validate_scene(scene)
     target = _clock_target(scene, element_id)
     if target["source"] == "secondsRing":
-        raise ValueError("Select a time, date or divider text element to fit its box.")
+        raise ValueError("Select a text element to fit its box.")
     edited = copy.deepcopy(scene)
     _clock_target(edited, element_id)["boxSizing"] = "hug"
     metrics = scene_font_pack(scene)["fonts"][target["font"]]
@@ -442,9 +447,9 @@ def set_clock_source(scene, element_id, source):
     if not isinstance(source, str) or source not in {"time", "timeSeconds", "hours", "minutes", "seconds", "secondsRing"}:
         raise ValueError("Choose HH:MM, HH:MM:SS, hours only, minutes only, seconds or an outer ring.")
     scene = validate_scene(scene)
-    target = _clock_target(scene, element_id)
-    if target["source"] not in CLOCK_SOURCES - {"divider"}:
-        raise ValueError("Choose a time element; dividers are independent Library elements.")
+    target = next((element for element in scene["elements"] if element["id"] == element_id), None)
+    if not target or target["source"] not in CLOCK_SOURCES - {"divider"}:
+        raise ValueError("Select a time element; dividers are independent Library elements.")
     font = scene_font_pack(scene)["fonts"][target["font"]]
     return _fit_clock(scene, element_id, font, source=source)
 
@@ -459,11 +464,12 @@ def apply(scene, element_id, value, *, cache=None):
         value["family"] = scene.get("fontFamily", "time")
     if "textPresetId" in target and preset_settings(value) != preset_settings(target["typography"]):
         target.pop("textPresetId")
-    signature = (target["source"] == "divider", target["source"] in DATE_SOURCES, tuple(sorted(value.items())))
+    signature = (target["source"], tuple(sorted(value.items())))
     if cache is not None and signature in cache:
         key, record = cache[signature]
     else:
-        key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES)
+        key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES,
+                               data=target["source"] in DATA_SOURCES, label=target["source"] == "label")
         if cache is not None:
             cache[signature] = key, record
     return _fit_clock(scene, element_id, record["font"], font=key, typography=value, inheritFont=inherited)
@@ -518,9 +524,10 @@ def set_watch_font(scene, family):
         if element["source"] not in TEXT_SOURCES or not inherits(element):
             continue
         value = {**element_settings(element, scene["device"]), "family": family}
-        signature = (element["source"] == "divider", element["source"] in DATE_SOURCES, tuple(sorted(value.items())))
+        signature = (element["source"], tuple(sorted(value.items())))
         if signature not in generated:
-            generated[signature] = generate(scene["device"], value, divider=element["source"] == "divider", date=element["source"] in DATE_SOURCES)
+            generated[signature] = generate(scene["device"], value, divider=element["source"] == "divider", date=element["source"] in DATE_SOURCES,
+                                                      data=element["source"] in DATA_SOURCES, label=element["source"] == "label")
         key, record = generated[signature]
         edited = _fit_clock(edited, element["id"], record["font"], validate=False,
                             font=key, typography=value, inheritFont=True)
@@ -541,7 +548,8 @@ def set_inheritance(scene, element_id, inherit):
     if not inherit:
         return validate_scene(edited)
     value = {**element_settings(target, scene["device"]), "family": scene.get("fontFamily", "time")}
-    key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES)
+    key, record = generate(scene["device"], value, divider=target["source"] == "divider", date=target["source"] in DATE_SOURCES,
+                               data=target["source"] in DATA_SOURCES, label=target["source"] == "label")
     return _fit_clock(edited, element_id, record["font"], font=key, typography=value, inheritFont=True)
 
 
@@ -656,6 +664,6 @@ def refresh_fonts(scene):
         scene = set_watch_font(scene, "garmin")
     edited, cache = copy.deepcopy(scene), {}
     for element in scene["elements"]:
-        if element["source"] in TEXT_SOURCES:
+        if element["source"] in TEXT_SOURCES and (element["source"] not in DATA_SOURCES or "typography" in element or element.get("inheritFont") is True):
             edited = apply(edited, element["id"], element_settings(element, scene["device"]), cache=cache)
     return edited

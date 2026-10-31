@@ -256,6 +256,11 @@ def validate_scene(payload):
                 (generated and (source not in TEXT_SOURCES or font not in pack["fonts"])) or
                 (not generated and font not in info["allowedFonts"])):
             raise ValueError("That font does not contain every character needed by this data source.")
+        if generated and source in TEXT_SOURCES - DATE_SOURCES:
+            from designer_typography import DATA_SOURCES, DATA_CODES
+            if source in DATA_SOURCES - {"label"} and any(
+                    str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in DATA_CODES + " "):
+                raise ValueError("The selected font does not contain every data character; apply its typography again.")
         if generated and source in DATE_SOURCES:
             from designer_typography import DATE_CODES
             if any(str(ord(char)) not in pack["fonts"][font]["glyphs"] for char in DATE_CODES + " "):
@@ -274,7 +279,7 @@ def validate_scene(payload):
             if "typography" not in original or any(typography[key] != value for key, value in preset_settings(preset).items()):
                 raise ValueError("The linked element must match its text preset.")
         if "inheritFont" in original and (type(original["inheritFont"]) is not bool or source not in TEXT_SOURCES):
-            raise ValueError("Only time and date elements can choose whether to inherit the watch font.")
+            raise ValueError("Only text elements can choose whether to inherit the watch font.")
         if source in TEXT_SOURCES and inherits(original) and ("fontFamily" in payload or original.get("inheritFont") is True):
             actual_family = typography["family"] if "typography" in original else font
             if actual_family != family:
