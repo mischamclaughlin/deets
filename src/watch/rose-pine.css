@@ -1,0 +1,163 @@
+/* Rosé Pine Dawn panels and Moon workspace: https://rosepinetheme.com/palette/
+   Theme only the application surfaces; native watch pixels and guides stay intact. */
+:root {
+    --rp-base: #faf4ed;
+    --rp-surface: #fffaf3;
+    --rp-overlay: #f2e9e1;
+    --rp-subtle: #797593;
+    --rp-text: #464261;
+    --rp-love: #b4637a;
+    --rp-pine: #286983;
+    --rp-iris: #907aa9;
+    --rp-low: #f4ede8;
+    --rp-border: #dfdad9;
+    --rp-high: #cecacd;
+    --panel: var(--rp-surface);
+    --surface: var(--rp-base);
+    --border: var(--rp-border);
+    --muted: var(--rp-subtle);
+    --accent: var(--rp-pine);
+    --accent-soft: var(--rp-overlay);
+    color: var(--rp-text);
+    background: #232136;
+}
+
+.watch-sidebar, .element-picker { color: var(--rp-text); color-scheme: light; }
+.brand-mark { background: var(--rp-text); color: var(--rp-base); }
+.sidebar-switcher, .element-count { background: var(--rp-overlay); }
+.sidebar-switcher button, .element-count { color: var(--rp-subtle); }
+.sidebar-switcher button[aria-pressed="true"] {
+    color: var(--rp-pine);
+    background: var(--rp-surface);
+    box-shadow: 0 1px 4px #46426114;
+}
+.sidebar-scroll { scrollbar-color: var(--rp-high) transparent; }
+.sidebar-footer, .selection-empty h2 { color: var(--rp-text); }
+.add-element, .font-upload, .element-action, .element-box-actions button, .snap-button {
+    background: var(--rp-surface);
+    color: var(--rp-text);
+}
+.library-grid .add-element, .colour-channel { background: var(--rp-base); }
+.library-symbol, .element-symbol, .compact-library-symbol { color: var(--rp-iris); }
+.library-plus, .compact-library-action { color: var(--rp-subtle); }
+.element-choice { color: var(--rp-text); }
+.element-choice[aria-pressed="true"] {
+    color: var(--rp-text);
+    border-color: var(--rp-high);
+    background: var(--rp-overlay);
+    box-shadow: inset 3px 0 0 var(--rp-love);
+}
+.inspector-dot { background: var(--rp-love); }
+.element-action-danger, .preset-delete { color: var(--rp-love); }
+.control-heading, .guide-toggle, .font-choice, .grid-counts label, .colour-control,
+.watch-sidebar .element-box-fields label, .watch-sidebar .text-alignment-control > span {
+    color: var(--rp-subtle);
+}
+.control-heading output, .grid-gap-value { border-color: var(--rp-border); color: var(--rp-text); }
+.grid-gap-value:focus-within { border-color: var(--rp-pine); outline-color: var(--rp-pine); }
+.font-choice select, .font-choice input[type="text"], .grid-counts select,
+.colour-inputs input[type="text"], .element-box-fields input {
+    background: var(--rp-base);
+    color: var(--rp-text);
+}
+.font-upload { background: transparent; }
+.typography-status { background: var(--rp-overlay); color: var(--rp-pine); }
+.typography-status[role="alert"], .picker-feedback[role="alert"] {
+    background: color-mix(in srgb, var(--rp-love) 12%, var(--rp-surface));
+    color: #913d56;
+}
+.document-group { background: var(--rp-surface); }
+.document-group > summary, .colour-channel-heading { color: var(--rp-text); }
+.document-group > summary::after { color: var(--rp-iris); }
+.snap-button[aria-pressed="true"] { color: var(--rp-pine); border-color: var(--rp-high); }
+.clock-modes button, .watch-sidebar .text-alignment-options button { color: var(--rp-subtle); }
+.clock-modes button[aria-pressed="true"], .watch-sidebar .text-alignment-options button[aria-pressed="true"] {
+    color: var(--rp-pine);
+    background: var(--rp-surface);
+    border-color: var(--rp-high);
+    box-shadow: 0 1px 3px #4642610a;
+}
+.colour-inputs input[type="color"], .colour-channel .font-choice select,
+.colour-channel .colour-inputs input[type="text"] { background: var(--rp-surface); }
+.watch-sidebar input[aria-invalid="true"], .watch-sidebar .element-box-fields input[aria-invalid="true"] {
+    border-color: var(--rp-love);
+}
+
+/* The element library belongs to Dawn, including its native dialog backdrop. */
+.element-picker { border-color: var(--rp-border); background: var(--rp-surface); box-shadow: 0 30px 110px #23213666; }
+.element-picker::backdrop { background: #232136b5; }
+.picker-eyebrow, .picker-description, .picker-filters button, .picker-card-detail,
+.picker-note, .picker-capacity, .picker-empty, .compact-library-group h3,
+.activity-add-options label, .activity-options-hint { color: var(--rp-subtle); }
+.picker-close, .picker-search, .picker-card { border-color: var(--rp-border); background: var(--rp-surface); color: var(--rp-text); }
+.picker-search input, .picker-empty h3 { color: var(--rp-text); }
+.picker-search input::placeholder { color: var(--rp-subtle); }
+.picker-search:focus-within { border-color: var(--rp-pine); box-shadow: 0 0 0 3px #28698319; }
+.picker-controls, .picker-footer { border-color: var(--rp-border); }
+.picker-filters button[aria-pressed="true"], .picker-empty button, .activity-add-button,
+.library-browse-button { border-color: var(--rp-border); background: var(--rp-overlay); color: var(--rp-pine); }
+.picker-card-plus { border-color: var(--rp-border); background: var(--rp-base); color: var(--rp-iris); }
+.picker-footer { background: var(--rp-base); }
+.picker-feedback { background: var(--rp-overlay); color: var(--rp-pine); }
+.element-preview { background: #2a273f; }
+.preview-placeholder { color: #e0def4; }
+.compact-library-row { color: var(--rp-text); }
+.compact-library-item.is-expanded { border-color: var(--rp-border); background: var(--rp-base); }
+.compact-library-item.is-expanded .compact-library-row { color: var(--rp-pine); }
+.activity-add-options input { accent-color: var(--rp-pine); }
+.element-picker button:focus-visible, .library-browse-button:focus-visible,
+.compact-library-row:focus-visible { outline-color: var(--rp-pine); }
+
+/* Moon is deliberately scoped outside the watch's native rendering. */
+.watch-workspace {
+    --moon-base: #232136;
+    --moon-surface: #2a273f;
+    --moon-overlay: #393552;
+    --moon-subtle: #a6a1bc;
+    --moon-text: #e0def4;
+    --moon-rose: #ea9a97;
+    --moon-iris: #c4a7e7;
+    --moon-border: #56526e;
+    color: var(--moon-text);
+    background: radial-gradient(ellipse at 50% 44%, var(--moon-overlay) 0%, var(--moon-surface) 58%, var(--moon-base) 100%);
+}
+.workspace-eyebrow, .canvas-badge span, .selection-position, .workspace-snap span,
+.canvas-info, .canvas-view-note, .canvas-shortcuts { color: var(--moon-subtle); }
+.workspace-title-dot, .context-dot { background: var(--moon-rose); }
+.canvas-badge { border-color: var(--moon-border); color: var(--moon-text); }
+.workspace-segment { border-color: var(--moon-border); background: #23213680; }
+.workspace-segment button { color: var(--moon-subtle); }
+.workspace-segment button[aria-pressed="true"] {
+    color: var(--moon-base);
+    background: var(--moon-text);
+    box-shadow: 0 1px 4px #23213633;
+}
+.watch-stage::before {
+    border-color: #c4a7e71f;
+    background-image: radial-gradient(#c4a7e72b 0.7px, transparent 0.7px);
+}
+.watch-stage .watch { box-shadow: 0 0 0 1px #56526e, 0 0 0 9px #232136, 0 0 0 10px #c4a7e740, 0 16px 40px #19172466; }
+.watch-device-message, .canvas-selection { color: var(--moon-text); }
+.canvas-context { border-color: #c4a7e72e; }
+.workspace-snap { border-color: var(--moon-border); background: var(--moon-surface); color: var(--moon-text); }
+.workspace-snap[aria-pressed="true"] { border-color: var(--moon-iris); background: var(--moon-iris); color: var(--moon-base); }
+.workspace-snap[aria-pressed="true"] span { color: var(--moon-base); }
+.canvas-shortcuts > span { color: var(--moon-subtle); }
+.canvas-shortcuts kbd { border-color: var(--moon-border); color: var(--moon-text); }
+.watch-workspace button:focus-visible { outline-color: var(--moon-iris); }
+.garmin-export-button { border-color: var(--moon-rose); background: var(--moon-rose); color: var(--moon-base); }
+.garmin-export-feedback { border-color: var(--moon-border); background: var(--moon-surface); color: var(--moon-text); box-shadow: 0 4px 16px #19172466; }
+.garmin-export-feedback [role="alert"] { color: #eb6f92; }
+
+@media (hover: hover) {
+    .watch-sidebar button:not(:disabled):hover { border-color: var(--rp-high); background: var(--rp-overlay); color: var(--rp-pine); }
+    .watch-sidebar .element-action-danger:not(:disabled):hover { border-color: var(--rp-love); color: #913d56; background: #f4e3e4; }
+    .document-group > summary:hover, .picker-close:hover, .picker-filters button:hover { background: var(--rp-low); }
+    .picker-card:hover:enabled { border-color: var(--rp-iris); box-shadow: 0 3px 12px #46426110; }
+    .picker-card:hover:enabled .picker-card-plus { background: var(--rp-pine); color: var(--rp-surface); }
+    .library-browse-button:hover, .activity-add-button:hover:enabled { border-color: var(--rp-iris); background: var(--rp-overlay); }
+    .compact-library-row:hover:enabled { background: var(--rp-overlay); color: var(--rp-pine); }
+    .workspace-segment button:not([aria-pressed="true"]):hover { background: var(--moon-overlay); color: var(--moon-text); }
+    .workspace-snap:not(:disabled):hover { border-color: var(--moon-iris); }
+    .garmin-export-button:not(:disabled):hover { background: #f2b5b2; border-color: #f2b5b2; }
+}
