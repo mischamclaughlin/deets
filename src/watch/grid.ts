@@ -1,14 +1,12 @@
 /** Native-coordinate guide geometry; SVG paths themselves are browser-only annotations. */
 export interface GridSettings {
     visible: boolean;
-    rows: number;
-    columns: number;
     circumferences: number;
     circumferenceStart: "inside" | "outside";
     circumferenceSpacing: number;
     curvedRows: boolean;
     curvedColumns: boolean;
-    /** Normalised browser-only positions; null removes a generated line. */
+    /** Independent normalised browser-only positions; null removes a line. */
     edits?: Record<string, number | null>;
     /** Full native-pixel width of a symmetric gap around each logical line. */
     gaps?: Record<string, number>;
@@ -16,8 +14,6 @@ export interface GridSettings {
 
 export const defaultGrid: GridSettings = {
     visible: false,
-    rows: 4,
-    columns: 4,
     circumferences: 0,
     circumferenceStart: "outside",
     circumferenceSpacing: 24,
@@ -39,13 +35,6 @@ function positions(size: number, inset: number, grid: GridSettings): LinePositio
     const radius = size / 2 - inset;
     if (!grid.visible || radius <= 0) return [];
     const result: LinePosition[] = [];
-    for (const axis of ["rows", "columns"] as const) {
-        const count = grid[axis];
-        if (!Number.isInteger(count) || count < 1 || count > 24)
-            throw new RangeError("Grid counts must be integers from 1 to 24.");
-        for (let index = 1; index < count; index++)
-            result.push({ id: `${axis}-${index}`, axis, value: 2 * index / count - 1 });
-    }
     if (!Number.isInteger(grid.circumferences) || grid.circumferences < 0 || grid.circumferences > 24)
         throw new RangeError("Extra circumferences must be an integer from 0 to 24.");
     if (!Number.isInteger(grid.circumferenceSpacing) || grid.circumferenceSpacing < 1 || grid.circumferenceSpacing > 100)
@@ -77,6 +66,27 @@ function positions(size: number, inset: number, grid: GridSettings): LinePositio
             throw new RangeError("Grid gaps must be non-negative whole native pixels with valid line IDs.");
     }
     return result;
+}
+
+/** Add exactly one independent guide at the centre without moving existing guides. */
+export function addGridLine(grid: GridSettings, axis: "rows" | "columns"): { grid: GridSettings; id: string } {
+    const edits = { ...grid.edits };
+    let index = 1;
+    while (Object.hasOwn(edits, `${axis}-${index}`)) index++;
+    const id = `${axis}-${index}`;
+    if (Object.keys(edits).length >= 256) throw new RangeError("Too many grid edits.");
+    edits[id] = 0;
+    return { grid: { ...grid, visible: true, edits }, id };
+}
+
+/** Regenerate rings without clearing independent horizontal or vertical guides. */
+export function configureGridRings(grid: GridSettings,
+    settings: Partial<Pick<GridSettings, "circumferences" | "circumferenceSpacing" | "circumferenceStart">>): GridSettings {
+    const keep = <T,>(entries: Record<string, T> | undefined) => {
+        const remaining = Object.entries(entries ?? {}).filter(([id]) => !id.startsWith("rings-"));
+        return remaining.length ? Object.fromEntries(remaining) : undefined;
+    };
+    return { ...grid, ...settings, edits: keep(grid.edits), gaps: keep(grid.gaps) };
 }
 
 function bounds(radius: number, line: LinePosition, gap = 0): [number, number] {

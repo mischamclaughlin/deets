@@ -36,14 +36,14 @@ test("odd element dimensions round centre alignment to a native pixel", () => {
 });
 
 test("grid chords, curved dividers and rings supply visible snap targets", () => {
-    const options = { ...none, enabled: true, grid: { ...defaultGrid, visible: true, rows: 4, columns: 1 } };
+    const options = { ...none, enabled: true, grid: { ...defaultGrid, visible: true, edits: { "rows-1": -0.5, "rows-2": 0, "rows-3": 0.5 } } };
     assert.equal(moveElement(scene, element, { x: 190, y: 115 }, options).y, 112);
     const curved = { ...options, grid: { ...options.grid, curvedRows: true } };
     const x = 270;
     const target = 208 - 96 * Math.sqrt(1 - ((x + 10 - 208) / 192) ** 2);
     const result = moveElement(scene, element, { x, y: Math.round(target) + 2 }, curved);
     assert.ok(Math.abs(result.y - target) <= 1);
-    const ringOptions = { ...options, grid: { ...options.grid, rows: 1, circumferences: 1, circumferenceStart: "inside" as const, circumferenceSpacing: 90 } };
+    const ringOptions = { ...options, grid: { ...options.grid, edits: undefined, circumferences: 1, circumferenceStart: "inside" as const, circumferenceSpacing: 90 } };
     assert.equal(moveElement(scene, element, { x: 198, y: 120 }, ringOptions).y, 118);
 });
 
@@ -170,7 +170,7 @@ test("Grid, Guide and Elements categories work independently under the master sw
                     snapToGrid: gridEnabled,
                     snapToGuides: guideEnabled,
                     snapToElements: elementsEnabled,
-                    grid: { ...defaultGrid, visible: true, rows: 4, columns: 1 },
+                    grid: { ...defaultGrid, visible: true, edits: { "rows-1": -0.5, "rows-2": 0, "rows-3": 0.5 } },
                 };
                 for (const { category, desired, snapped } of probes) {
                     assert.deepEqual(moveElement(neighbouringScene, element, desired, options), selected[category] ? snapped : desired,
@@ -194,13 +194,13 @@ test("Guide controls centre-line attraction while the circumference stays a hard
 
 
 test("snapping follows edited guides and excludes deleted guides and rings", () => {
-    const original = { ...defaultGrid, visible: true, rows: 4, columns: 1 };
+    const original = { ...defaultGrid, visible: true, edits: { "rows-1": -0.5, "rows-2": 0, "rows-3": 0.5 } };
     const options = { ...none, enabled: true, grid: editGridLine(416, 16, original, "rows-1", -0.25) };
     assert.equal(moveElement(scene, element, { x: 190, y: 163 }, options).y, 160);
     assert.equal(moveElement(scene, element, { x: 190, y: 115 }, options).y, 115);
     options.grid = editGridLine(416, 16, options.grid, "rows-1", null);
     assert.equal(moveElement(scene, element, { x: 190, y: 163 }, options).y, 163);
-    const rings = { ...defaultGrid, visible: true, rows: 1, columns: 1, circumferences: 1 };
+    const rings = { ...defaultGrid, visible: true, circumferences: 1 };
     const ringMoved = editGridLine(416, 16, rings, "rings-1", 0.5);
     assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options, grid: ringMoved }).y, 112);
     assert.equal(moveElement(scene, element, { x: 198, y: 115 }, { ...options,
@@ -208,7 +208,10 @@ test("snapping follows edited guides and excludes deleted guides and rings", () 
 });
 
 
-const editableGrid = { ...defaultGrid, visible: true };
+const editableGrid = { ...defaultGrid, visible: true, edits: {
+    "rows-1": -0.5, "rows-2": 0, "rows-3": 0.5,
+    "columns-1": -0.5, "columns-2": 0, "columns-3": 0.5,
+} };
 const gridLine = (axis: GridLine["axis"]): GridLine => ({ id: `${axis}-1`, axis, value: -0.5, path: "" });
 
 test("dragged straight grid lines snap to element edges and centres on either axis", () => {
