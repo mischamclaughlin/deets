@@ -1,22 +1,28 @@
-import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import type { Scene } from "../../shared/scene.ts";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { devices, type Scene } from "../../shared/scene.ts";
 import { previewWatch, setActivityGraph } from "./api.ts";
 import { activityParts, libraryEntries } from "./library-catalogue.ts";
 import { activityLayout, arrangeActivity, type IconPosition } from "./activity-layout.ts";
 
-function GapInput({ gap, disabled, invalid, onCommit }: {
-    gap: number; disabled: boolean; invalid: boolean; onCommit: (gap: number) => void;
+function GapInput({ gap, max, disabled, invalid, onCommit }: {
+    gap: number; max: number; disabled: boolean; invalid: boolean; onCommit: (gap: number) => void;
 }) {
-    const [draft, setDraft] = useState(String(gap));
-    return <label className="font-choice">Icon–data gap (px)
-        <input type="text" inputMode="numeric" value={draft} disabled={disabled}
-            aria-invalid={invalid || undefined} onChange={(event) => setDraft(event.target.value)}
-            onBlur={() => { if (draft !== String(gap)) onCommit(draft.trim() === "" ? NaN : Number(draft)); }}
-            onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-                if (event.key === "Escape") setDraft(String(gap));
+    const id = useId();
+    const [draft, setDraft] = useState(gap);
+    const commit = () => { if (draft !== gap) onCommit(draft); };
+    return <div className="typography-control">
+        <div className="control-heading">
+            <label htmlFor={id}>Icon–data gap</label>
+            <output htmlFor={id}>{draft} px</output>
+        </div>
+        <input id={id} type="range" min={0} max={Math.max(max, gap)} step={1} value={draft} disabled={disabled}
+            aria-invalid={invalid || undefined} aria-valuetext={`${draft} pixels`}
+            onChange={(event) => setDraft(Number(event.target.value))}
+            onPointerUp={commit} onPointerCancel={() => setDraft(gap)} onBlur={commit}
+            onKeyUp={(event) => {
+                if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) commit();
             }} />
-    </label>;
+    </div>;
 }
 
 type Change = { kind: "graph" | "movement"; enabled: boolean }
@@ -79,6 +85,7 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
                 </select>
             </label>
             <GapInput key={`${activity.id}-${layout.position}-${layout.gap}`} gap={layout.gap}
+                max={devices[scene.device] / 2 - 1}
                 disabled={busy} invalid={error !== undefined}
                 onCommit={(gap) => void change({ kind: "layout", position: layout.position, gap })} />
         </>}
