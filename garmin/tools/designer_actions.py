@@ -16,7 +16,7 @@ def _target(scene, element_id):
 
 def copy_element(scene, element_id):
     scene = validate_scene(scene)
-    index, target = _target(scene, element_id)
+    _, target = _target(scene, element_id)
     if len(scene["elements"]) >= 40:
         raise ValueError("A design can contain at most 40 elements.")
     identities = {element["id"] for element in scene["elements"]}
@@ -31,7 +31,7 @@ def copy_element(scene, element_id):
     duplicate["id"] = identity
     duplicate.pop("activityId", None)
     duplicate.pop("moveTogether", None)
-    edited["elements"].insert(index + 1, duplicate)
+    edited["elements"].append(duplicate)
     return validate_scene(edited)
 
 

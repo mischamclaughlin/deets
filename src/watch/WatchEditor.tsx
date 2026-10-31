@@ -95,7 +95,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         setFontsReady(false);
                     }}>Retry fonts</button>
                 </>}
-                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} />
+                <ElementsPanel scene={scene} selectedId={selectedId} onSelect={setSelectedId} onSceneChange={setScene} />
                 <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
                 <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
                 <TextPresetsPanel scene={scene} onSceneChange={setScene} />

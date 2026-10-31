@@ -2,6 +2,7 @@ import { activityName } from "./element-name.ts";
 import { useEffect, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
 import { copyElement, deleteElement } from "./api.ts";
+import { LayerPanel } from "./LayerPanel.tsx";
 
 export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect }: {
     scene: Scene;
@@ -41,6 +42,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect 
             onClick={() => { setError(undefined); setAction("delete"); }}>
             {action === "delete" ? "Deleting…" : "Delete"}
         </button>
+        <LayerPanel scene={scene} elementId={elementId} disabled={action !== undefined} onSceneChange={onSceneChange} />
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;
 }

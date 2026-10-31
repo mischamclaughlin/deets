@@ -1,0 +1,22 @@
+.layers-caption { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 12px; color: var(--rp-subtle); font-size: 10px; }
+.layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); transition: border-color 120ms ease, background-color 120ms ease, opacity 120ms ease; }
+.layer-list .layer-row + .layer-row { margin-top: 6px; }
+.layer-row[data-selected="true"] { border-color: var(--rp-pine); background: var(--rp-low); }
+.layer-row[data-dragging="true"] { opacity: 0.45; }
+.layer-list .element-choice { flex: 1; min-width: 0; width: auto; padding: 8px 8px 8px 2px; gap: 6px; }
+.layer-list .element-choice > span:not([class]) { flex: 1; min-width: 0; }
+.layer-list .element-choice[aria-pressed="true"] { border-color: transparent; box-shadow: none; background: transparent; }
+.layer-handle { flex: 0 0 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px 0 0 7px; background: transparent; color: var(--rp-subtle); cursor: grab; }
+.layer-handle:active { cursor: grabbing; }
+.layer-handle:disabled { cursor: default; opacity: 0.5; }
+.layer-handle svg { width: 12px; height: 18px; fill: currentColor; }
+.layer-handle:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
+.layer-number { flex-shrink: 0; min-width: 15px; text-align: right; color: var(--rp-subtle); font-size: 10px; font-variant-numeric: tabular-nums; }
+.layer-row[data-drop-edge]::after { content: ""; position: absolute; z-index: 1; left: 0; right: 0; height: 2px; border-radius: 2px; background: var(--rp-pine); pointer-events: none; }
+.layer-row[data-drop-edge="before"]::after { top: -5px; }
+.layer-row[data-drop-edge="after"]::after { bottom: -5px; }
+@media (hover: hover) {
+    .layer-row:hover { border-color: var(--rp-pine); }
+    .layer-handle:hover { color: var(--rp-pine); background: var(--rp-low); }
+}
+@media (prefers-reduced-motion: reduce) { .layer-list .layer-row { transition: none; } }

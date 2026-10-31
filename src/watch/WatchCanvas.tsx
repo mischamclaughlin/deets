@@ -246,9 +246,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     viewBox={`0 0 ${mapping.size} ${mapping.size}`}
                     aria-label="Translated watch areas"
                 >
-                    {mapping.areas.toSorted((left, right) =>
-                        Number(left.id === selectedId) - Number(right.id === selectedId),
-                    ).map((area) => {
+                    {mapping.areas.map((area) => {
                         const position = preview?.element.id === area.id ? preview.position : area;
                         const selected = area.id === selectedId;
                         const ring = scene.elements.find((element) => element.id === area.id);

@@ -58,8 +58,8 @@ class DocumentActionsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "text element"):
             actions.apply_text_defaults(ring, "time")
 
-    def test_copy_is_deep_exact_and_inserted_after_original_with_bounded_unique_ids(self):
-        original = typography.add_divider(typography.add_time(self.scene()))
+    def test_copy_is_deep_exact_and_added_to_front_with_bounded_unique_ids(self):
+        original = typography.add_time(typography.add_divider(typography.add_time(self.scene())))
         original = typography.set_divider_symbol(original, "divider", "|")
         original["elements"][1]["dividerPosition"] = "top"
         original["elements"][1]["id"] = "D" + "x" * 63
@@ -67,13 +67,14 @@ class DocumentActionsTests(unittest.TestCase):
         original = actions.set_text_defaults(original, DEFAULTS)
         before = copy.deepcopy(original)
         first = actions.copy_element(original, identity)
-        duplicate = first["elements"][2]
+        duplicate = first["elements"][-1]
+        self.assertEqual(first["elements"][:-1], original["elements"])
         self.assertEqual({k: v for k, v in duplicate.items() if k != "id"}, {k: v for k, v in original["elements"][1].items() if k != "id"})
         self.assertRegex(duplicate["id"], r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
         second = actions.copy_element(first, identity)
-        self.assertEqual(len({e["id"] for e in second["elements"]}), 4)
+        self.assertEqual(len({e["id"] for e in second["elements"]}), 5)
         self.assertEqual(second["elements"][1]["id"], identity)
-        self.assertNotEqual(second["elements"][2]["id"], duplicate["id"])
+        self.assertNotEqual(second["elements"][-1]["id"], duplicate["id"])
         duplicate["typography"]["size"] = 99
         self.assertNotEqual(first["elements"][1]["typography"]["size"], 99)
         self.assertEqual(original, before)

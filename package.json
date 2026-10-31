@@ -11,7 +11,7 @@
     "export:garmin": "node scripts/export.ts",
     "test:export": "node scripts/test-export.ts",
     "test:preview": "node --test server/mapping-cache.test.ts server/preview-client.test.ts",
-    "test": "node --test server/arithmetic.test.ts server/library.test.ts server/bridge.test.ts server/garmin.test.ts server/grid.test.ts server/snapping.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
+    "test": "node --test server/arithmetic.test.ts server/library.test.ts server/layers.test.ts server/bridge.test.ts server/garmin.test.ts server/grid.test.ts server/snapping.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
   },
   "dependencies": {
     "react": "^19.3.1",
