@@ -45,7 +45,7 @@ export interface SceneElement {
     source: string;
     /** The activity value this icon or graph accompanies. */
     activityId?: string;
-    /** Translate linked activity parts together unless explicitly disabled. */
+    /** Translate the activity's icon and data together unless explicitly disabled. Graphs move independently. */
     moveTogether?: boolean;
     font: FontKey;
     x: number;

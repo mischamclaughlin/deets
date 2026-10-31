@@ -1,5 +1,6 @@
 import { devices, type Scene, type SceneElement } from "../../shared/scene.ts";
 import { gridLines, gridLineValues, gridRadii, type GridSettings } from "./grid.ts";
+import { activityParts } from "./library-catalogue.ts";
 
 interface Point { x: number; y: number }
 export interface SnapOptions {
@@ -13,7 +14,7 @@ export interface SnapOptions {
     threshold?: number;
 }
 
-/** Linked activity parts share translation until the data value opts out. */
+/** Only an activity's icon and data share movement; its graph is independent. */
 export function linkedElementIds(scene: Scene, elementId: string): string[] {
     const selected = scene.elements.find((element) => element.id === elementId);
     if (!selected) return [];
@@ -21,7 +22,10 @@ export function linkedElementIds(scene: Scene, elementId: string): string[] {
         ? scene.elements.find((element) => element.id === selected.activityId)
         : selected;
     if (!root || root.moveTogether === false) return [elementId];
-    return scene.elements.filter((element) => element.id === root.id || element.activityId === root.id)
+    const iconSource = activityParts[root.source as keyof typeof activityParts]?.icon;
+    if (selected.id !== root.id && selected.source !== iconSource) return [elementId];
+    return scene.elements.filter((element) => element.id === root.id ||
+        (element.activityId === root.id && element.source === iconSource))
         .map((element) => element.id);
 }
 

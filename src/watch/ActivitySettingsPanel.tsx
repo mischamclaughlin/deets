@@ -72,9 +72,9 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
     }
     return <section className="activity-settings" aria-labelledby="activity-settings-heading">
         <h2 id="activity-settings-heading">{libraryEntries.find((entry) => entry.source === activity.source)?.label} activity</h2>
-        <label className="guide-toggle"><input type="checkbox" checked={activity.moveTogether !== false} disabled={busy || companions.length === 0}
-            onChange={(event) => void change({ kind: "movement", enabled: event.target.checked })} />Move together</label>
-        <p className="activity-setting-help">{activity.moveTogether === false ? "Move the icon, value and graph independently." : "Keep the icon, value and graph together when moving."}</p>
+        <label className="guide-toggle"><input type="checkbox" checked={activity.moveTogether !== false} disabled={busy || !layout}
+            onChange={(event) => void change({ kind: "movement", enabled: event.target.checked })} />Move icon and data together</label>
+        <p className="activity-setting-help">The graph always moves independently.</p>
         {layout && <>
             <label className="font-choice">Icon position
                 <select value={layout.position} disabled={busy} onChange={(event) => void change({

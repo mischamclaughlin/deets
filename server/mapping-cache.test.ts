@@ -31,7 +31,7 @@ test("icons move immediately with canonical day and night pixels on every device
     }
 });
 
-test("linked activity values, icons and graphs share immediate movement", async () => {
+test("linked icon and data move immediately while the graph stays put", async () => {
     const original = rememberMapping(await callBridge<WatchMapping>("add", {
         scene: { ...initialScene, name: "Live linked activity", elements: [] },
         source: "steps", options: { value: true, icon: true, graph: true },
@@ -40,6 +40,8 @@ test("linked activity values, icons and graphs share immediate movement", async 
     const moved = moveSceneElement(original.scene, icon.id, { x: icon.x + 15, y: icon.y + 20 },
         { enabled: false, showGuideLines: false });
     assert.notDeepEqual(moved, original.scene);
+    const graph = original.scene.elements.find((element) => element.source === "stepsWeek")!;
+    assert.equal(moved.elements.find((element) => element.id === graph.id), graph);
     const local = preparedMapping(moved);
     assert.ok(local);
     const canonical = await callBridge<WatchMapping>("layout", { scene: moved });

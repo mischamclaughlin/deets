@@ -305,16 +305,17 @@ function activityScene(device: Scene["device"] = "epix2pro47mm"): Scene {
     ] };
 }
 
-test("moving any linked activity part preserves the icon, value and graph offsets", () => {
+test("icon and data move together while graph movement is independent in both directions", () => {
     const original = activityScene();
     for (const id of ["steps", "steps-icon", "steps-graph"]) {
         const selected = original.elements.find((item) => item.id === id)!;
-        assert.deepEqual(linkedElementIds(original, id), ["steps", "steps-icon", "steps-graph"]);
+        const linked = id === "steps-graph" ? [id] : ["steps", "steps-icon"];
+        assert.deepEqual(linkedElementIds(original, id), linked);
         const changed = moveSceneElement(original, id, { x: selected.x+11, y: selected.y+7 }, none);
         for (const before of original.elements) {
             const after = changed.elements.find((item) => item.id === before.id)!;
-            assert.deepEqual({ x: after.x, y: after.y }, before.id === "unrelated"
-                ? { x: before.x, y: before.y } : { x: before.x+11, y: before.y+7 });
+            assert.deepEqual({ x: after.x, y: after.y }, linked.includes(before.id)
+                ? { x: before.x+11, y: before.y+7 } : { x: before.x, y: before.y });
         }
         assert.equal(changed.elements[3], original.elements[3]);
     }
@@ -333,7 +334,8 @@ test("linked movement clamps the whole activity inside every device boundary", (
                         const position = moveElement(original, selected, { x, y }, none);
                         const changed = moveSceneElement(original, selected.id, { x, y }, none);
                         const dx = position.x-selected.x, dy = position.y-selected.y;
-                        for (const before of original.elements.slice(0, 3)) {
+                        const linked = linkedElementIds(original, selected.id);
+                        for (const before of original.elements.filter((item) => linked.includes(item.id))) {
                             const after = changed.elements.find((item) => item.id === before.id)!;
                             assert.equal(after.x-before.x, dx);
                             assert.equal(after.y-before.y, dy);
@@ -367,7 +369,7 @@ test("disabling linked movement leaves all other activity parts in place", () =>
     }
     const implicit = activityScene();
     delete implicit.elements[0].moveTogether;
-    assert.equal(linkedElementIds(implicit, "steps-icon").length, 3);
+    assert.equal(linkedElementIds(implicit, "steps-icon").length, 2);
 });
 
 test("linked members are excluded from snapping while external elements remain targets", () => {

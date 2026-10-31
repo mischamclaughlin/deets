@@ -29,9 +29,7 @@ test("activity layout changes exact box gaps and order while keeping the data an
             assert.equal(layout.icon.x, 190, "Odd widths align to integer native pixels");
             assert.deepEqual(layout.value, original.elements[0]);
             assert.equal(changed.elements[3], original.elements[3]);
-            const graph = changed.elements[2];
-            assert.equal(graph.y - Math.max(layout.value.y + layout.value.height, layout.icon.y + layout.icon.height), 16);
-            assert.equal(graph.x, original.elements[2].x);
+            assert.equal(changed.elements[2], original.elements[2], "Gap and order never move the graph");
         }
     }
     assert.deepEqual(original, before);
