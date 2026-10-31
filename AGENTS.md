@@ -27,9 +27,51 @@
 
 ## Project boundaries
 
-Keep this project limited to the watch canvas, translated native-pixel area
-information and exact Garmin export. Do not add editor chrome, navigation,
-sidebars, account/storage features or simulator controls without user direction.
+Keep this project focused on the watch-face editor, translated native-pixel area
+information and exact Garmin export. The existing settings sidebar, canvas
+workspace, element inspector and library are part of the agreed scope. Do not
+add unrelated navigation, account/storage features or simulator controls without
+user direction.
+
+## Design ethos
+
+- Keep the studio calm, compact and precise: restrained colour, clear hierarchy,
+  subtle borders, consistent rounded controls and useful spacing. Prefer concise
+  labels and grouped controls over explanatory clutter or additional chrome.
+- Use Rosé Pine Dawn for **Light** mode and a customised Rosé Pine Moon palette
+  for **Dark** mode. Dark base is `#24273A`; sidebar surfaces are `#282B40` and
+  overlays `#32364D`. Keep sidebars close to the workspace colour, with rose,
+  iris and foam accents used sparingly for selection, focus and actions.
+- Apply the selected app theme consistently to both sidebars, the workspace,
+  library dialogue, inputs and feedback. Maintain contrast in hover, selected,
+  disabled, invalid and keyboard-focus states. Reuse the semantic tokens in
+  `src/watch/rose-pine.css` rather than adding unrelated hard-coded colours.
+- Switch Light/Dark with the single circular sun/moon button beside the brand.
+  Give it an accessible action label and keyboard support. Use smooth colour
+  and icon transitions, respecting `prefers-reduced-motion`.
+- App appearance is independent of the watch's Day/Night preview. Changing the
+  studio theme must never change scene colours, glyphs, geometry or export.
+  Preserve the watch face itself unless the user explicitly edits its design.
+
+## Editor behaviour
+
+- Keep Grid settings compact: paired horizontal/vertical additions with their
+  curved toggles, followed by ring count, starting edge and spacing. Adding a
+  guide must preserve existing guides and select the new line.
+- For selected grid lines, Stretch sets the band width independently of Mirror.
+  With Mirror off, grey out the inside of the selected stretched band. With
+  Mirror on, retain the two clear boundary edges without the grey fill. Toggling
+  Mirror must preserve stretch width and position; dragging moves both edges
+  together. Keep straight, curved and ring bands inside the content boundary.
+- Grid shading, selection, guides and area labels are browser-only annotations;
+  they must never change the native watch pixels or enter Garmin output.
+- Canvas settings include a watch background colour picker and hex input using
+  the existing colour-control design. This edits `scene.background` for the
+  watch's day appearance through the existing native mapping and export path.
+  Night/low-power background remains black. Keep this independent of app themes
+  and preserve device colour quantisation and stale-mapping rejection.
+
+## Rendering and verification
 
 - The typed scene in `src/watch/scene.ts` supplies canvas and export.
 - `shared/scene.ts` owns the TypeScript protocol. `garmin/tools/designer_model.py`
@@ -46,5 +88,6 @@ sidebars, account/storage features or simulator controls without user direction.
   require native builds. Native raster comparisons require an explicit user
   request; otherwise leave that verification to the user and report the gap.
   Compilation alone is not visual verification.
-- Preserve the pre-existing `src/App.tsx` changes and local `.venv`; the current
-  entry mounts `WatchCanvas` directly.
+- Preserve pre-existing work, including `src/App.tsx` changes and local `.venv`.
+  The current entry in `src/main.tsx` mounts `WatchEditor`; `WatchWorkspace` hosts
+  the canvas and its browser-only viewing controls.
