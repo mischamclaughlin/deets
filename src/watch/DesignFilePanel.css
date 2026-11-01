@@ -5,3 +5,12 @@
 .design-file-actions button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: 2px; }
 .design-file-actions button:disabled { opacity: .5; cursor: default; }
 .design-file-hint { margin: 7px 0 0; font-size: 10px; color: var(--muted); line-height: 1.5; }
+.design-file-secondary { margin-top: 5px; }
+.design-file-secondary button { padding: 4px; border-color: transparent; background: transparent; color: var(--muted); font-size: 10px; }
+.design-name-dialog { width: min(420px, calc(100vw - 40px)); box-sizing: border-box; padding: 26px; border: 1px solid var(--border); border-radius: 14px; background: var(--rp-surface); color: var(--rp-text); }
+.design-name-dialog::backdrop { background: color-mix(in srgb, var(--rp-base) 50%, transparent); backdrop-filter: blur(3px); }
+.watch-editor .design-name-dialog h2 { margin: 0 0 9px; font-size: 21px; font-weight: 600; }
+.design-name-dialog p { line-height: 1.6; }
+.design-name-dialog form > p:first-of-type { margin: 0 0 22px; color: var(--muted); font-size: 12px; }
+.design-name-dialog label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; }
+.design-name-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }

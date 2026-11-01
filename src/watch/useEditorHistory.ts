@@ -3,12 +3,12 @@ import type { Scene } from "../../shared/scene.ts";
 import { defaultGrid, type GridSettings } from "./grid.ts";
 import { createHistory, recordHistory, redoHistory, undoHistory } from "./history.ts";
 
-interface EditorDocument { scene: Scene; grid: GridSettings }
+interface EditorDocument { scene: Scene; grid: GridSettings; savedDesignId?: string }
 const resolveUpdate = <T,>(previous: T, value: SetStateAction<T>): T =>
     typeof value === "function" ? (value as (previous: T) => T)(previous) : value;
 
 export function useEditorHistory(initialScene: Scene) {
-    const [history, setHistory] = useState(() => createHistory({ scene: initialScene, grid: defaultGrid }));
+    const [history, setHistory] = useState(() => createHistory<EditorDocument>({ scene: initialScene, grid: defaultGrid }));
     const current = useRef(history);
     const [revision, setRevision] = useState(0);
     const generation = useRef(0);
@@ -21,6 +21,8 @@ export function useEditorHistory(initialScene: Scene) {
     }, []);
     const setScene = useCallback((value: SetStateAction<Scene>) => update((document) => ({ ...document, scene: resolveUpdate(document.scene, value) }), revision), [update, revision]);
     const setGrid = useCallback((value: SetStateAction<GridSettings>) => update((document) => ({ ...document, grid: resolveUpdate(document.grid, value) }), revision), [update, revision]);
+    const markSaved = useCallback((id: string, name: string) => update((document) => ({ ...document,
+        savedDesignId: id, scene: { ...document.scene, name } }), revision), [update, revision]);
     const replaceInitialScene = useCallback((scene: Scene) => {
         const next = createHistory({ ...current.current.present, scene });
         current.current = next;
@@ -41,6 +43,6 @@ export function useEditorHistory(initialScene: Scene) {
         setRevision(generation.current);
         setHistory(next);
     }, []);
-    return { ...history.present, setScene, setGrid, replaceInitialScene, importDocument, revision,
+    return { ...history.present, setScene, setGrid, markSaved, replaceInitialScene, importDocument, revision,
         canUndo: history.past.length > 0, canRedo: history.future.length > 0, navigate };
 }
