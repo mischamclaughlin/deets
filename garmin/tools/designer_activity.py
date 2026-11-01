@@ -7,16 +7,17 @@ import subprocess
 
 # Original colour-ready Tabler assets from the parent Garmin watch face.
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
-ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs"}
+ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs", "heartIcon": "heart"}
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
 ACTIVITY_GROUPS = {
+    "heartRate": ("heartIcon", None),
     "steps": ("stepsIcon", "stepsWeek"),
     "floors": ("floorsIcon", "floorsWeek"),
     "weeklyWalk": ("walkIcon", "walkWeek"),
     "weeklyRun": ("runIcon", "runWeek"),
 }
 _NO_OPTIONS = object()
-ACTIVITY_SOURCES = {"floors", "floorsWeek", "steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
+ACTIVITY_SOURCES = {"heartRate", "floors", "floorsWeek", "steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
 
 
 def icon_asset_paths():
@@ -147,6 +148,8 @@ def add_activity(scene, source, options=_NO_OPTIONS):
             raise ValueError("Choose boolean value, icon and graph options for the activity.")
         include_value = options.get("value", True)
         icon, graph = ACTIVITY_GROUPS[source]
+        if options.get("graph", False) and graph is None:
+            raise ValueError("This activity does not have a weekly graph.")
         sources = ([source] if include_value else []) + ([icon] if options.get("icon", True) else []) + ([graph] if options.get("graph", False) else [])
         if not sources:
             raise ValueError("Choose at least one activity element to add.")
@@ -184,6 +187,10 @@ def set_activity_graph(scene, element_id, enabled):
     scene = validate_scene(scene)
     parent = activity_parent(scene, element_id)
     graph_source = ACTIVITY_GROUPS[parent["source"]][1]
+    if graph_source is None:
+        if enabled:
+            raise ValueError("This activity does not have a weekly graph.")
+        return scene
     existing = next((item for item in scene["elements"] if item.get("activityId") == parent["id"] and item["source"] == graph_source), None)
     if bool(existing) == enabled:
         return scene

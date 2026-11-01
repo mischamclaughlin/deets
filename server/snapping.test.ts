@@ -323,6 +323,21 @@ test("icon and data move together while graph movement is independent in both di
     assert.deepEqual(linkedElementIds(original, "missing"), []);
 });
 
+test("heart-rate icon and value share movement and can be unlinked", () => {
+    const original = activityScene();
+    original.elements = original.elements.slice(0, 2).map((item, index) => ({ ...item, source: index === 0 ? "heartRate" : "heartIcon" }));
+    for (const selected of original.elements) {
+        assert.deepEqual(linkedElementIds(original, selected.id), original.elements.map((item) => item.id));
+        const moved = moveSceneElement(original, selected.id, { x: selected.x + 12, y: selected.y + 10 }, none);
+        moved.elements.forEach((item, index) => {
+            assert.equal(item.x, original.elements[index].x + 12);
+            assert.equal(item.y, original.elements[index].y + 10);
+        });
+    }
+    original.elements[0] = { ...original.elements[0], moveTogether: false };
+    assert.deepEqual(linkedElementIds(original, original.elements[1].id), [original.elements[1].id]);
+});
+
 test("linked movement clamps the whole activity inside every device boundary", () => {
     for (const device of Object.keys(devices) as Scene["device"][]) {
         for (const edgeInset of [undefined, 16]) {

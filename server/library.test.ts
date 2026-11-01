@@ -69,7 +69,7 @@ test("activity gap and order round-trip native validation for every activity and
 
 test("activity values share text controls while icons and graphs retain geometry controls", () => {
     for (const entry of libraryEntries.filter((item) => item.category === "activity")) {
-        const value = ["steps", "floors", "weeklyWalk", "weeklyRun"].includes(entry.source);
+        const value = ["heartRate", "steps", "floors", "weeklyWalk", "weeklyRun"].includes(entry.source);
         assert.equal(isEditableTextSource(entry.source), value, entry.source);
         if (value) {
             const element = { source: entry.source };
@@ -90,7 +90,7 @@ test("library search combines category, names and useful activity synonyms", () 
     assert.deepEqual(matchingEntries("activity", "steps").map((entry) => entry.source), ["steps"]);
     assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["steps", "floors", "weeklyWalk", "weeklyRun"]);
     assert.deepEqual(matchingEntries("all", "unknown-item"), []);
-    assert.equal(matchingEntries("all", "   ").length, 7);
+    assert.equal(matchingEntries("all", "   ").length, 8);
 });
 
 test("element names distinguish values, symbols and graphs and number duplicates", () => {
@@ -104,5 +104,33 @@ test("element names distinguish values, symbols and graphs and number duplicates
 test("stairs searches resolve to the data entry with its associated extras", () => {
     for (const query of ["stairs", "floors", "flights of stairs"]) {
         assert.deepEqual(matchingEntries("activity", query).map((entry) => entry.source), ["floors"]);
+    }
+});
+
+test("heart-rate searches include the value and heart icon without inventing a graph", () => {
+    for (const query of ["heart", "heart icon", "heart rate", "pulse", "bpm"])
+        assert.deepEqual(matchingEntries("activity", query).map((entry) => entry.source), ["heartRate"]);
+    assert.deepEqual(matchingEntries("activity", "heart graph"), []);
+});
+
+test("heart-rate value and icon use the existing layout, linked movement and native layers", async () => {
+    for (const device of Object.keys(devices) as Array<keyof typeof devices>) {
+        const base = await callBridge<WatchMapping>("add", { scene: { ...scene, device, elements: [] }, source: "time" });
+        const original = await callBridge<WatchMapping>("add", {
+            scene: base.scene, source: "heartRate", options: { value: true, icon: true },
+        });
+        assert.deepEqual(original.scene.elements[0], base.scene.elements[0]);
+        assert.deepEqual(original.scene.elements.slice(-2).map((element) => element.source), ["heartRate", "heartIcon"]);
+        const value = original.scene.elements.at(-2)!;
+        const icon = original.scene.elements.at(-1)!;
+        assert.equal(icon.activityId, value.id);
+        assert.equal(elementName(original.scene, value.id), "Heart rate 1");
+        assert.equal(elementName(original.scene, icon.id), "Heart icon 1");
+        for (const position of ["above", "below"] as const) {
+            const arranged = arrangeActivity(original.scene, value.id, position, 12);
+            const mapped = await callBridge<WatchMapping>("layout", { scene: arranged });
+            assert.equal(activityLayout(mapped.scene, value.id)!.position, position);
+            assert.equal(activityLayout(mapped.scene, value.id)!.gap, 12);
+        }
     }
 });

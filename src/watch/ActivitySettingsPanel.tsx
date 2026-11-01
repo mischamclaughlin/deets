@@ -74,7 +74,7 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
         <h2 id="activity-settings-heading">{libraryEntries.find((entry) => entry.source === activity.source)?.label} activity</h2>
         <label className="guide-toggle"><input type="checkbox" checked={activity.moveTogether !== false} disabled={busy || !layout}
             onChange={(event) => void change({ kind: "movement", enabled: event.target.checked })} />Move icon and data together</label>
-        <p className="activity-setting-help">The graph always moves independently.</p>
+        {parts.graph && <p className="activity-setting-help">The graph always moves independently.</p>}
         {layout && <>
             <label className="font-choice">Icon position
                 <select value={layout.position} disabled={busy} onChange={(event) => void change({
@@ -89,8 +89,8 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
                 disabled={busy} invalid={error !== undefined}
                 onCommit={(gap) => void change({ kind: "layout", position: layout.position, gap })} />
         </>}
-        <label className="guide-toggle"><input type="checkbox" checked={hasGraph} disabled={busy}
-            onChange={(event) => void change({ kind: "graph", enabled: event.target.checked })} />Weekly graph</label>
+        {parts.graph && <label className="guide-toggle"><input type="checkbox" checked={hasGraph} disabled={busy}
+            onChange={(event) => void change({ kind: "graph", enabled: event.target.checked })} />Weekly graph</label>}
         {busy && <p className="typography-status" role="status">Updating activity…</p>}
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;

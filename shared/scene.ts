@@ -20,7 +20,7 @@ export const isEditableTextSource = (source: string): boolean =>
 export const isDataTextSource = (source: string): boolean =>
     ["heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature", "highLow",
         "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label"].includes(source);
-export type ActivitySource = "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
+export type ActivitySource = "heartRate" | "heartIcon" | "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek";
 export interface ActivityAddOptions { value?: boolean; icon?: boolean; graph?: boolean; }
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {

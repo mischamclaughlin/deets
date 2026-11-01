@@ -56,6 +56,7 @@ CATALOG = [
     _source("month", "Month", "Clock & date", "OCT"),
     _source("year", "Year", "Clock & date", "2026"),
     _source("heartRate", "Heart rate", "Health & activity", "64", complication=18),
+    _source("heartIcon", "Heart icon", "Activity icons", 0, "icon"),
     _source("steps", "Daily steps", "Health & activity", "8642", complication=2),
     _source("weeklyWalk", "Weekly walking distance", "Health & activity", "18.6"),
     _source("floors", "Floors climbed", "Health & activity", "12", complication=4),

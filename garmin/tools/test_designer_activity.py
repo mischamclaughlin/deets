@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
-from designer_activity import ACTIVITY_SOURCES, ICON_MASKS, ICON_DIRECTORY, add_activity, icon_asset_paths
+from designer_activity import ACTIVITY_GROUPS, ACTIVITY_SOURCES, ICON_MASKS, ICON_DIRECTORY, add_activity, icon_asset_paths
 from designer_charts import chart_ops
 from designer_model import DEVICES, validate_scene
 import test_designer_export as export_tests
@@ -27,11 +27,12 @@ class ActivityTests(unittest.TestCase):
                 edited = add_activity(edited, source)
                 edited = add_activity(edited, source)
             self.assertEqual(original, self.scene(device))
-            self.assertEqual(len(edited['elements']), 32)
-            self.assertEqual(len({e['id'] for e in edited['elements']}), 32)
+            expected_count = 2 * len(ACTIVITY_SOURCES) + 2 * len(ACTIVITY_GROUPS)
+            self.assertEqual(len(edited['elements']), expected_count)
+            self.assertEqual(len({e['id'] for e in edited['elements']}), expected_count)
             self.assertEqual(validate_scene(edited), edited)
             mapped = bridge.layout({'scene': edited})
-            self.assertEqual(len(mapped['areas']), 32)
+            self.assertEqual(len(mapped['areas']), expected_count)
             self.assertTrue(mapped['ops'])
 
     def test_icons_keep_all_pixels_inside_their_boxes_and_use_night_colour(self):
@@ -50,7 +51,7 @@ class ActivityTests(unittest.TestCase):
         self.assertNotEqual(masks[1], masks[2])
 
     def test_original_parent_icon_coverage_is_preserved_at_native_size(self):
-        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png', 'stairs.png'})
+        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png', 'stairs.png', 'heart.png'})
         for source, name in ICON_MASKS.items():
             data = (ICON_DIRECTORY / f'{name}.png').read_bytes()
             width, height = struct.unpack('>II', data[16:24])
@@ -99,7 +100,9 @@ class ActivityTests(unittest.TestCase):
 
     def test_live_and_proof_exports_keep_icon_pixels_and_walking_bindings(self):
         scene = self.scene()
-        for source in sorted(ACTIVITY_SOURCES):
+        # Keep this broad walking-provider fixture inside the conservative export
+        # budget; heart-rate export has its own complete regression fixture.
+        for source in sorted(ACTIVITY_SOURCES - {"heartRate", "heartIcon"}):
             scene = add_activity(scene, source)
         for proof in (False, True):
             with tempfile.TemporaryDirectory() as directory:
@@ -128,6 +131,11 @@ class ActivityTests(unittest.TestCase):
             with self.subTest(device=device, source=source, icon=icon, graph=graph):
                 original = add_activity(self.scene(device), 'steps')
                 saved = copy.deepcopy(original)
+                if graph and companions[1] is None:
+                    with self.assertRaisesRegex(ValueError, 'does not have a weekly graph'):
+                        add_activity(original, source, dict(icon=icon, graph=graph))
+                    self.assertEqual(original, saved)
+                    continue
                 edited = add_activity(original, source, dict(icon=icon, graph=graph))
                 self.assertEqual(original, saved)
                 self.assertEqual(edited['elements'][:len(original['elements'])], original['elements'])
