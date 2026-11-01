@@ -1,5 +1,6 @@
 import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { editGridLine, gridLines, moveGridLines, type GridLine, type GridSettings } from "./grid.ts";
+import { useGridAreaHover } from "./useGridAreaHover.ts";
 import { selectGridArea, type GridArea } from "./grid-area.ts";
 import type { Scene } from "../../shared/scene.ts";
 import { snapGridLineToElements } from "./grid-snapping.ts";
@@ -41,6 +42,8 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
     const clip = useId();
+    const { hoveredArea, hoverAt, clearHover } = useGridAreaHover({ size, inset, grid, scene, selectedArea, enabled: !!onSelectArea });
+    const hover = hoveredArea?.path !== selectedArea?.path ? hoveredArea : undefined;
     function move(event: ReactPointerEvent<SVGSVGElement>) {
         const current = drag.current;
         const point = pointer(event);
@@ -84,6 +87,7 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
         role="group" aria-label="Editable grid. Shift-click to select several lines. Drag or use arrow keys to move; Delete removes the selection."
         onPointerDown={(event) => {
             if (event.button !== 0 || drag.current) return;
+            clearHover();
             const target = event.target instanceof Element ? event.target.closest<SVGGElement>("[data-grid-id]") : null;
             const line = gridLines(size, inset, grid).find((item) => item.id === target?.dataset.gridId);
             const start = pointer(event);
@@ -109,9 +113,16 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
                 ? [line.id, ...selectedIds.filter((id) => id !== line.id)] : [line.id];
             drag.current = { pointerId: event.pointerId, line, ids, start, grid, latest: grid };
         }}
-        onPointerMove={move} onPointerUp={(event) => finish(event, true)}
-        onPointerCancel={(event) => finish(event, false)}
-        onLostPointerCapture={() => { drag.current = undefined; setPreview(undefined); }}>
+        onPointerMove={(event) => {
+            if (drag.current) { move(event); return; }
+            if (event.pointerType === "touch" || event.buttons !== 0 ||
+                event.target instanceof Element && event.target.closest("[data-grid-id]")) { clearHover(); return; }
+            const point = pointer(event);
+            if (point) hoverAt(point);
+        }}
+        onPointerLeave={clearHover} onPointerUp={(event) => finish(event, true)}
+        onPointerCancel={(event) => { clearHover(); finish(event, false); }}
+        onLostPointerCapture={() => { clearHover(); drag.current = undefined; setPreview(undefined); }}>
         <defs><clipPath id={clip}><circle cx={size / 2} cy={size / 2} r={radius} /></clipPath></defs>
         {onSelectArea && <circle className="grid-area-hit" cx={size / 2} cy={size / 2} r={radius}
             tabIndex={0} role="button" aria-label="Select a grid area. Enter selects the centre; arrow keys move the selection."
@@ -123,8 +134,11 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
                 event.stopPropagation();
                 const anchor = selectedArea?.anchor ?? { x: size / 2, y: size / 2 };
                 const area = selectGridArea(size, inset, grid, { x: anchor.x + (direction?.[0] ?? 0), y: anchor.y + (direction?.[1] ?? 0) });
-                if (area) onSelectArea(area);
+                if (area) { clearHover(); onSelectArea(area); }
             }} />}
+        {hover && <g className="grid-area-hover" clipPath={`url(#${clip})`} aria-hidden="true">
+            <path d={hover.path} />
+        </g>}
         {selectedArea && <g className="grid-area-selection" clipPath={`url(#${clip})`} aria-hidden="true">
             <path d={selectedArea.path} />
             <rect x={selectedArea.box.x} y={selectedArea.box.y} width={selectedArea.box.width} height={selectedArea.box.height} />

@@ -60,7 +60,7 @@ export function GridAreaPanel({ scene, area, onSceneChange, onSelect }: {
         }
     }
     return <section className="grid-area-panel" aria-labelledby={heading} aria-busy={busy}>
-        <h2 id={heading}>Grid area <span className="section-unit">{area.box.width} × {area.box.height} px</span></h2>
+        <h2 id={heading}>Selected grid area <span className="section-unit">{area.box.width} × {area.box.height} px</span></h2>
         <p className="control-hint">Use this area as the element’s box. Text size stays unchanged.</p>
         <label className="font-choice">Existing element
             <select value={existing} disabled={busy} onChange={(event) => setExisting(event.target.value)}>
