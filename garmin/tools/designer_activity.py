@@ -7,25 +7,37 @@ import subprocess
 
 # Original colour-ready Tabler assets from the parent Garmin watch face.
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
-ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs", "heartIcon": "heart"}
+ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs", "heartIcon": "heart",
+              "temperatureIcon": "temperature", "highLowIcon": "temperature-sun", "sunriseSunsetIcon": "sunrise"}
+ICON_VARIANTS = {
+    "temperatureIcon": ("temperature", "sun", "cloud", "cloud-rain", "cloud-storm", "snowflake", "wind", "mist"),
+    "sunriseSunsetIcon": ("sunrise", "sunset"),
+}
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
 ACTIVITY_GROUPS = {
     "heartRate": ("heartIcon", None),
+    "temperature": ("temperatureIcon", "temperatureZones"),
+    "highLow": ("highLowIcon", "temperatureZones"),
+    "temperatureHigh": ("highLowIcon", None),
+    "temperatureLow": ("highLowIcon", None),
+    "sunriseSunset": ("sunriseSunsetIcon", "solarTimeline"),
     "steps": ("stepsIcon", "stepsWeek"),
     "floors": ("floorsIcon", "floorsWeek"),
     "weeklyWalk": ("walkIcon", "walkWeek"),
     "weeklyRun": ("runIcon", "runWeek"),
 }
 _NO_OPTIONS = object()
-ACTIVITY_SOURCES = {"heartRate", "floors", "floorsWeek", "steps", "weeklyWalk", "weeklyRun", "stepsWeek", "walkWeek", "runWeek", *ICON_MASKS}
+GRAPH_SOURCES = {graph for _, graph in ACTIVITY_GROUPS.values() if graph is not None}
+ACTIVITY_SOURCES = {*ACTIVITY_GROUPS, *GRAPH_SOURCES, *ICON_MASKS}
 
 
 def icon_asset_paths():
     """Return rendering inputs for mapping and exported application fingerprints."""
-    return tuple(ICON_DIRECTORY / f"{name}.png" for name in sorted(set(ICON_MASKS.values())))
+    names = set(ICON_MASKS.values()) | {name for variants in ICON_VARIANTS.values() for name in variants}
+    return tuple(ICON_DIRECTORY / f"{name}.png" for name in sorted(names))
 
 
-@functools.lru_cache(maxsize=8)
+@functools.lru_cache(maxsize=32)
 def _icon_mask(data):
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("An activity icon is not a PNG resource.")
@@ -72,8 +84,12 @@ def _icon_rectangles(data, width, height):
     return tuple(rectangles)
 
 
-def icon_ops(element):
-    data = (ICON_DIRECTORY / f"{ICON_MASKS[element['source']]}.png").read_bytes()
+def icon_ops(element, variant=None):
+    source = element["source"]
+    name = ICON_MASKS[source] if variant is None else variant
+    if name not in ICON_VARIANTS.get(source, (ICON_MASKS[source],)):
+        raise ValueError("Choose a supported variant for this icon.")
+    data = (ICON_DIRECTORY / f"{name}.png").read_bytes()
     return [dict(kind="rect", x=element["x"]+x, y=element["y"]+y, width=width, height=height)
             for x, y, width, height in _icon_rectangles(data, element["width"], element["height"])]
 
@@ -81,7 +97,7 @@ def icon_ops(element):
 def _new_activity_element(scene, source, identities):
     from designer_model import DEVICES, font_pack
     size = DEVICES[scene["device"]]
-    width, height = ((112, 24) if source.endswith("Week") else
+    width, height = ((112, 24) if source in GRAPH_SOURCES else
                      (112, font_pack(scene["device"])["fonts"]["widget"]["height"]))
     if source in ICON_MASKS:
         data = (ICON_DIRECTORY / f"{ICON_MASKS[source]}.png").read_bytes()
@@ -109,7 +125,8 @@ def _arrange_activity_group(scene, elements):
     from designer_model import DEVICES
     value = elements[0]
     icon = next((item for item in elements[1:] if item["source"] in ICON_MASKS), None)
-    graph = next((item for item in elements[1:] if item["source"].endswith("Week")), None)
+    graph_source = ACTIVITY_GROUPS[value["source"]][1]
+    graph = next((item for item in elements[1:] if item["source"] == graph_source), None)
     height = value["height"] + (icon["height"] + 16 if icon else 0) + (graph["height"] + 16 if graph else 0)
     value["y"] = (DEVICES[scene["device"]] - height) // 2 + (icon["height"] + 16 if icon else 0)
     _position_companions(value, elements[1:])

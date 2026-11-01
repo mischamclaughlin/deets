@@ -21,6 +21,7 @@ TYPE_SOURCES = {
     "temperatureHigh": 39, "temperatureLow": 39,
     "stepsWeek": 2, "floorsWeek": 4, "runWeek": 19, "weeklyWalk": -5, "walkWeek": -5,
     "heartZones": 18, "temperatureZones": 38, "solarTimeline": 13,
+    "temperatureIcon": 38, "sunriseSunsetIcon": 13,
 }
 
 
@@ -30,7 +31,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
+    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():
@@ -244,6 +245,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     if graphics_cost(pack, resource_codes) > FONT_GRAPHICS_BUDGET:
         raise ValueError("This design exceeds the conservative font graphics budget. Use fewer or smaller font styles before exporting.")
     rows = []
+    from designer_activity import ICON_VARIANTS, icon_ops
+    from designer_weather import weather_icon_switch
     for element in scene["elements"]:
         source = element["source"]
         kind = catalogue[source]["kind"]
@@ -253,6 +256,10 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             for night, destination in ((False, day_rectangles), (True, night_rectangles)):
                 destination.extend([[operation[key] for key in ("x", "y", "width", "height", "colour")]
                                     for operation in chart_ops(element, night=night)])
+        variants = []
+        if source in ICON_VARIANTS:
+            variants = [[[operation[key] for key in ("x", "y", "width", "height")]
+                         for operation in icon_ops(element, variant)] for variant in ICON_VARIANTS[source]]
         rows.append([
             source, (ring_fonts.get(ring_indices[ring_signature(scene, element)], 0) if source == "secondsRing"
                      else font_indices.get(element["font"], 0)), element["x"], element["y"],
@@ -265,7 +272,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
             ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
             source == "timeSeconds" and element.get("secondsSize", "full") == "half",
-            element.get("boxSizing") == "hug", 0, 0,
+            element.get("boxSizing") == "hug", 0, 0, variants,
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -316,6 +323,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         "@BACKGROUND@": str(scene["background"]), "@PROOF@": _mc(proof),
         "@FORCED_NIGHT@": _mc(preview_night), "@SAMPLES@": "{" + proof_dictionary + "}",
         "@RING_TABLE@": ring_table,
+        "@WEATHER_ICON_SWITCH@": weather_icon_switch(ICON_VARIANTS["temperatureIcon"])
+            if any(element["source"] == "temperatureIcon" for element in scene["elements"]) else "            default: return 0;",
         "@FONT_RESOURCES@": "[" + ", ".join(font_resources) + "]",
     }
     for marker, replacement in replacements.items():
@@ -340,6 +349,7 @@ using Toybox.System;
 using Toybox.Time;
 using Toybox.Time.Gregorian;
 using Toybox.Math;
+using Toybox.Weather;
 import Toybox.Lang;
 
 // Generated from the canonical scene. All positions are native integer pixels.
@@ -602,9 +612,28 @@ class DesignerView extends WatchUi.WatchFace {
         return (red << 16) | (green << 8) | blue;
     }
 
+    private function weatherIconIndex(condition) {
+        switch (condition) {
+@WEATHER_ICON_SWITCH@
+        }
+        return 0;
+    }
+
     private function drawChart(dc as Graphics.Dc, element as Array, colour as Number, night as Boolean) {
         if ((_proof && !element[10].equals("ring")) || element[10].equals("icon")) {
             var rectangles = (night ? element[13] : element[12]) as Array<Array<Number>>;
+            var iconVariants = element[22] as Array;
+            if (!_proof && iconVariants.size() > 0) {
+                var index = element[0].equals("temperatureIcon") ? weatherIconIndex(_snapshot.weatherCondition)
+                    : (_snapshot.solarEventIsSunset ? 1 : 0);
+                var variant = iconVariants[index] as Array<Array<Number>>;
+                dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
+                for (var i = 0; i < variant.size(); i += 1) {
+                    var rectangle = variant[i];
+                    dc.fillRectangle(rectangle[0], rectangle[1], rectangle[2], rectangle[3]);
+                }
+                return;
+            }
             for (var i = 0; i < rectangles.size(); i += 1) {
                 var rectangle = rectangles[i];
                 dc.setColor(rectangle[4], Graphics.COLOR_TRANSPARENT);
@@ -669,18 +698,23 @@ class DesignerView extends WatchUi.WatchFace {
             dc.setColor(shade(colour, 24), Graphics.COLOR_TRANSPARENT);
             var middle = Math.floor(boxHeight / 2.0).toNumber();
             dc.fillRectangle(x, y + middle, width, 1);
-            if (sunrise != null && sunset != null) {
-                var start = Math.floor(width * sunrise / 86400.0).toNumber();
-                var end = Math.floor(width * sunset / 86400.0).toNumber();
+            if (sunrise != null && sunset != null && sunrise != sunset) {
+                var daylight = (sunset - sunrise + 86400) % 86400;
+                var displayedSunrise = ((86400 - daylight) / 2).toNumber();
+                var start = (width * displayedSunrise / 86400).toNumber();
+                var end = (width * (displayedSunrise + daylight) / 86400).toNumber();
                 dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
-                if (end >= start) {
-                    dc.fillRectangle(x + start, y + middle - 1, end - start, 3);
-                } else {
-                    dc.fillRectangle(x, y + middle - 1, end, 3);
-                    dc.fillRectangle(x + start, y + middle - 1, width - start, 3);
+                var daylightTop = middle > 0 ? middle - 1 : 0;
+                var daylightBottom = middle + 2 < boxHeight ? middle + 2 : boxHeight;
+                if (end > start && daylightBottom > daylightTop) {
+                    dc.fillRectangle(x + start, y + daylightTop, end - start, daylightBottom - daylightTop);
                 }
+                var solarNoon = (sunrise + (daylight / 2).toNumber()) % 86400;
+                now = (now + 43200 - solarNoon + 86400) % 86400;
+            } else {
+                return;
             }
-            var marker = Math.floor(width * now / 86400.0).toNumber();
+            var marker = (width * now / 86400).toNumber();
             if (marker > width - 1) { marker = width - 1; }
             if (marker < 0) { marker = 0; }
             dc.setColor(colour, Graphics.COLOR_TRANSPARENT);

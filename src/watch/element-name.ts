@@ -17,6 +17,6 @@ export function elementName(scene: Scene, id: string): string {
 
 export function activityName(scene: Scene, id: string): string | undefined {
     const source = scene.elements.find((element) => element.id === id)?.source;
-    return libraryEntries.some((entry) => entry.source === source && entry.category === "activity")
+    return libraryEntries.some((entry) => entry.source === source && entry.category !== "clock")
         ? elementName(scene, id) : undefined;
 }

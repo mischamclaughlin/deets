@@ -9,7 +9,7 @@ import { moveSceneElement } from "../src/watch/snapping.ts";
 test("icons move immediately with canonical day and night pixels on every device", async (context) => {
     context.mock.method(globalThis, "fetch", () => { throw new Error("Icon movement must not fetch."); });
     for (const device of Object.keys(devices) as Array<keyof typeof devices>) {
-        for (const source of ["heartIcon", "floorsIcon", "stepsIcon", "walkIcon", "runIcon"]) {
+        for (const source of ["temperatureIcon", "highLowIcon", "sunriseSunsetIcon", "heartIcon", "floorsIcon", "stepsIcon", "walkIcon", "runIcon"]) {
             for (const night of [false, true]) {
                 const scene: Scene = { ...initialScene, name: `Live ${source} ${device}`, device, edgeInset: undefined,
                     elements: [

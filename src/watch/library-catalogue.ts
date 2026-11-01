@@ -1,7 +1,7 @@
 import type { ActivitySource } from "../../shared/scene.ts";
 
 export type LibrarySource = ActivitySource | "time" | "numericDate" | "divider";
-export type LibraryCategory = "all" | "clock" | "activity";
+export type LibraryCategory = "all" | "clock" | "activity" | "weather";
 export interface LibraryEntry {
     source: LibrarySource;
     label: string;
@@ -28,14 +28,29 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "weeklyRun", label: "Running", detail: "Distance this week", category: "activity", keywords: "value weekly run distance" },
     { source: "runIcon", label: "Running icon", detail: "Runner", category: "activity", keywords: "symbol run" },
     { source: "runWeek", label: "Running graph", detail: "Daily distance · Monday–Sunday", category: "activity", keywords: "weekly run chart bars" },
+    { source: "temperature", label: "Current temperature", detail: "Weather conditions and current temperature", category: "weather", keywords: "value current temperature weather degrees celsius fahrenheit thermometer" },
+    { source: "temperatureIcon", label: "Weather icon", detail: "Changes with the weather conditions", category: "weather", keywords: "symbol temperature weather sun cloud rain snow wind mist thermometer" },
+    { source: "highLow", label: "High / low temperature", detail: "Today's forecast high and low", category: "weather", keywords: "value temperature forecast high low maximum minimum range" },
+    { source: "temperatureHigh", label: "High temperature", detail: "Today's forecast high", category: "weather", keywords: "value temperature forecast high maximum" },
+    { source: "temperatureLow", label: "Low temperature", detail: "Today's forecast low", category: "weather", keywords: "value temperature forecast low minimum" },
+    { source: "highLowIcon", label: "Forecast icon", detail: "Thermometer and sun", category: "weather", keywords: "symbol forecast temperature thermometer sun" },
+    { source: "temperatureZones", label: "Temperature band", detail: "Current temperature across five zones", category: "weather", keywords: "graph chart temperature zones band current cold warm hot" },
+    { source: "sunriseSunset", label: "Sunrise / sunset", detail: "The next sunrise or sunset", category: "weather", keywords: "value sun sunrise sunset solar next event dawn dusk" },
+    { source: "sunriseSunsetIcon", label: "Sunrise / sunset icon", detail: "Matches the next solar event", category: "weather", keywords: "symbol sun sunrise sunset solar dawn dusk" },
+    { source: "solarTimeline", label: "Daylight graph", detail: "Daylight and the current time", category: "weather", keywords: "graph chart sun sunrise sunset solar daylight timeline noon" },
 ];
 
-export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph?: LibrarySource }>> = {
+export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph?: LibrarySource; graphLabel?: string }>> = {
     heartRate: { icon: "heartIcon" },
     steps: { icon: "stepsIcon", graph: "stepsWeek" },
     floors: { icon: "floorsIcon", graph: "floorsWeek" },
     weeklyWalk: { icon: "walkIcon", graph: "walkWeek" },
     weeklyRun: { icon: "runIcon", graph: "runWeek" },
+    temperature: { icon: "temperatureIcon", graph: "temperatureZones", graphLabel: "Temperature band" },
+    highLow: { icon: "highLowIcon", graph: "temperatureZones", graphLabel: "Temperature band" },
+    temperatureHigh: { icon: "highLowIcon" },
+    temperatureLow: { icon: "highLowIcon" },
+    sunriseSunset: { icon: "sunriseSunsetIcon", graph: "solarTimeline", graphLabel: "Daylight graph" },
 };
 
 /** Present data first; its icon and graph are choices made when adding it. */

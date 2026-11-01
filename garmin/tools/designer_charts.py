@@ -236,13 +236,16 @@ def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_
     elif source == 'solarTimeline':
         sunrise, sunset, now = value
         rect(x, y + height // 2, width, 1, shade(colour, 24))
-        if sunrise is not None and sunset is not None:
-            a, b = width * sunrise // 86400, width * sunset // 86400
-            if b >= a:
-                rect(x + a, y + height // 2 - 1, b - a, 3, colour)
-            else:
-                rect(x, y + height // 2 - 1, b, 3, colour)
-                rect(x + a, y + height // 2 - 1, width - a, 3, colour)
+        if sunrise is None or sunset is None or sunrise == sunset:
+            return ops
+        daylight = (sunset - sunrise) % 86400
+        displayed_sunrise = (86400 - daylight) // 2
+        a, b = width * displayed_sunrise // 86400, width * (displayed_sunrise + daylight) // 86400
+        daylight_top = max(0, height // 2 - 1)
+        daylight_bottom = min(height, height // 2 + 2)
+        rect(x + a, y + daylight_top, b - a, daylight_bottom - daylight_top, colour)
+        solar_noon = (sunrise + daylight // 2) % 86400
+        now = (now + 43200 - solar_noon) % 86400
         rect(x + min(width - 1, max(0, width * now // 86400)), y, 1, height, colour)
     elif source == 'secondsRing':
         font, _ = ring_font(width, ring_radius, ring_inner_radius)

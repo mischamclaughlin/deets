@@ -14,7 +14,7 @@
 .picker-search svg { flex-shrink: 0; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .picker-search input { width: 100%; min-width: 0; height: 39px; border: 0; background: transparent; color: #253332; outline: none; font-size: 12px; }
 .picker-search:focus-within { border-color: #278465; box-shadow: 0 0 0 3px #26856719; }
-.picker-filters { display: flex; gap: 7px; }
+.picker-filters { display: flex; flex-wrap: wrap; gap: 7px; }
 .picker-filters button { min-height: 30px; padding: 5px 13px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #687d71; font-size: 11px; font-weight: 550; }
 .picker-filters button:hover { background: #eaf0eb; }
 .picker-filters button[aria-pressed="true"] { border-color: #c9dfd0; background: #e6f2e9; color: #236348; }

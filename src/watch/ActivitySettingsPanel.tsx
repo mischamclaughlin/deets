@@ -65,13 +65,13 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
             onSceneChange((current) => current === snapshot ? mapping.scene : current);
             if (latestSelection.current === elementId && !mapping.scene.elements.some((item) => item.id === elementId)) onSelect(activity.id);
         } catch (failure) {
-            if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "The activity could not be updated.");
+            if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "The element could not be updated.");
         } finally {
             if (request.current === controller) { request.current = undefined; setBusy(false); }
         }
     }
     return <section className="activity-settings" aria-labelledby="activity-settings-heading">
-        <h2 id="activity-settings-heading">{libraryEntries.find((entry) => entry.source === activity.source)?.label} activity</h2>
+        <h2 id="activity-settings-heading">{libraryEntries.find((entry) => entry.source === activity.source)?.label} settings</h2>
         <label className="guide-toggle"><input type="checkbox" checked={activity.moveTogether !== false} disabled={busy || !layout}
             onChange={(event) => void change({ kind: "movement", enabled: event.target.checked })} />Move icon and data together</label>
         {parts.graph && <p className="activity-setting-help">The graph always moves independently.</p>}
@@ -90,8 +90,8 @@ export function ActivitySettingsPanel({ scene, elementId, onSceneChange, onSelec
                 onCommit={(gap) => void change({ kind: "layout", position: layout.position, gap })} />
         </>}
         {parts.graph && <label className="guide-toggle"><input type="checkbox" checked={hasGraph} disabled={busy}
-            onChange={(event) => void change({ kind: "graph", enabled: event.target.checked })} />Weekly graph</label>}
-        {busy && <p className="typography-status" role="status">Updating activity…</p>}
+            onChange={(event) => void change({ kind: "graph", enabled: event.target.checked })} />{parts.graphLabel ?? "Weekly graph"}</label>}
+        {busy && <p className="typography-status" role="status">Updating element…</p>}
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;
 }

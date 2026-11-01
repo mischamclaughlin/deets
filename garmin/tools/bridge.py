@@ -22,7 +22,7 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py"):
+    for filename in ("designer_model.py", "designer_export.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py"):
         digest.update((ROOT / "tools" / filename).read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():

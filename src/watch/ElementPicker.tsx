@@ -50,7 +50,7 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
                 <input ref={search} type="search" aria-label="Search elements" placeholder="Search elements…" value={query} onChange={(event) => setQuery(event.target.value)} />
             </label>
             <div className="picker-filters" role="group" aria-label="Filter elements">
-                {([['all', 'All'], ['clock', 'Clock & date'], ['activity', 'Activity']] as const).map(([value, label]) =>
+                {([['all', 'All'], ['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun']] as const).map(([value, label]) =>
                     <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)}>{label}</button>)}
             </div>
         </div>
@@ -67,7 +67,7 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
                 <button type="button" onClick={() => { setQuery(""); setCategory("all"); }}>Show all elements</button></div>}
         </div>
         <footer className="picker-footer">
-            <p className="picker-note">Previews use sample data. Activity values update on your watch.</p>
+            <p className="picker-note">Previews use sample data. Values update on your watch.</p>
             <span className="picker-capacity">{remaining === 0 ? "All 40 slots are in use" : `${remaining} of 40 slots available`}</span>
         </footer>
         <div className="picker-feedback" role={error ? "alert" : "status"} aria-live="polite">

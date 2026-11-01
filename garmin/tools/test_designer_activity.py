@@ -21,19 +21,22 @@ class ActivityTests(unittest.TestCase):
 
     def test_each_source_adds_unique_independent_elements_on_every_device(self):
         for device in DEVICES:
-            original = self.scene(device)
-            edited = copy.deepcopy(original)
             for source in sorted(ACTIVITY_SOURCES):
-                edited = add_activity(edited, source)
-                edited = add_activity(edited, source)
-            self.assertEqual(original, self.scene(device))
-            expected_count = 2 * len(ACTIVITY_SOURCES) + 2 * len(ACTIVITY_GROUPS)
-            self.assertEqual(len(edited['elements']), expected_count)
-            self.assertEqual(len({e['id'] for e in edited['elements']}), expected_count)
-            self.assertEqual(validate_scene(edited), edited)
-            mapped = bridge.layout({'scene': edited})
-            self.assertEqual(len(mapped['areas']), expected_count)
-            self.assertTrue(mapped['ops'])
+                with self.subTest(device=device, source=source):
+                    # Exercise every source independently rather than exceeding
+                    # the document's forty-element limit as the catalogue grows.
+                    original = add_activity(self.scene(device), 'steps')
+                    saved = copy.deepcopy(original)
+                    edited = add_activity(add_activity(original, source), source)
+                    expected_count = len(original['elements']) + (4 if source in ACTIVITY_GROUPS else 2)
+                    self.assertEqual(original, saved)
+                    self.assertEqual(edited['elements'][:len(saved['elements'])], saved['elements'])
+                    self.assertEqual(len(edited['elements']), expected_count)
+                    self.assertEqual(len({e['id'] for e in edited['elements']}), expected_count)
+                    self.assertEqual(validate_scene(edited), edited)
+                    mapped = bridge.layout({'scene': edited})
+                    self.assertEqual(len(mapped['areas']), expected_count)
+                    self.assertTrue(mapped['ops'])
 
     def test_icons_keep_all_pixels_inside_their_boxes_and_use_night_colour(self):
         masks = []
@@ -51,7 +54,10 @@ class ActivityTests(unittest.TestCase):
         self.assertNotEqual(masks[1], masks[2])
 
     def test_original_parent_icon_coverage_is_preserved_at_native_size(self):
-        self.assertEqual({path.name for path in icon_asset_paths()}, {'footsteps.png', 'run.png', 'stairs.png', 'heart.png'})
+        self.assertEqual({path.name for path in icon_asset_paths()}, {
+            'footsteps.png', 'run.png', 'stairs.png', 'heart.png', 'temperature.png', 'temperature-sun.png',
+            'sunrise.png', 'sunset.png', 'sun.png', 'cloud.png', 'cloud-rain.png', 'cloud-storm.png',
+            'snowflake.png', 'wind.png', 'mist.png'})
         for source, name in ICON_MASKS.items():
             data = (ICON_DIRECTORY / f'{name}.png').read_bytes()
             width, height = struct.unpack('>II', data[16:24])
@@ -100,9 +106,11 @@ class ActivityTests(unittest.TestCase):
 
     def test_live_and_proof_exports_keep_icon_pixels_and_walking_bindings(self):
         scene = self.scene()
-        # Keep this broad walking-provider fixture inside the conservative export
-        # budget; heart-rate export has its own complete regression fixture.
-        for source in sorted(ACTIVITY_SOURCES - {"heartRate", "heartIcon"}):
+        # Keep the walking-provider regression focused on its original sources;
+        # weather and heart-rate export have their own complete fixtures.
+        walking_sources = {'floors', 'floorsWeek', 'steps', 'weeklyWalk', 'weeklyRun',
+                           'stepsWeek', 'walkWeek', 'runWeek', 'floorsIcon', 'stepsIcon', 'walkIcon', 'runIcon'}
+        for source in sorted(walking_sources):
             scene = add_activity(scene, source)
         for proof in (False, True):
             with tempfile.TemporaryDirectory() as directory:

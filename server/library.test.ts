@@ -90,7 +90,7 @@ test("library search combines category, names and useful activity synonyms", () 
     assert.deepEqual(matchingEntries("activity", "steps").map((entry) => entry.source), ["steps"]);
     assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["steps", "floors", "weeklyWalk", "weeklyRun"]);
     assert.deepEqual(matchingEntries("all", "unknown-item"), []);
-    assert.equal(matchingEntries("all", "   ").length, 8);
+    assert.equal(matchingEntries("all", "   ").length, 13);
 });
 
 test("element names distinguish values, symbols and graphs and number duplicates", () => {
