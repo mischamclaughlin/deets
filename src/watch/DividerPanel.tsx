@@ -42,20 +42,6 @@ export function DividerPanel({ scene, elementId, onSceneChange }: {
                 {symbols.map(({ symbol, name }) => <option key={symbol} value={symbol} aria-label={name}>{symbol}</option>)}
             </select>
         </label>
-        <label className="font-choice">
-            Position
-            <select value={selected.dividerPosition ?? "middle"} disabled={requested !== undefined}
-                onChange={(event) => onSceneChange({
-                    ...scene,
-                    elements: scene.elements.map((element) => element.id === elementId
-                        ? { ...element, dividerPosition: event.target.value as "top" | "middle" | "bottom" }
-                        : element),
-                })}>
-                <option value="top">Top</option>
-                <option value="middle">Middle</option>
-                <option value="bottom">Bottom</option>
-            </select>
-        </label>
         {(requested !== undefined || error) && <p className="typography-status" role={error ? "alert" : "status"}>
             {error ?? "Updating divider…"}
         </p>}

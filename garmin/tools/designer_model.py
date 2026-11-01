@@ -244,7 +244,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "backgroundColour", "nightBackgroundColour", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "verticalAlign", "backgroundColour", "nightBackgroundColour", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -254,6 +254,10 @@ def validate_scene(payload):
         if not isinstance(source, str) or source not in SOURCES:
             raise ValueError("Choose a supported data source.")
         info = SOURCES[source]
+        if "verticalAlign" in original and (info["kind"] != "text"
+                or not isinstance(original["verticalAlign"], str)
+                or original["verticalAlign"] not in {"top", "middle", "bottom"}):
+            raise ValueError("Choose top, middle or bottom vertical alignment for a text element.")
         for background_key in ("backgroundColour", "nightBackgroundColour"):
             if background_key in original:
                 if info["kind"] != "text":
@@ -373,6 +377,8 @@ def validate_scene(payload):
                 result[activity_key] = original[activity_key]
         if "boxSizing" in original:
             result["boxSizing"] = original["boxSizing"]
+        if "verticalAlign" in original:
+            result["verticalAlign"] = original["verticalAlign"]
         if "typography" in original:
             result["typography"] = typography
         if "textPresetId" in original:
@@ -478,12 +484,21 @@ def layout_text(text, element, font):
               element["width"] - total if alignment == "right" else 0)
     cursor = element["x"] - ink_left if element.get("boxSizing") == "hug" else element["x"] + offset
     top = element["y"]
+    vertical_offset = 0
+    if "verticalAlign" in element and element.get("boxSizing") != "hug":
+        visible_glyphs = [glyph for glyph in glyphs if glyph["width"] and glyph["height"]]
+        if visible_glyphs:
+            ink_top = min(glyph["yoffset"] for glyph in visible_glyphs)
+            ink_bottom = max(glyph["yoffset"] + glyph["height"] for glyph in visible_glyphs)
+            spare = element.get("height", font["height"]) - (ink_bottom - ink_top)
+            vertical_offset = (0 if element["verticalAlign"] == "top" else
+                               spare if element["verticalAlign"] == "bottom" else spare // 2)
     clip_right = element["x"] + element["width"]
     clip_bottom = top + element.get("height", font["height"])
     operations = []
     for glyph in glyphs:
-        glyph_y = glyph["yoffset"] - ink_top
-        if element.get("source") == "divider" and element.get("boxSizing") != "hug":
+        glyph_y = glyph["yoffset"] - ink_top + vertical_offset
+        if element.get("source") == "divider" and element.get("boxSizing") != "hug" and "verticalAlign" not in element:
             spare = element.get("height", font["height"]) - glyph["height"]
             position = element.get("dividerPosition", "middle")
             glyph_y = 0 if position == "top" else spare if position == "bottom" else spare // 2

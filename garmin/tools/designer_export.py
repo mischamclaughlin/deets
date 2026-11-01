@@ -162,7 +162,7 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
     icon_cost = 96 * len(icons)
     zone_cost = 160 * sum(catalogue[element["source"]]["kind"] == "zones"
                           for element in scene["elements"])
-    return metadata + references + cache_cost + rectangles + ring_cost + icon_cost + zone_cost + 96 * len(scene["elements"])
+    return metadata + references + cache_cost + rectangles + ring_cost + icon_cost + zone_cost + 104 * len(scene["elements"])
 
 
 def _ring_positions(font):
@@ -295,6 +295,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             zone_colours(element, night=True) if kind == "zones" else [],
             device_colour(element["backgroundColour"]) if "backgroundColour" in element else -1,
             device_colour(element["nightBackgroundColour"]) if "nightBackgroundColour" in element else -1,
+            {"top": 0, "middle": 1, "bottom": 2}.get(element.get("verticalAlign"), -1),
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -514,11 +515,19 @@ class DesignerView extends WatchUi.WatchFace {
         var characters = text.toCharArray();
         var total = 0;
         var advance = 0;
+        var verticalInkTop = 0;
+        var verticalInkBottom = 0;
+        var hasVerticalInk = false;
         for (var i = 0; i < characters.size(); i += 1) {
             var measuredCode = characters[i].toNumber();
             if (element[18] && i >= 5) { measuredCode += 57344; }
             var glyph = glyphFor(font, measuredCode);
             if (glyph != null) {
+                if (glyph[2] > 0 && glyph[3] > 0) {
+                    if (!hasVerticalInk || glyph[4] < verticalInkTop) { verticalInkTop = glyph[4]; }
+                    if (!hasVerticalInk || glyph[4] + glyph[3] > verticalInkBottom) { verticalInkBottom = glyph[4] + glyph[3]; }
+                    hasVerticalInk = true;
+                }
                 if (_fontInkBounds[element[1]]) {
                     var rightEdge = advance + glyph[2];
                     if (rightEdge > total) { total = rightEdge; }
@@ -540,6 +549,13 @@ class DesignerView extends WatchUi.WatchFace {
         var right = left + element[4];
         var top = element[3];
         var bottom = top + element[11];
+        var verticalShift = 0;
+        if (element[27] >= 0 && !element[19] && hasVerticalInk) {
+            var spare = element[11] - (verticalInkBottom - verticalInkTop);
+            verticalShift = -verticalInkTop;
+            if (element[27] == 1) { verticalShift += Math.floor(spare / 2.0).toNumber(); }
+            if (element[27] == 2) { verticalShift += spare; }
+        }
         for (var i = 0; i < characters.size(); i += 1) {
             var code = characters[i].toNumber();
             if (element[18] && i >= 5) { code += 57344; }
@@ -547,8 +563,8 @@ class DesignerView extends WatchUi.WatchFace {
             var glyph = glyphFor(font, code);
             if (glyph == null) { continue; }
             var dx = pen + glyph[6];
-            var glyphY = top + glyph[4] - (element[19] ? element[21] : 0);
-            if (element[0].equals("divider") && !element[19]) {
+            var glyphY = top + glyph[4] - (element[19] ? element[21] : 0) + verticalShift;
+            if (element[0].equals("divider") && !element[19] && element[27] < 0) {
                 var spare = element[11] - glyph[3];
                 glyphY = top;
                 if (element[16] == 1) { glyphY += Math.floor(spare / 2.0).toNumber(); }

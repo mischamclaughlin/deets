@@ -1,5 +1,6 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { editGridLine, gridLines, moveGridLines, type GridLine, type GridSettings } from "./grid.ts";
+import { selectGridArea, type GridArea } from "./grid-area.ts";
 import type { Scene } from "../../shared/scene.ts";
 import { snapGridLineToElements } from "./grid-snapping.ts";
 import "./GridOverlay.css";
@@ -15,6 +16,8 @@ interface Props {
     selectedIds?: string[];
     onSelect: (id: string | undefined, additive?: boolean) => void;
     onChange: (grid: GridSettings) => void;
+    selectedArea?: GridArea;
+    onSelectArea?: (area: GridArea) => void;
 }
 interface Drag {
     pointerId: number;
@@ -32,11 +35,12 @@ function pointer(event: ReactPointerEvent<SVGSVGElement>) {
 }
 
 /** Editable annotations use native coordinates but never enter the exported scene. */
-export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedIds = [], onSelect, onChange }: Props) {
+export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedIds = [], onSelect, onChange, selectedArea, onSelectArea }: Props) {
     const drag = useRef<Drag | undefined>(undefined);
     const pointerFocus = useRef(false);
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
+    const clip = useId();
     function move(event: ReactPointerEvent<SVGSVGElement>) {
         const current = drag.current;
         const point = pointer(event);
@@ -83,7 +87,16 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
             const target = event.target instanceof Element ? event.target.closest<SVGGElement>("[data-grid-id]") : null;
             const line = gridLines(size, inset, grid).find((item) => item.id === target?.dataset.gridId);
             const start = pointer(event);
-            if (!line || !start) return;
+            if (!start) return;
+            if (!line) {
+                if (!onSelectArea) return;
+                const area = selectGridArea(size, inset, grid, start);
+                if (!area) return;
+                event.preventDefault();
+                event.stopPropagation();
+                onSelectArea(area);
+                return;
+            }
             event.preventDefault();
             const additive = event.shiftKey || event.metaKey || event.ctrlKey;
             pointerFocus.current = true;
@@ -99,6 +112,23 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
         onPointerMove={move} onPointerUp={(event) => finish(event, true)}
         onPointerCancel={(event) => finish(event, false)}
         onLostPointerCapture={() => { drag.current = undefined; setPreview(undefined); }}>
+        <defs><clipPath id={clip}><circle cx={size / 2} cy={size / 2} r={radius} /></clipPath></defs>
+        {onSelectArea && <circle className="grid-area-hit" cx={size / 2} cy={size / 2} r={radius}
+            tabIndex={0} role="button" aria-label="Select a grid area. Enter selects the centre; arrow keys move the selection."
+            onKeyDown={(event) => {
+                const step = event.shiftKey ? 10 : 1;
+                const direction = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, number[]>)[event.key];
+                if (!direction && event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                event.stopPropagation();
+                const anchor = selectedArea?.anchor ?? { x: size / 2, y: size / 2 };
+                const area = selectGridArea(size, inset, grid, { x: anchor.x + (direction?.[0] ?? 0), y: anchor.y + (direction?.[1] ?? 0) });
+                if (area) onSelectArea(area);
+            }} />}
+        {selectedArea && <g className="grid-area-selection" clipPath={`url(#${clip})`} aria-hidden="true">
+            <path d={selectedArea.path} />
+            <rect x={selectedArea.box.x} y={selectedArea.box.y} width={selectedArea.box.width} height={selectedArea.box.height} />
+        </g>}
         {gridLines(size, inset, preview ?? grid).map((line) => <g key={line.id} data-grid-id={line.id}
             className={selectedIds.includes(line.id) ? "grid-line selected" : "grid-line"}
             tabIndex={0} role="button" aria-pressed={selectedIds.includes(line.id)}

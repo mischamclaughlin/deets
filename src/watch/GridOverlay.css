@@ -7,3 +7,9 @@
 .watch-grid.grid-editor .grid-line.selected .grid-line-visible,
 .watch-grid.grid-editor .grid-line:focus .grid-line-visible,
 .watch-grid.grid-editor .grid-line:hover .grid-line-visible { stroke: #d2f3e4; stroke-opacity: 1; stroke-width: 1.5; }
+
+.watch-grid.grid-editor .grid-area-hit { fill: transparent; stroke: none; pointer-events: all; cursor: crosshair; }
+.watch-grid.grid-editor .grid-area-hit:focus-visible { outline: none; stroke: var(--rp-pine); stroke-width: 1; }
+.watch-grid.grid-editor .grid-area-selection { pointer-events: none; }
+.watch-grid.grid-editor .grid-area-selection path { fill: var(--rp-foam); fill-opacity: .14; stroke: none; }
+.watch-grid.grid-editor .grid-area-selection rect { fill: none; stroke: var(--rp-foam); stroke-opacity: .8; stroke-width: .75; stroke-dasharray: 3 3; }

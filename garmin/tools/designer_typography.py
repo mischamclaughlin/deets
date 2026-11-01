@@ -405,6 +405,7 @@ def _fit_clock(scene, element_id, metrics, *, validate=True, **changes):
         element.pop("boxSizing", None)
         element.pop("backgroundColour", None)
         element.pop("nightBackgroundColour", None)
+        element.pop("verticalAlign", None)
         if element["source"] != "secondsRing":
             from designer_model import DEVICES
             size = DEVICES[scene["device"]]

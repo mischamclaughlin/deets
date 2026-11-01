@@ -3,6 +3,7 @@ import { devices, type Scene, type SceneElement, type WatchMapping } from "../..
 import { previewWatch } from "./api.ts";
 import { preparedMapping } from "./mapping-cache.ts";
 import { gridLines, type GridSettings } from "./grid.ts";
+import type { GridArea } from "./grid-area.ts";
 import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement, moveSceneElement } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
@@ -17,6 +18,8 @@ interface Props {
     grid?: GridSettings;
     mirrorGrid?: boolean;
     selectedGridLineIds?: string[];
+    selectedGridArea?: GridArea;
+    onSelectGridArea?: (area: GridArea) => void;
     onSelectGridLine?: (id: string | undefined, additive?: boolean) => void;
     onChangeGrid?: (grid: GridSettings) => void;
     snapEnabled?: boolean;
@@ -52,7 +55,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -179,6 +182,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 <GridOverlay key={`${size}-${scene.edgeInset ?? 0}`} size={size} inset={scene.edgeInset ?? 0}
                     grid={grid} mirror={mirrorGrid} selectedIds={selectedGridLineIds}
                     scene={scene} night={night} snapToElements={snapEnabled && snapGridToElements}
+                    selectedArea={selectedGridArea} onSelectArea={onSelectGridArea}
                     onSelect={onSelectGridLine} onChange={onChangeGrid} />
             )}
             {grid?.visible && !onChangeGrid && (

@@ -59,6 +59,8 @@ export interface SceneElement {
     /** Use explicit clipping dimensions or hug the live visible text ink. */
     boxSizing?: "fixed" | "hug";
     align: "left" | "centre" | "right";
+    /** Align visible text ink within its box; omission preserves legacy layout. */
+    verticalAlign?: "top" | "middle" | "bottom";
     colour: number;
     nightColour: number;
     /** Opaque text-box fill; omission keeps that appearance transparent. */

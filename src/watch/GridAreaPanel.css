@@ -1,0 +1,3 @@
+.grid-area-actions { display: grid; gap: 6px; margin-top: 10px; }
+.grid-area-actions button { min-height: 32px; padding: 7px 10px; border: 1px solid var(--rp-border); border-radius: 7px; background: var(--rp-surface); color: var(--rp-text); font: inherit; font-size: 11px; }
+.grid-area-actions button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: 2px; }

@@ -16,6 +16,8 @@ import { TextPresetsPanel } from "./TextPresetsPanel.tsx";
 import { WatchFontPanel } from "./WatchFontPanel.tsx";
 import type { UploadedFont } from "./FontPicker.tsx";
 import { TypographyPanel } from "./TypographyPanel.tsx";
+import { GridAreaPanel } from "./GridAreaPanel.tsx";
+import type { GridArea } from "./grid-area.ts";
 import { GridLinePanel } from "./GridLinePanel.tsx";
 import { WatchCanvas } from "./WatchCanvas.tsx";
 
@@ -49,17 +51,21 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [snapGridToElements, setSnapGridToElements] = useState(true);
     const [grid, setGrid] = useState(defaultGrid);
     const [selectedGridLineIds, setSelectedGridLines] = useState<string[]>([]);
+    const [gridAreaSelection, setGridAreaSelection] = useState<{ area: GridArea; grid: typeof grid; device: string; inset: number }>();
     const setSelectedId = useCallback((id: string | undefined) => {
         setSelectedElement(id);
         setSelectedGridLines([]);
+        setGridAreaSelection(undefined);
     }, []);
     const setSelectedGridLineId = useCallback((id: string | undefined, additive = false) => {
+        setGridAreaSelection(undefined);
         setSelectedGridLines((current) => id === undefined ? [] : additive
             ? current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
             : current.includes(id) ? current : [id]);
         setSelectedElement(undefined);
     }, []);
     function clearSelection() {
+        setGridAreaSelection(undefined);
         setSelectedElement(undefined);
         setSelectedGridLines([]);
     }
@@ -69,6 +75,12 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const size = devices[scene.device];
     const inset = scene.edgeInset ?? 0;
     const gridIds = new Set(gridLines(size, inset, grid).map((line) => line.id));
+    const selectedGridArea = grid.visible && gridAreaSelection?.grid === grid && gridAreaSelection.device === scene.device
+        && gridAreaSelection.inset === inset ? gridAreaSelection.area : undefined;
+    function selectGridArea(area: GridArea) {
+        setSelectedId(undefined);
+        setGridAreaSelection({ area, grid, device: scene.device, inset });
+    }
     const selectedGridLines = selectedGridLineIds.filter((id) => gridIds.has(id));
 
     return (
@@ -245,6 +257,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         outlineMode={outlineMode}
                         grid={grid}
                         selectedGridLineIds={selectedGridLines}
+                        selectedGridArea={selectedGridArea}
+                        onSelectGridArea={selectGridArea}
                         onSelectGridLine={setSelectedGridLineId}
                         onChangeGrid={setGrid}
                         snapEnabled={snapEnabled}
@@ -262,6 +276,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 </p>
             </main>
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings" tabIndex={0}>
+                {selectedGridArea && <GridAreaPanel scene={scene} area={selectedGridArea} onSceneChange={setScene} onSelect={setSelectedId} />}
                 {selectedGridLines.length > 0 && <GridLinePanel key={selectedGridLines.join("|")} size={size} inset={inset} grid={grid}
                     selectedIds={selectedGridLines} onChange={setGrid} onDelete={() => setSelectedGridLineId(undefined)} />}
                 {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
