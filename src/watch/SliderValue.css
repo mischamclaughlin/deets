@@ -1,0 +1,8 @@
+.slider-value-group { display: inline-flex; flex-direction: column; align-items: flex-end; max-width: 65%; gap: 4px; }
+.slider-value { display: inline-flex; align-items: baseline; gap: 3px; max-width: 100%; padding: 3px 6px; border: 1px solid var(--rp-border); border-radius: 6px; background: var(--rp-base); color: var(--rp-text); font-size: 11px; font-variant-numeric: tabular-nums; }
+.watch-sidebar .slider-value input { min-width: 2ch; max-width: 100%; padding: 0; border: 0; border-radius: 0; outline: none; background: transparent; color: inherit; font: inherit; text-align: right; }
+.slider-value:focus-within { border-color: var(--rp-pine); outline: 2px solid var(--rp-pine); outline-offset: 2px; }
+.slider-value[data-invalid="true"] { border-color: var(--rp-love); }
+.slider-value-error { color: var(--rp-love); font-size: 11px; line-height: 1.4; text-align: right; }
+
+.watch-sidebar .slider-value input:focus-visible { outline: none; }

@@ -55,6 +55,14 @@ user direction.
 
 ## Editor behaviour
 
+- Every slider must have an editable numeric value beside it. Users can type a
+  number or an arithmetic expression using `+`, `-`, `*`, `/` and parentheses
+  (for example, `260 / 2` or `88 + 12`). Apply on Enter or blur; Escape cancels.
+  Use the shared bounded arithmetic parser, round to the control's supported
+  step, and enforce the same limits and disabled state as the slider. Invalid
+  calculations must show an accessible error without changing the saved value.
+  Keep units visible and use the shared `SliderValue` control consistently.
+
 - Keep Grid settings compact: paired horizontal/vertical additions with their
   curved toggles, followed by ring count, starting edge and spacing. Adding a
   guide must preserve existing guides and select the new line.

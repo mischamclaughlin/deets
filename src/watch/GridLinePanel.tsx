@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { SliderValue } from "./SliderValue.tsx";
 import { editGridLine, gridLineGap, maxGridLineGap, setGridLineGaps, setGridLineMirrors, type GridSettings } from "./grid.ts";
 import "./GridLinePanel.css";
 
@@ -13,8 +13,6 @@ interface Props {
 
 /** Stretch stays independent of the selected guide's shaded or mirrored presentation. */
 export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDelete }: Props) {
-    const [draft, setDraft] = useState<string>();
-    const cancelled = useRef(false);
     const widths = selectedIds.map((id) => gridLineGap(size, inset, grid, id));
     const width = widths.every((value) => value === widths[0]) ? widths[0] : undefined;
     const maximum = maxGridLineGap(size, inset, grid, selectedIds);
@@ -31,29 +29,10 @@ export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDele
         <p className="control-hint">Stretch a shaded band, or enable Mirror for two clear edges. Drag to move them together.</p>
         <div className="control-heading">
             <label htmlFor="grid-gap-width">Stretch</label>
-            <label className="grid-gap-value" title="Edit stretch">
-                <input type="text" inputMode="numeric" aria-label="Stretch in pixels"
-                    size={Math.max(1, String(draft ?? width ?? "Mixed").length)}
-                    value={draft ?? width ?? ""} placeholder="Mixed"
-                    onFocus={(event) => { cancelled.current = false; event.currentTarget.select(); }}
-                    onChange={(event) => setDraft(event.target.value)}
-                    onBlur={() => {
-                        if (!cancelled.current && draft !== undefined && draft.trim() !== "") {
-                            const value = Number(draft);
-                            if (Number.isSafeInteger(value) && value >= 0) change(value);
-                        }
-                        cancelled.current = false;
-                        setDraft(undefined);
-                    }}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") event.currentTarget.blur();
-                        if (event.key === "Escape") { cancelled.current = true; setDraft(undefined); event.currentTarget.blur(); }
-                    }} />
-                {(draft !== undefined || width !== undefined) && <span aria-hidden="true">px</span>}
-            </label>
+            <SliderValue label="Stretch" value={width} min={0} max={maximum} onChange={change} />
         </div>
         <input id="grid-gap-width" type="range" min={0} max={maximum} step={1} value={width ?? 0}
-            onChange={(event) => { setDraft(undefined); change(Number(event.target.value)); }} />
+            onChange={(event) => change(Number(event.target.value))} />
         <button type="button" className="snap-button" onClick={() => {
             onChange(selectedIds.reduce((next, id) => editGridLine(size, inset, next, id, null), grid));
             onDelete();

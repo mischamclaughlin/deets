@@ -1,3 +1,4 @@
+import { SliderValue } from "./SliderValue.tsx";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { devices, type Scene } from "../../shared/scene.ts";
 import { previewWatch, setActivityGraph } from "./api.ts";
@@ -13,7 +14,8 @@ function GapInput({ gap, max, disabled, invalid, onCommit }: {
     return <div className="typography-control">
         <div className="control-heading">
             <label htmlFor={id}>Icon–data gap</label>
-            <output htmlFor={id}>{draft} px</output>
+            <SliderValue label="Icon–data gap" value={draft} min={0} max={Math.max(max, gap)} disabled={disabled}
+                onChange={(value) => { setDraft(value); if (value !== gap) onCommit(value); }} />
         </div>
         <input id={id} type="range" min={0} max={Math.max(max, gap)} step={1} value={draft} disabled={disabled}
             aria-invalid={invalid || undefined} aria-valuetext={`${draft} pixels`}

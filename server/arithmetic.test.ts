@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { evaluateSliderExpression } from "../src/watch/slider-expression.ts";
 import { evaluatePixelExpression } from "../src/watch/arithmetic.ts";
 
 test("pixel calculations follow precedence, parentheses and unary signs", () => {
@@ -34,4 +35,17 @@ test("pixel calculations reject division by zero and bounded resource abuse", ()
     assert.throws(() => evaluatePixelExpression("1000000001"), /one billion/);
     assert.throws(() => evaluatePixelExpression("1000000000 * 1000000000"), /one billion/);
     assert.equal(evaluatePixelExpression("1000000000 / 1000000000"), 1);
+});
+
+test("slider calculations enforce the same bounds for pixels and percentages", () => {
+    assert.equal(evaluateSliderExpression("260 / 2", 12, 160), 130);
+    assert.equal(evaluateSliderExpression("88 + 12", 12, 160), 100);
+    assert.equal(evaluateSliderExpression("(50 + 25) * 2", 50, 200), 150);
+    assert.equal(evaluateSliderExpression("-8 / 2", -4, 24), -4);
+    assert.equal(evaluateSliderExpression("3 / 2", 0, 10), 2);
+    assert.equal(evaluateSliderExpression("100 - 100", 0, 0), 0);
+    for (const expression of ["260", "160 + 1", "12 - 1"])
+        assert.throws(() => evaluateSliderExpression(expression, 12, 160), /from 12 to 160/);
+    for (const expression of ["1 / 0", "2 +", "alert(1)"])
+        assert.throws(() => evaluateSliderExpression(expression, 0, 100));
 });
