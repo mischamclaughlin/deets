@@ -13,6 +13,8 @@ import xml.etree.ElementTree as ET
 from designer_model import CATALOG, scene_font_pack, validate_scene
 from designer_charts import chart_ops, ring_font, ring_signature, device_colour
 from designer_fonts import write_fonts, graphics_cost, FONT_GRAPHICS_BUDGET
+from designer_export_icons import icon_font, icon_signature
+from designer_colours import zone_colours
 
 
 TYPE_SOURCES = {
@@ -31,7 +33,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py"):
+    for filename in ("designer_export.py", "designer_export_icons.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():
@@ -148,13 +150,19 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
             cache_cost += 512  # Dynamic bounds and the resolved clipping-box row.
     rectangles = 0
     for element in scene["elements"]:
-        if (proof and catalogue[element["source"]]["kind"] not in {"text", "ring"}) or catalogue[element["source"]]["kind"] == "icon":
+        if proof and catalogue[element["source"]]["kind"] not in {"text", "ring", "icon"}:
             rectangles += 40 * (len(chart_ops(element)) + len(chart_ops(element, night=True)))
     # Native tick coverage lives in the graphics pool, with only compact draw
     # positions in VM memory. Identical geometry shares one resource and table.
     rings = {ring_signature(scene, element) for element in scene["elements"] if element["source"] == "secondsRing"}
     ring_cost = sum(_ring_resource_cost(signature) for signature in rings)
-    return metadata + references + cache_cost + rectangles + ring_cost + 80 * len(scene["elements"])
+    icons = {icon_signature(element) for element in scene["elements"]
+             if catalogue[element["source"]]["kind"] == "icon"}
+    # Icon coverage and variants live in shared native fonts in the graphics pool.
+    icon_cost = 96 * len(icons)
+    zone_cost = 160 * sum(catalogue[element["source"]]["kind"] == "zones"
+                          for element in scene["elements"])
+    return metadata + references + cache_cost + rectangles + ring_cost + icon_cost + zone_cost + 80 * len(scene["elements"])
 
 
 def _ring_positions(font):
@@ -242,26 +250,36 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             resource_fonts.append(key)
             resource_codes[key] = visible_codes
             pack["fonts"][key], pack["images"][key] = font, image
+    icon_fonts = {}
+    for element in scene["elements"]:
+        if catalogue[element["source"]]["kind"] != "icon":
+            continue
+        signature = icon_signature(element)
+        if signature in icon_fonts:
+            continue
+        key = f"icon:{len(icon_fonts)}"
+        font, image = icon_font(element)
+        icon_fonts[signature] = len(resource_fonts)
+        resource_fonts.append(key)
+        resource_codes[key] = {int(code) for code in font["glyphs"]}
+        pack["fonts"][key], pack["images"][key] = font, image
     if graphics_cost(pack, resource_codes) > FONT_GRAPHICS_BUDGET:
         raise ValueError("This design exceeds the conservative font graphics budget. Use fewer or smaller font styles before exporting.")
     rows = []
-    from designer_activity import ICON_VARIANTS, icon_ops
+    from designer_activity import ICON_VARIANTS
     from designer_weather import weather_icon_switch
     for element in scene["elements"]:
         source = element["source"]
         kind = catalogue[source]["kind"]
         day_rectangles = []
         night_rectangles = []
-        if (proof and kind not in {"text", "ring"}) or kind == "icon":
+        if proof and kind not in {"text", "ring", "icon"}:
             for night, destination in ((False, day_rectangles), (True, night_rectangles)):
                 destination.extend([[operation[key] for key in ("x", "y", "width", "height", "colour")]
                                     for operation in chart_ops(element, night=night)])
-        variants = []
-        if source in ICON_VARIANTS:
-            variants = [[[operation[key] for key in ("x", "y", "width", "height")]
-                         for operation in icon_ops(element, variant)] for variant in ICON_VARIANTS[source]]
         rows.append([
             source, (ring_fonts.get(ring_indices[ring_signature(scene, element)], 0) if source == "secondsRing"
+                     else icon_fonts[icon_signature(element)] if kind == "icon"
                      else font_indices.get(element["font"], 0)), element["x"], element["y"],
             element["width"], {"left": 0, "centre": 1, "right": 2}[element["align"]],
             device_colour(element["colour"]) if kind == "text" else element["colour"],
@@ -272,7 +290,9 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             {"top": 0, "middle": 1, "bottom": 2}[element.get("dividerPosition", "middle")],
             ring_indices.get(ring_signature(scene, element), -1) if source == "secondsRing" else -1,
             source == "timeSeconds" and element.get("secondsSize", "full") == "half",
-            element.get("boxSizing") == "hug", 0, 0, variants,
+            element.get("boxSizing") == "hug", 0, 0, [],
+            zone_colours(element) if kind == "zones" else [],
+            zone_colours(element, night=True) if kind == "zones" else [],
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -620,20 +640,21 @@ class DesignerView extends WatchUi.WatchFace {
     }
 
     private function drawChart(dc as Graphics.Dc, element as Array, colour as Number, night as Boolean) {
-        if ((_proof && !element[10].equals("ring")) || element[10].equals("icon")) {
-            var rectangles = (night ? element[13] : element[12]) as Array<Array<Number>>;
-            var iconVariants = element[22] as Array;
-            if (!_proof && iconVariants.size() > 0) {
-                var index = element[0].equals("temperatureIcon") ? weatherIconIndex(_snapshot.weatherCondition)
-                    : (_snapshot.solarEventIsSunset ? 1 : 0);
-                var variant = iconVariants[index] as Array<Array<Number>>;
-                dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
-                for (var i = 0; i < variant.size(); i += 1) {
-                    var rectangle = variant[i];
-                    dc.fillRectangle(rectangle[0], rectangle[1], rectangle[2], rectangle[3]);
-                }
-                return;
+        if (element[10].equals("icon")) {
+            var index = 0;
+            if (!_proof) {
+                if (element[0].equals("temperatureIcon")) { index = weatherIconIndex(_snapshot.weatherCondition); }
+                else if (element[0].equals("sunriseSunsetIcon")) { index = _snapshot.solarEventIsSunset ? 1 : 0; }
             }
+            dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
+            dc.setClip(element[2], element[3], element[4], element[11]);
+            dc.drawText(element[2], element[3], _nativeFonts[element[1]],
+                        (57856 + index).toChar().toString(), Graphics.TEXT_JUSTIFY_LEFT);
+            dc.clearClip();
+            return;
+        }
+        if (_proof && !element[10].equals("ring")) {
+            var rectangles = (night ? element[13] : element[12]) as Array<Array<Number>>;
             for (var i = 0; i < rectangles.size(); i += 1) {
                 var rectangle = rectangles[i];
                 dc.setColor(rectangle[4], Graphics.COLOR_TRANSPARENT);
@@ -680,7 +701,7 @@ class DesignerView extends WatchUi.WatchFace {
             }
             var active = 0;
             if (value != null) { while (active < 4 && value > thresholds[active + 1]) { active += 1; } }
-            var colours = [0x4D9DE0, 0x35D7FF, 0x27813F, 0xFF7A00, 0xFF4D67];
+            var colours = (night ? element[24] : element[23]) as Array<Number>;
             for (var i = 0; i < 5; i += 1) {
                 var start = Math.floor(i * (width - 12) / 5.0).toNumber();
                 var end = Math.floor((i + 1) * (width - 12) / 5.0).toNumber();

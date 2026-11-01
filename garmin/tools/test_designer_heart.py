@@ -93,9 +93,13 @@ class HeartTests(unittest.TestCase):
                     encoded = re.search(r"private var _elements as Array<Array> = (.*);", source)
                     rows = json.loads(encoded.group(1))
                     self.assertEqual([row[0] for row in rows], ["heartRate", "heartIcon"])
-                    rectangles = rows[1][13 if night else 12]
-                    self.assertEqual(rectangles, [[operation[key] for key in ("x", "y", "width", "height", "colour")]
-                                                 for operation in chart_ops(icon, night=night)])
+                    from designer_export_icons import icon_font
+                    from designer_fonts import _coverage_png
+                    _, image = icon_font(icon)
+                    self.assertEqual(rows[1][12:14], [[], []])
+                    self.assertEqual(rows[1][7 if night else 6], icon["nightColour" if night else "colour"])
+                    resource = project / f"resources/designer-fonts/font-{rows[1][1]}.png"
+                    self.assertEqual(resource.read_bytes(), _coverage_png(image))
                     provider = (project / "source/EpixCanvasComplications.mc").read_text()
                     self.assertIn('_slotTypes = [18];', provider)
                     self.assertIn('case "heartRate": return _provider.designerValue(18);', source)

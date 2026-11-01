@@ -115,7 +115,7 @@ def apply_text_preset(scene, element_id, preset_id):
 
 
 def set_colour_presets(scene, presets):
-    from designer_colours import colour_presets
+    from designer_colours import colour_presets, set_channel
     scene = validate_scene(scene)
     checked = colour_presets(presets)
     registry = {preset["id"]: preset["colour"] for preset in checked}
@@ -127,38 +127,38 @@ def set_colour_presets(scene, presets):
                 continue
             preset_id = element[link_key]
             if preset_id in registry:
-                element[value_key] = registry[preset_id]
+                set_channel(element, "day" if value_key == "colour" else "night", registry[preset_id], preset_id)
             else:
                 element.pop(link_key)
+        for appearance, links_key in (("day", "zoneColourPresetIds"), ("night", "nightZoneColourPresetIds")):
+            for index, preset_id in enumerate(list(element.get(links_key, []))):
+                if preset_id is not None:
+                    set_channel(element, f"{appearance}:zone:{index}", registry.get(preset_id), preset_id if preset_id in registry else None)
     return validate_scene(edited)
 
 
 def set_element_colour(scene, element_id, channel, colour):
-    from designer_colours import colour_value, colour_channel
+    from designer_colours import colour_value, set_channel
     scene = validate_scene(scene)
-    value_key, link_key = colour_channel(channel)
     checked = colour_value(colour)
     edited = copy.deepcopy(scene)
     _, target = _target(edited, element_id)
-    target.pop(link_key, None)
-    target[value_key] = checked
+    set_channel(target, channel, checked)
     return validate_scene(edited)
 
 
 def set_element_colour_preset(scene, element_id, channel, preset_id):
-    from designer_colours import colour_channel
+    from designer_colours import set_channel
     scene = validate_scene(scene)
-    value_key, link_key = colour_channel(channel)
     edited = copy.deepcopy(scene)
     _, target = _target(edited, element_id)
     if preset_id is None:
-        target.pop(link_key, None)
+        set_channel(target, channel)
     else:
         if not isinstance(preset_id, str):
             raise ValueError("Choose an existing named colour preset.")
         preset = next((preset for preset in scene.get("colourPresets", []) if preset["id"] == preset_id), None)
         if preset is None:
             raise ValueError("Choose an existing named colour preset.")
-        target[link_key] = preset_id
-        target[value_key] = preset["colour"]
+        set_channel(target, channel, preset["colour"], preset_id)
     return validate_scene(edited)

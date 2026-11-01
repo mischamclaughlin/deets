@@ -229,7 +229,8 @@ def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_
         boundaries = [110, 130, 150, 170] if source == 'heartZones' else [0, 10, 20, 30]
         active = sum(value > boundary for boundary in boundaries)
         usable = width - 12
-        for i, c in enumerate([0x4D9DE0, 0x35D7FF, 0x27813F, 0xFF7A00, 0xFF4D67]):
+        from designer_colours import zone_colours
+        for i, c in enumerate(zone_colours(element, night)):
             h = height if i == active else max(1, math.floor(height * 0.4))
             left, right = i * usable // 5, (i + 1) * usable // 5
             rect(x + left + i * 3, y + (height - h) // 2, right - left, h, c if i == active else shade(c, 24))

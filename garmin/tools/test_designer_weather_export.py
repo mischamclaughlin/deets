@@ -1,6 +1,7 @@
 """Weather icons and solar graphs keep native geometry and live parent behaviour."""
 import json
 import re
+import subprocess
 import tempfile
 import unittest
 
@@ -33,19 +34,32 @@ class WeatherExportTests(unittest.TestCase):
             for source in activity.ICON_VARIANTS:
                 with self.subTest(device=device, source=source):
                     scene = self.scene(source, device)
-                    _, code, rows = self.project(scene)
-                    variants = rows[0][22]
-                    self.assertEqual(len(variants), len(activity.ICON_VARIANTS[source]))
+                    project, code, rows = self.project(scene)
+                    row = rows[0]
+                    atlas_width = 32 * len(activity.ICON_VARIANTS[source])
+                    resource = project / f"resources/designer-fonts/font-{row[1]}"
+                    descriptor = resource.with_suffix(".fnt").read_text()
+                    coverage = subprocess.check_output(["magick", str(resource.with_suffix(".png")), "-depth", "8", "gray:-"])
+                    self.assertEqual(len(coverage), atlas_width * 32)
                     for index, name in enumerate(activity.ICON_VARIANTS[source]):
-                        expected = [[operation[key] for key in ("x", "y", "width", "height")]
-                                    for operation in activity.icon_ops(scene["elements"][0], name)]
-                        self.assertEqual(variants[index], expected)
+                        expected = set()
+                        element = scene["elements"][0]
+                        for operation in activity.icon_ops(element, name):
+                            expected.update((x - element["x"], y - element["y"])
+                                for x in range(operation["x"], operation["x"] + operation["width"])
+                                for y in range(operation["y"], operation["y"] + operation["height"]))
+                        actual = {(x, y) for y in range(32) for x in range(32)
+                                  if coverage[y * atlas_width + index * 32 + x]}
+                        self.assertEqual(actual, expected)
+                        self.assertIn(f"char id={0xE200 + index} x={index * 32} y=0 width=32 height=32 xoffset=0 yoffset=0 xadvance=32", descriptor)
                     for night in (False, True):
                         colour = scene["elements"][0]["nightColour" if night else "colour"]
-                        self.assertEqual(rows[0][13 if night else 12], [rectangle + [colour] for rectangle in variants[0]])
-                    self.assertIn("if (!_proof && iconVariants.size() > 0)", code)
-                    self.assertIn("var variant = iconVariants[index] as Array<Array<Number>>;", code)
+                        self.assertEqual(row[7 if night else 6], colour)
+                        self.assertEqual(row[13 if night else 12], [])
+                    self.assertIn("if (!_proof)", code)
+                    self.assertIn("(57856 + index).toChar().toString()", code)
                     self.assertIn("dc.setColor(colour, Graphics.COLOR_TRANSPARENT);", code)
+                    self.assertIn("dc.setClip(element[2], element[3], element[4], element[11]);", code)
 
     def test_icon_only_exports_subscribe_to_the_data_needed_for_live_variants(self):
         for source, complication in (("temperatureIcon", 38), ("sunriseSunsetIcon", 13)):
@@ -73,7 +87,8 @@ class WeatherExportTests(unittest.TestCase):
     def test_proof_keeps_base_icon_and_static_icons_do_not_add_variant_rows(self):
         _, code, rows = self.project(self.scene("temperatureIcon"), proof=True)
         self.assertIn("private var _proof = true;", code)
-        self.assertEqual(rows[0][12], [rectangle + [rows[0][6]] for rectangle in rows[0][22][0]])
+        self.assertEqual(rows[0][12:14], [[], []])
+        self.assertIn("var index = 0;\n            if (!_proof)", code)
         project, _, rows = self.project(self.scene("highLowIcon"))
         self.assertEqual(rows[0][22], [])
         self.assertIn("_slotTypes = [];", (project / "source/EpixCanvasComplications.mc").read_text())

@@ -124,12 +124,20 @@ class ActivityTests(unittest.TestCase):
                 self.assertIn('case "weeklyWalk": return _provider.designerValue(-5);', code)
                 self.assertIn('_slotTypes = [-5, 2, 4, 19];', provider)
                 self.assertIn('_widgetTypes = [-5, 2, 4, 19];', provider)
-                self.assertIn('|| element[10].equals("icon")', code)
+                self.assertIn('if (element[10].equals("icon"))', code)
                 for element in scene['elements']:
                     if element['source'] in ICON_MASKS:
-                        from designer_export import _mc
-                        rectangles = [[op[k] for k in ('x','y','width','height','colour')] for op in chart_ops(element)]
-                        self.assertIn(_mc(rectangles), code)
+                        from designer_export_icons import icon_font
+                        from designer_fonts import _coverage_png
+                        import json
+                        import re
+                        rows = json.loads(re.search(r"private var _elements as Array<Array> = (.*);", code).group(1))
+                        row = rows[scene['elements'].index(element)]
+                        _, image = icon_font(element)
+                        self.assertEqual(row[12:14], [[], []])
+                        self.assertEqual(row[6:8], [element['colour'], element['nightColour']])
+                        resource = project / f"resources/designer-fonts/font-{row[1]}.png"
+                        self.assertEqual(resource.read_bytes(), _coverage_png(image))
 
     def test_activity_companions_are_atomic_native_layouts_on_every_device(self):
         from itertools import product

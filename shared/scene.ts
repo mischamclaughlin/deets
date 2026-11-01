@@ -37,6 +37,8 @@ export interface TextPreset extends TextDefaults {
     id: string;
     name: string;
 }
+export type ColourChannel = "day" | "night" | `day:zone:${0 | 1 | 2 | 3 | 4}` | `night:zone:${0 | 1 | 2 | 3 | 4}`;
+export const defaultZoneColours = [0x4D9DE0, 0x35D7FF, 0x27813F, 0xFF7A00, 0xFF4D67] as const;
 export interface ColourPreset {
     id: string;
     name: string;
@@ -61,6 +63,11 @@ export interface SceneElement {
     nightColour: number;
     colourPresetId?: string;
     nightColourPresetId?: string;
+    /** Five independently editable bands for heart-rate and temperature charts. */
+    zoneColours?: number[];
+    nightZoneColours?: number[];
+    zoneColourPresetIds?: (string | null)[];
+    nightZoneColourPresetIds?: (string | null)[];
     visible: "both" | "day" | "night";
     text?: string;
     /** Live link to a named numeric typography preset. */

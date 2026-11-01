@@ -244,7 +244,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -358,6 +358,8 @@ def validate_scene(payload):
         for link_key in ("colourPresetId", "nightColourPresetId"):
             if link_key in original:
                 result[link_key] = original[link_key]
+        from designer_colours import validate_zone_colours
+        validate_zone_colours(original, result, colour_registry)
         for activity_key in ("activityId", "moveTogether"):
             if activity_key in original:
                 result[activity_key] = original[activity_key]

@@ -1,4 +1,4 @@
-import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourChannel, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 import { preparedMapping, rememberMapping } from "./mapping-cache.ts";
 
 async function post<T>(
@@ -118,10 +118,10 @@ export const applyTextPreset = (scene: Scene, elementId: string, presetId: strin
 export const setColourPresets = (scene: Scene, presets: ColourPreset[], signal?: AbortSignal) =>
     post<WatchMapping>("colour-presets", { scene, presets }, signal);
 
-export const setElementColour = (scene: Scene, elementId: string, channel: "day" | "night", colour: number, signal?: AbortSignal) =>
+export const setElementColour = (scene: Scene, elementId: string, channel: ColourChannel, colour: number, signal?: AbortSignal) =>
     post<WatchMapping>("element-colour", { scene, elementId, channel, colour }, signal);
 
-export const setElementColourPreset = (scene: Scene, elementId: string, channel: "day" | "night", presetId: string | null, signal?: AbortSignal) =>
+export const setElementColourPreset = (scene: Scene, elementId: string, channel: ColourChannel, presetId: string | null, signal?: AbortSignal) =>
     post<WatchMapping>("element-colour-preset", { scene, elementId, channel, presetId }, signal);
 
 export const addDate = (scene: Scene, signal?: AbortSignal) =>
