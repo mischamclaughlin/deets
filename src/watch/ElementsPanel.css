@@ -1,8 +1,14 @@
 .layers-caption { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 12px; color: var(--rp-subtle); font-size: 10px; }
-.layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); transition: border-color 120ms ease, background-color 120ms ease, opacity 120ms ease; }
+.layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); touch-action: pan-x; user-select: none; cursor: grab; transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
 .layer-list .layer-row + .layer-row { margin-top: 6px; }
 .layer-row[data-selected="true"] { border-color: var(--rp-pine); background: var(--rp-low); }
-.layer-row[data-dragging="true"] { opacity: 0.45; }
+.layer-list[data-drag-active="true"] { isolation: isolate; }
+.layer-list[data-drag-active="true"] .layer-row { will-change: transform; }
+.layer-list[data-drag-active="true"] button:disabled { opacity: 1; cursor: inherit; }
+.layer-list .layer-row[data-dragging="true"] { z-index: 2; cursor: grabbing; border-color: var(--rp-pine); background: var(--rp-overlay); box-shadow: 0 6px 18px color-mix(in srgb, var(--rp-base) 35%, transparent); }
+.layer-list .layer-row[data-dragging="true"][data-settling="false"] { transition: border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
+.layer-list .layer-row[aria-disabled="true"] { cursor: default; }
+.layer-list .layer-row .element-choice { cursor: inherit; }
 .layer-list .element-choice { flex: 1; min-width: 0; width: auto; padding: 8px 8px 8px 2px; gap: 6px; }
 .layer-list .element-choice > span:not([class]) { flex: 1; min-width: 0; }
 .layer-list .element-choice[aria-pressed="true"] { border-color: transparent; box-shadow: none; background: transparent; }
@@ -12,11 +18,10 @@
 .layer-handle svg { width: 12px; height: 18px; fill: currentColor; }
 .layer-handle:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
 .layer-number { flex-shrink: 0; min-width: 15px; text-align: right; color: var(--rp-subtle); font-size: 10px; font-variant-numeric: tabular-nums; }
-.layer-row[data-drop-edge]::after { content: ""; position: absolute; z-index: 1; left: 0; right: 0; height: 2px; border-radius: 2px; background: var(--rp-pine); pointer-events: none; }
-.layer-row[data-drop-edge="before"]::after { top: -5px; }
-.layer-row[data-drop-edge="after"]::after { bottom: -5px; }
 @media (hover: hover) {
     .layer-row:hover { border-color: var(--rp-pine); }
     .layer-handle:hover { color: var(--rp-pine); background: var(--rp-low); }
 }
-@media (prefers-reduced-motion: reduce) { .layer-list .layer-row { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .layer-list .layer-row, .layer-list .layer-row[data-dragging="true"][data-settling="false"] { transition: none; }
+}

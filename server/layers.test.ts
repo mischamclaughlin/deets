@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { callBridge } from "./bridge.ts";
 import type { Scene, WatchMapping } from "../shared/scene.ts";
 import { scene as initialScene } from "../src/watch/scene.ts";
+import { layerDragLayout } from "../src/watch/layer-drag.ts";
 import { frontToBack, moveLayer, placeLayer } from "../src/watch/layers.ts";
 import { preparedMapping, rememberMapping } from "../src/watch/mapping-cache.ts";
 
@@ -54,5 +55,52 @@ test("reordering invalidates prepared ink and maps overlapping layers in the sam
         assert.deepEqual(mapped.scene, reordered);
         assert.deepEqual([...new Set(mapped.ops.map((operation) => operation.elementId))], ids(reordered));
         assert.deepEqual(mapped.areas.map((area) => area.id), ids(reordered));
+    }
+});
+
+const slots = ["a", "b", "c", "d"].map((id, index) => ({ id, top: 100 + index * 50, height: 44 }));
+
+test("tiles cross insertion midpoints and leave a full tile-sized space", () => {
+    assert.equal(layerDragLayout(slots, "b", 24).destination, 1);
+    const down = layerDragLayout(slots, "b", 26);
+    assert.equal(down.destination, 2);
+    assert.deepEqual([...down.shifts], [["a", 0], ["c", -50], ["b", 50], ["d", 0]]);
+    const up = layerDragLayout(slots, "c", -76);
+    assert.equal(up.destination, 0);
+    assert.deepEqual([...up.shifts], [["c", -100], ["a", 50], ["b", 50], ["d", 0]]);
+    assert.equal(layerDragLayout(slots, "b", 0).destination, 1);
+});
+
+test("pointer movement is clamped to the list and handles a single tile", () => {
+    const top = layerDragLayout(slots, "b", -1000);
+    assert.equal(top.offset, -50);
+    assert.equal(top.destination, 0);
+    const bottom = layerDragLayout(slots, "b", 1000);
+    assert.equal(bottom.offset, 100);
+    assert.equal(bottom.destination, 3);
+    assert.equal(layerDragLayout(slots.slice(0, 1), "a", 100).offset, 0);
+    assert.equal(layerDragLayout([], "missing", 100).destination, -1);
+});
+
+test("unequal tile heights reach every slot without overlap or changing total height", () => {
+    const varied = [100, 30, 60, 44].map((height, index, heights) => ({
+        id: String(index), height, top: heights.slice(0, index).reduce((total, value) => total + value + 6, 0),
+    }));
+    for (const source of varied) {
+        for (let destination = 0; destination < varied.length; destination++) {
+            const remaining = varied.filter((slot) => slot !== source);
+            const target = remaining.slice(0, destination).reduce((top, slot) => top + slot.height + 6, 0);
+            const layout = layerDragLayout(varied, source.id, target - source.top);
+            assert.equal(layout.destination, destination);
+            const order = [...remaining];
+            order.splice(destination, 0, source);
+            let bottom = -6;
+            for (const slot of order) {
+                const top = slot.top + layout.shifts.get(slot.id)!;
+                assert.equal(top, bottom + 6);
+                bottom = top + slot.height;
+            }
+            assert.equal(bottom, 252);
+        }
     }
 });
