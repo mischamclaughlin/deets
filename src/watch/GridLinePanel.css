@@ -30,3 +30,10 @@
 .grid-line-panel .section-heading h2 { margin: 0; }
 .grid-line-panel .section-heading .guide-toggle { font-size: 11px; }
 .grid-line-panel .control-hint { margin-bottom: 12px; }
+.grid-line-detail { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.grid-line-detail h3 { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; font-size: 12px; text-transform: capitalize; }
+.grid-line-detail h3 span { color: var(--muted); font-size: 10px; font-weight: normal; text-transform: none; }
+.grid-line-detail dl { display: grid; gap: 6px; margin: 0; font-size: 11px; }
+.grid-line-detail dl > div { display: flex; justify-content: space-between; gap: 8px; }
+.grid-line-detail dt { color: var(--muted); }
+.grid-line-detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
