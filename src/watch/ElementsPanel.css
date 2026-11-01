@@ -1,9 +1,12 @@
 .layers-caption { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 12px; color: var(--rp-subtle); font-size: 10px; }
-.layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); touch-action: pan-x; user-select: none; cursor: grab; transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
+.layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); touch-action: pan-x; user-select: none; cursor: grab; transition: border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
 .layer-list .layer-row + .layer-row { margin-top: 6px; }
 .layer-row[data-selected="true"] { border-color: var(--rp-pine); background: var(--rp-low); }
+/* Temporary offsets animate only during a gesture. Once DOM order is committed,
+   clearing those offsets must be immediate to avoid a second movement. */
+.layer-list { overflow-anchor: none; }
 .layer-list[data-drag-active="true"] { isolation: isolate; }
-.layer-list[data-drag-active="true"] .layer-row { will-change: transform; }
+.layer-list[data-drag-active="true"] .layer-row { will-change: transform; transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
 .layer-list[data-drag-active="true"] button:disabled { opacity: 1; cursor: inherit; }
 .layer-list .layer-row[data-dragging="true"] { z-index: 2; cursor: grabbing; border-color: var(--rp-pine); background: var(--rp-overlay); box-shadow: 0 6px 18px color-mix(in srgb, var(--rp-base) 35%, transparent); }
 .layer-list .layer-row[data-dragging="true"][data-settling="false"] { transition: border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
@@ -23,5 +26,5 @@
     .layer-handle:hover { color: var(--rp-pine); background: var(--rp-low); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .layer-list .layer-row, .layer-list .layer-row[data-dragging="true"][data-settling="false"] { transition: none; }
+    .layer-list .layer-row, .layer-list[data-drag-active="true"] .layer-row, .layer-list .layer-row[data-dragging="true"][data-settling="false"] { transition: none; }
 }

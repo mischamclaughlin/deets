@@ -1,7 +1,10 @@
 .layer-panel { margin-top: 18px; }
-.layer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.layer-actions button { min-width: 0; min-height: 36px; padding: 8px 12px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); color: var(--rp-text); font: inherit; font-size: 12px; cursor: pointer; }
-.layer-actions button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: 2px; }
-.layer-actions button:disabled { opacity: 0.5; cursor: default; }
-@media (hover: hover) { .layer-actions button:not(:disabled):hover { border-color: var(--rp-pine); background: var(--rp-low); } }
+.layer-toolbar { display: flex; align-items: center; gap: 10px; }
+.layer-toolbar .control-heading { flex: 1; align-items: center; justify-content: flex-start; gap: 8px; margin: 0; white-space: nowrap; }
+.layer-toolbar .control-heading output { min-width: 0; padding: 0; border: 0; background: transparent; color: var(--rp-subtle); font-size: 10px; }
+.layer-actions { display: flex; flex-shrink: 0; gap: 2px; padding: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); }
+.layer-actions button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--rp-text); cursor: pointer; }
+.layer-actions button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
+.layer-actions button:disabled { color: var(--rp-subtle); opacity: 0.5; cursor: default; }
+@media (hover: hover) { .layer-actions button:not(:disabled):hover { border-color: var(--rp-border); background: var(--rp-low); color: var(--rp-pine); } }
 .layers-announcement { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
