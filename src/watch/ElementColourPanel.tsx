@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
 import { setElementColour, setElementColourPreset } from "./api.ts";
+import { TextBackgroundControls } from "./TextBackgroundControls.tsx";
 import { ColourInput } from "./ColourInput.tsx";
 
 type Channel = "day" | "night";
@@ -61,6 +62,7 @@ export function ElementColourPanel({ scene, elementId, onSceneChange }: {
                     onChange={(value) => queue({ channel, kind: "colour", colour: value })} />
             </div>;
         })}
+        <TextBackgroundControls scene={scene} elementId={elementId} onSceneChange={onSceneChange} />
         {pending.length > 0 && !error && <p className="typography-status" role="status">Updating colours…</p>}
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;

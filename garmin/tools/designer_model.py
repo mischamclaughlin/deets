@@ -244,7 +244,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "backgroundColour", "nightBackgroundColour", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -254,6 +254,11 @@ def validate_scene(payload):
         if not isinstance(source, str) or source not in SOURCES:
             raise ValueError("Choose a supported data source.")
         info = SOURCES[source]
+        for background_key in ("backgroundColour", "nightBackgroundColour"):
+            if background_key in original:
+                if info["kind"] != "text":
+                    raise ValueError("Only text elements can have a background colour.")
+                _integer(original[background_key], "Text background colour", 0, 0xFFFFFF)
         font = original["font"]
         generated = isinstance(font, str) and font.startswith("generated:")
         if (not isinstance(font, str) or
@@ -355,6 +360,9 @@ def validate_scene(payload):
         result = {"id": identity, "source": source, "font": font, "x": x, "y": y,
                   "width": width, "height": height, "align": original["align"], "colour": colour,
                   "nightColour": night_colour, "visible": original["visible"]}
+        for background_key in ("backgroundColour", "nightBackgroundColour"):
+            if background_key in original:
+                result[background_key] = original[background_key]
         for link_key in ("colourPresetId", "nightColourPresetId"):
             if link_key in original:
                 result[link_key] = original[link_key]
@@ -505,6 +513,13 @@ def render_text_ops(scene, values=None, night=False):
             text = element.get("dividerSymbol", ":")
         if text is None:
             text = "--"
+        background_key = "nightBackgroundColour" if night else "backgroundColour"
+        if background_key in element:
+            box = (hugging_element(str(text), element, pack["fonts"][element["font"]])[0]
+                   if element.get("boxSizing") == "hug" else element)
+            operations.append({"kind": "rect", "elementId": element["id"],
+                               **{key: box[key] for key in ("x", "y", "width", "height")},
+                               "colour": element[background_key]})
         for operation in layout_text(str(text), element, pack["fonts"][element["font"]]):
             operations.append({**operation, "kind": "bitmap", "font": element["font"], "asset": element["font"],
                 "colour": element["nightColour"] if night else element["colour"], "elementId": element["id"]})

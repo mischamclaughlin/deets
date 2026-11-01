@@ -61,6 +61,9 @@ export interface SceneElement {
     align: "left" | "centre" | "right";
     colour: number;
     nightColour: number;
+    /** Opaque text-box fill; omission keeps that appearance transparent. */
+    backgroundColour?: number;
+    nightBackgroundColour?: number;
     colourPresetId?: string;
     nightColourPresetId?: string;
     /** Five independently editable bands for heart-rate and temperature charts. */

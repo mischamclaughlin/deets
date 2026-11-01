@@ -162,7 +162,7 @@ def _resource_cost(scene, pack, catalogue, needed_codes, pair_codes, proof):
     icon_cost = 96 * len(icons)
     zone_cost = 160 * sum(catalogue[element["source"]]["kind"] == "zones"
                           for element in scene["elements"])
-    return metadata + references + cache_cost + rectangles + ring_cost + icon_cost + zone_cost + 80 * len(scene["elements"])
+    return metadata + references + cache_cost + rectangles + ring_cost + icon_cost + zone_cost + 96 * len(scene["elements"])
 
 
 def _ring_positions(font):
@@ -293,6 +293,8 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
             element.get("boxSizing") == "hug", 0, 0, [],
             zone_colours(element) if kind == "zones" else [],
             zone_colours(element, night=True) if kind == "zones" else [],
+            device_colour(element["backgroundColour"]) if "backgroundColour" in element else -1,
+            device_colour(element["nightBackgroundColour"]) if "nightBackgroundColour" in element else -1,
         ])
     required_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"] if e["source"] in TYPE_SOURCES})
     widget_types = sorted({TYPE_SOURCES[e["source"]] for e in scene["elements"]
@@ -452,8 +454,13 @@ class DesignerView extends WatchUi.WatchFace {
             _glyphCache[index] = element[19] ? [text, operations, element] : [text, operations];
         }
         var nativeFont = _nativeFonts[element[1]];
-        dc.setColor(night ? element[7] : element[6], Graphics.COLOR_TRANSPARENT);
         dc.setClip(element[2], element[3], element[4], element[11]);
+        var textBackground = night ? element[26] : element[25];
+        if (textBackground >= 0) {
+            dc.setColor(textBackground, Graphics.COLOR_TRANSPARENT);
+            dc.fillRectangle(element[2], element[3], element[4], element[11]);
+        }
+        dc.setColor(night ? element[7] : element[6], Graphics.COLOR_TRANSPARENT);
         for (var i = 0; i < operations.size(); i += 1) {
             var operation = operations[i];
             dc.drawText(operation[0], operation[1], nativeFont,

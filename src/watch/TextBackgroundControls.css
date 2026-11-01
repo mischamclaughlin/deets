@@ -1,0 +1,8 @@
+.text-background-controls { margin-top: 16px; }
+.text-background-controls h3 { margin: 0 0 10px; color: var(--rp-subtle); font-size: 11px; font-weight: 500; }
+.text-background-channel + .text-background-channel { margin-top: 10px; }
+.text-background-toggle, .text-background-toggle > span:last-child { display: flex; align-items: center; gap: 6px; }
+.text-background-toggle { justify-content: space-between; color: var(--rp-text); font-size: 11px; }
+.text-background-toggle > span:last-child { color: var(--rp-subtle); }
+.text-background-toggle input { margin: 0; accent-color: var(--rp-pine); }
+.text-background-toggle + .colour-control { margin-top: 8px; }

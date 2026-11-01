@@ -86,7 +86,7 @@ class RingFitTests(unittest.TestCase):
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
         self.assertEqual(signatures, {(416, 208, -1), (416, 174, -1)})
-        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 160
+        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 192
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
             project = Path(directory)
@@ -162,7 +162,7 @@ class RingFitTests(unittest.TestCase):
         catalogue = {entry["id"]: entry for entry in exporter.CATALOG}
         signatures = {charts.ring_signature(scene, element) for element in scene["elements"]}
         self.assertEqual(signatures, {(416, 208, -1), (416, 174, -1), (416, 208, 174)})
-        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 240
+        expected = sum(exporter._ring_resource_cost(signature) for signature in signatures) + 288
         self.assertEqual(exporter._resource_cost(scene, model.scene_font_pack(scene), catalogue, {}, {}, False), expected)
         with tempfile.TemporaryDirectory() as directory, patch.object(exporter, "RESOURCE_BUDGET", 1_000_000):
             project = Path(directory)

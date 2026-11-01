@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { callBridge } from "./bridge.ts";
 import type { Scene, WatchMapping } from "../shared/scene.ts";
 import { scene as initialScene } from "../src/watch/scene.ts";
+import { setTextBackground } from "../src/watch/text-background.ts";
 import { layerDragLayout } from "../src/watch/layer-drag.ts";
 import { frontToBack, moveLayer, placeLayer } from "../src/watch/layers.ts";
 import { preparedMapping, rememberMapping } from "../src/watch/mapping-cache.ts";
@@ -103,4 +104,48 @@ test("unequal tile heights reach every slot without overlap or changing total he
             assert.equal(bottom, 252);
         }
     }
+});
+
+
+test("text backgrounds change each appearance independently without changing layers or glyphs", () => {
+    const before = structuredClone(scene);
+    const day = setTextBackground(scene, "middle", false, 0x24273a);
+    const both = setTextBackground(day, "middle", true, 0);
+    assert.deepEqual(ids(both), ids(scene));
+    assert.deepEqual(both.elements[1], { ...scene.elements[1], backgroundColour: 0x24273a, nightBackgroundColour: 0 });
+    assert.equal(both.elements[0], scene.elements[0]);
+    assert.equal(both.elements[2], scene.elements[2]);
+    const transparent = setTextBackground(both, "middle", false, undefined);
+    assert.equal(Object.hasOwn(transparent.elements[1], "backgroundColour"), false);
+    assert.equal(transparent.elements[1].nightBackgroundColour, 0);
+    assert.deepEqual(setTextBackground(transparent, "middle", true, undefined), scene);
+    assert.deepEqual(scene, before);
+});
+
+test("text backgrounds reject invalid colours, missing elements and non-text sources", () => {
+    assert.equal(setTextBackground(scene, "missing", false, 0), scene);
+    assert.equal(setTextBackground(scene, "middle", false, undefined), scene);
+    for (const invalid of [-1, 0x1000000, 0.5, NaN, Infinity]) {
+        assert.equal(setTextBackground(scene, "middle", false, invalid), scene);
+    }
+    for (const source of ["stepsIcon", "secondsRing", "walkWeek", "unknown"]) {
+        const other = { ...scene, elements: [{ ...scene.elements[0], source }] };
+        assert.equal(setTextBackground(other, other.elements[0].id, false, 0), other);
+    }
+});
+
+test("background changes invalidate old mappings and travel with text during movement previews", async () => {
+    const original = rememberMapping(await callBridge<WatchMapping>("layout", { scene }));
+    const opaque = setTextBackground(original.scene, "middle", false, 0x24273a);
+    assert.equal(preparedMapping(opaque), undefined);
+    const mapped = rememberMapping(await callBridge<WatchMapping>("layout", { scene: opaque }));
+    assert.notEqual(mapped.mapping, original.mapping);
+    const shifted = { ...mapped.scene, elements: mapped.scene.elements.map((element) => element.id === "middle"
+        ? { ...element, x: element.x + 1 } : element) };
+    const preview = preparedMapping(shifted)!;
+    assert.ok(preview);
+    const fill = mapped.ops.find((op) => op.elementId === "middle" && op.kind === "rect")!;
+    assert.ok(fill);
+    assert.deepEqual(preview.ops.find((op) => op.elementId === "middle" && op.kind === "rect"), { ...fill, x: fill.x + 1 });
+    assert.notEqual(preview.mapping, mapped.mapping);
 });
