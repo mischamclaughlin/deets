@@ -26,6 +26,13 @@ export function useEditorHistory(initialScene: Scene) {
         current.current = next;
         setHistory(next);
     }, []);
+    const importDocument = useCallback((document: EditorDocument) => {
+        const next = recordHistory(current.current, document);
+        current.current = next;
+        generation.current += 1;
+        setRevision(generation.current);
+        setHistory(next);
+    }, []);
     const navigate = useCallback((direction: "undo" | "redo") => {
         const next = (direction === "undo" ? undoHistory : redoHistory)(current.current);
         if (next === current.current) return;
@@ -34,6 +41,6 @@ export function useEditorHistory(initialScene: Scene) {
         setRevision(generation.current);
         setHistory(next);
     }, []);
-    return { ...history.present, setScene, setGrid, replaceInitialScene, revision,
+    return { ...history.present, setScene, setGrid, replaceInitialScene, importDocument, revision,
         canUndo: history.past.length > 0, canRedo: history.future.length > 0, navigate };
 }
