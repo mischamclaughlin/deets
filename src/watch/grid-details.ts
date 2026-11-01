@@ -20,11 +20,12 @@ export function gridLineDetails(size: number, inset: number, grid: GridSettings,
     });
 }
 
-/** Duplicate exact guide geometry, leaving originals untouched and selecting independent copies. */
-export function copyGridLines(size: number, inset: number, grid: GridSettings, ids: readonly string[]): {
+/** Duplicate guide geometry, optionally reflecting rows and columns across the watch centre. */
+export function copyGridLines(size: number, inset: number, grid: GridSettings, ids: readonly string[], mirror = false): {
     grid: GridSettings; ids: string[];
 } {
-    const selected = gridLines(size, inset, grid).filter((line) => ids.includes(line.id));
+    // Rings are already symmetric about the centre and have no distinct reflection.
+    const selected = gridLines(size, inset, grid).filter((line) => ids.includes(line.id) && (!mirror || line.axis !== 'rings'));
     if (!selected.length) return { grid, ids: [] };
     const edits = { ...grid.edits }, gaps = { ...grid.gaps }, gapMirrors = { ...grid.gapMirrors };
     const occupied = new Set([...Object.keys(edits), ...Object.keys(gaps), ...Object.keys(gapMirrors)]);
@@ -37,7 +38,7 @@ export function copyGridLines(size: number, inset: number, grid: GridSettings, i
         const id = `${line.axis}-${index}`;
         occupied.add(id);
         copiedIds.push(id);
-        edits[id] = line.value;
+        edits[id] = (mirror ? -line.value : line.value) || 0;
         const width = gridLineGap(size, inset, grid, line.id);
         if (width) gaps[id] = width;
         if (grid.gapMirrors?.[line.id]) gapMirrors[id] = true;

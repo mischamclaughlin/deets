@@ -20,9 +20,12 @@ export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDele
     const maximum = maxGridLineGap(size, inset, grid, selectedIds);
     const change = (value: number) => onChange(setGridLineGaps(size, inset, grid, selectedIds, value));
     const details = gridLineDetails(size, inset, grid, selectedIds);
-    const copyDisabled = Object.keys(grid.edits ?? {}).length + details.length > 256 ||
-        Object.keys(grid.gaps ?? {}).length + details.filter((line) => line.width > 0).length > 256 ||
-        Object.keys(grid.gapMirrors ?? {}).length + details.filter((line) => grid.gapMirrors?.[line.id]).length > 256;
+    const hasCopyCapacity = (lines: typeof details) => Object.keys(grid.edits ?? {}).length + lines.length <= 256 &&
+        Object.keys(grid.gaps ?? {}).length + lines.filter((line) => line.width > 0).length <= 256 &&
+        Object.keys(grid.gapMirrors ?? {}).length + lines.filter((line) => grid.gapMirrors?.[line.id]).length <= 256;
+    const copyDisabled = !hasCopyCapacity(details);
+    const mirrorLines = details.filter((line) => line.axis !== 'rings');
+    const mirrorCopyDisabled = !mirrorLines.length || !hasCopyCapacity(mirrorLines);
     const pixels = (value: number) => `${Number(value.toFixed(2))} px`;
     return <section className="element-box-panel grid-line-panel" aria-labelledby="grid-line-heading">
         <div className="section-heading">
@@ -61,6 +64,15 @@ export function GridLinePanel({ size, inset, grid, selectedIds, onChange, onDele
                 onChange(copied.grid);
                 onSelect?.(copied.ids);
             }}>Copy {selectedIds.length === 1 ? 'line' : 'lines'}</button>
+        <button type="button" disabled={mirrorCopyDisabled}
+            title={!mirrorLines.length ? 'Rings are already symmetric about the watch centre.'
+                : mirrorCopyDisabled ? 'Delete unused grid lines before copying more.'
+                    : 'Copy horizontal and vertical guides to the opposite side of the watch centre.'}
+            onClick={() => {
+                const copied = copyGridLines(size, inset, grid, selectedIds, true);
+                onChange(copied.grid);
+                onSelect?.(copied.ids);
+            }}>Mirror copy</button>
         <button type="button" className="snap-button" onClick={() => {
             onChange(selectedIds.reduce((next, id) => editGridLine(size, inset, next, id, null), grid));
             onDelete();
