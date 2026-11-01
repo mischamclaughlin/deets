@@ -16,6 +16,7 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "divider", label: "Divider", detail: "An independent separator", category: "clock", keywords: "colon punctuation separator" },
     { source: "heartRate", label: "Heart rate", detail: "Current beats per minute", category: "activity", keywords: "value pulse bpm health heart rate" },
     { source: "heartIcon", label: "Heart icon", detail: "Heart-rate symbol", category: "activity", keywords: "symbol pulse bpm health heart" },
+    { source: "heartZones", label: "Heart-rate zones", detail: "Current heart rate across five zones", category: "activity", keywords: "heart rate pulse bpm health graph chart zones band" },
     { source: "steps", label: "Steps", detail: "Today's step count", category: "activity", keywords: "value daily count" },
     { source: "stepsIcon", label: "Steps icon", detail: "Footsteps", category: "activity", keywords: "symbol footprints" },
     { source: "stepsWeek", label: "Steps graph", detail: "Daily steps · Monday–Sunday", category: "activity", keywords: "weekly chart bars" },
@@ -41,7 +42,7 @@ export const libraryEntries: readonly LibraryEntry[] = [
 ];
 
 export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph?: LibrarySource; graphLabel?: string }>> = {
-    heartRate: { icon: "heartIcon" },
+    heartRate: { icon: "heartIcon", graph: "heartZones", graphLabel: "Heart-rate zones" },
     steps: { icon: "stepsIcon", graph: "stepsWeek" },
     floors: { icon: "floorsIcon", graph: "floorsWeek" },
     weeklyWalk: { icon: "walkIcon", graph: "walkWeek" },

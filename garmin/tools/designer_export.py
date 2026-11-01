@@ -324,7 +324,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         "@FORCED_NIGHT@": _mc(preview_night), "@SAMPLES@": "{" + proof_dictionary + "}",
         "@RING_TABLE@": ring_table,
         "@WEATHER_ICON_SWITCH@": weather_icon_switch(ICON_VARIANTS["temperatureIcon"])
-            if any(element["source"] == "temperatureIcon" for element in scene["elements"]) else "            default: return 0;",
+            if any(element["source"] == "temperatureIcon" for element in scene["elements"]) else "            default: break;",
         "@FONT_RESOURCES@": "[" + ", ".join(font_resources) + "]",
     }
     for marker, replacement in replacements.items():

@@ -45,15 +45,35 @@ class HeartTests(unittest.TestCase):
                                   dict(family="widget", size=28, thickness=0, width=100, letterSpacing=1))
         self.assertEqual(styled["elements"][0]["typography"]["size"], 28)
 
-    def test_heart_graph_requests_fail_without_changing_scene(self):
-        scene = activity.add_activity(self.scene(), "heartRate")
-        saved = copy.deepcopy(scene)
-        with self.assertRaisesRegex(ValueError, "does not have a weekly graph"):
-            activity.add_activity(scene, "heartRate", {"graph": True})
-        with self.assertRaisesRegex(ValueError, "does not have a weekly graph"):
-            activity.set_activity_graph(scene, scene["elements"][1]["id"], True)
-        self.assertEqual(activity.set_activity_graph(scene, scene["elements"][0]["id"], False), scene)
-        self.assertEqual(scene, saved)
+    def test_heart_zones_add_and_toggle_without_mutating_existing_parts(self):
+        for device in model.DEVICES:
+            scene = activity.add_activity(self.scene(device), "heartRate")
+            saved = copy.deepcopy(scene)
+            value, icon = scene["elements"]
+            added = activity.set_activity_graph(scene, icon["id"], True)
+            self.assertEqual(added["elements"][:-1], scene["elements"])
+            graph = added["elements"][-1]
+            self.assertEqual(graph["source"], "heartZones")
+            self.assertEqual(graph["activityId"], value["id"])
+            self.assertEqual((graph["width"], graph["height"]), (112, 24))
+            self.assertEqual(activity.set_activity_graph(added, value["id"], False), scene)
+            bundled = activity.add_activity(self.scene(device), "heartRate", {"graph": True})
+            self.assertEqual([item["source"] for item in bundled["elements"]], ["heartRate", "heartIcon", "heartZones"])
+            graph_only = activity.add_activity(self.scene(device), "heartRate", {"value": False, "icon": False, "graph": True})
+            self.assertEqual([item["source"] for item in graph_only["elements"]], ["heartZones"])
+            with tempfile.TemporaryDirectory() as directory:
+                project = export_fixtures.DesignerExportTests().project(directory)
+                exporter.prepare_scene_project(project, graph_only)
+                source = (project / "source/DesignerView.mc").read_text()
+                encoded = re.search(r"private var _elements as Array<Array> = (.*);", source)
+                rows = json.loads(encoded.group(1))
+                self.assertEqual(rows[0][0], "heartZones")
+                self.assertEqual(rows[0][10], "zones")
+                self.assertIn("value = _snapshot.heartRate;", source)
+                self.assertIn("thresholds = _snapshot.heartRateZones;", source)
+                provider = (project / "source/EpixCanvasComplications.mc").read_text()
+                self.assertIn("_slotTypes = [18];", provider)
+            self.assertEqual(scene, saved)
 
     def test_heart_icon_is_original_asset_with_day_and_night_native_export_rows(self):
         data = (activity.ICON_DIRECTORY / "heart.png").read_bytes()

@@ -15,7 +15,7 @@ ICON_VARIANTS = {
 }
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
 ACTIVITY_GROUPS = {
-    "heartRate": ("heartIcon", None),
+    "heartRate": ("heartIcon", "heartZones"),
     "temperature": ("temperatureIcon", "temperatureZones"),
     "highLow": ("highLowIcon", "temperatureZones"),
     "temperatureHigh": ("highLowIcon", None),

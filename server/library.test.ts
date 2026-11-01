@@ -7,6 +7,7 @@ import { devices, inheritsFont, isEditableTextSource, type Scene, type WatchMapp
 import { libraryEntries } from "../src/watch/library-catalogue.ts";
 import { activityLayout, arrangeActivity } from "../src/watch/activity-layout.ts";
 import { callBridge } from "./bridge.ts";
+import { linkedElementIds, moveSceneElement } from "../src/watch/snapping.ts";
 
 function activityScene(): Scene {
     return { ...scene, elements: [
@@ -107,10 +108,24 @@ test("stairs searches resolve to the data entry with its associated extras", () 
     }
 });
 
-test("heart-rate searches include the value and heart icon without inventing a graph", () => {
-    for (const query of ["heart", "heart icon", "heart rate", "pulse", "bpm"])
+test("heart-rate searches include the value, icon and zones graph", () => {
+    for (const query of ["heart", "heart icon", "heart rate", "pulse", "bpm", "heart graph", "heart zones"])
         assert.deepEqual(matchingEntries("activity", query).map((entry) => entry.source), ["heartRate"]);
-    assert.deepEqual(matchingEntries("activity", "heart graph"), []);
+});
+
+test("heart-rate zones can be added and toggled while moving independently", async () => {
+    const original = await callBridge<WatchMapping>("add", { scene, source: "heartRate", options: { graph: true } });
+    const value = original.scene.elements.find((item) => item.source === "heartRate")!;
+    const icon = original.scene.elements.find((item) => item.source === "heartIcon")!;
+    const graph = original.scene.elements.find((item) => item.source === "heartZones")!;
+    assert.equal(graph.activityId, value.id);
+    assert.deepEqual(linkedElementIds(original.scene, graph.id), [graph.id]);
+    const moved = moveSceneElement(original.scene, icon.id, { x: icon.x + 6, y: icon.y + 6 }, { enabled: false, showGuideLines: false });
+    assert.equal(moved.elements.find((item) => item.id === graph.id), graph);
+    const removed = await callBridge<WatchMapping>("activity-graph", { scene: original.scene, elementId: icon.id, enabled: false });
+    assert.equal(removed.scene.elements.some((item) => item.id === graph.id), false);
+    const restored = await callBridge<WatchMapping>("activity-graph", { scene: removed.scene, elementId: value.id, enabled: true });
+    assert.equal(restored.scene.elements.at(-1)?.source, "heartZones");
 });
 
 test("heart-rate value and icon use the existing layout, linked movement and native layers", async () => {
