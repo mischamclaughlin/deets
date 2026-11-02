@@ -9,6 +9,8 @@ import "./workspace.css";
 
 type Props = ComponentProps<typeof WatchCanvas> & {
     onToggleSnapping: () => void;
+    gridSelectionEnabled: boolean;
+    onToggleGridSelection: () => void;
     exportDisabled?: boolean;
     editRevision?: number;
     canUndo?: boolean;
@@ -18,7 +20,7 @@ type Props = ComponentProps<typeof WatchCanvas> & {
 };
 
 /** Viewing options stay outside the typed scene and Garmin export protocol. */
-export function WatchWorkspace({ scene, onToggleSnapping, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
+export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
     const [preview, setPreview] = useState(false);
     const [night, setNight] = useState(false);
     const size = devices[scene.device];
@@ -74,10 +76,17 @@ export function WatchWorkspace({ scene, onToggleSnapping, exportDisabled, editRe
                     {preview ? `${night ? "Night" : "Day"} preview` : (canvasProps.selectedElementIds?.length ?? 0) > 1 ? `${canvasProps.selectedElementIds!.length} elements selected` : selected ? elementLabel(scene, selected.id) : "Select an element"}
                     {!preview && selected && <span className="selection-position">X {selected.x} · Y {selected.y}</span>}
                 </div>
-                <button type="button" className="workspace-snap" aria-pressed={canvasProps.snapEnabled ?? false}
-                    disabled={preview} onClick={onToggleSnapping} title="Toggle snapping while editing">
-                    <WorkspaceIcon kind="snap" />Snap <span>{canvasProps.snapEnabled ? "on" : "off"}</span>
-                </button>
+                <div className="canvas-edit-controls" role="group" aria-label="Canvas editing">
+                    <button type="button" className="workspace-snap" aria-pressed={canvasProps.snapEnabled ?? false}
+                        disabled={preview} onClick={onToggleSnapping} title="Toggle snapping while editing">
+                        <WorkspaceIcon kind="snap" />Snap <span>{canvasProps.snapEnabled ? "on" : "off"}</span>
+                    </button>
+                    <button type="button" className="workspace-snap" aria-label="Select grid lines" aria-pressed={gridSelectionEnabled}
+                        disabled={preview} onClick={onToggleGridSelection}
+                        title="Select grid lines. Turn off to select elements through them; guides remain visible and available for snapping.">
+                        <WorkspaceIcon kind="grid-select" />Grid selection <span>{gridSelectionEnabled ? "on" : "off"}</span>
+                    </button>
+                </div>
             </div>
             <div className="canvas-info" id="canvas-dimensions">
                 <span>{usable} px usable diameter</span>

@@ -2,22 +2,15 @@ import { SliderValue } from "./SliderValue.tsx";
 import { addGridLine, configureGridRings, type GridSettings } from './grid.ts';
 import './GridSettingsPanel.css';
 
-export function GridSettingsPanel({ grid, onChange, onSelect, selectionEnabled, onSelectionEnabledChange }: {
+export function GridSettingsPanel({ grid, onChange, onSelect }: {
     grid: GridSettings;
     onChange: (grid: GridSettings) => void;
     onSelect: (id: string) => void;
-    selectionEnabled: boolean;
-    onSelectionEnabledChange: (enabled: boolean) => void;
 }) {
     return <div className="grid-settings">
         <label className="guide-toggle">
             <input type="checkbox" checked={grid.visible} onChange={(event) => onChange({ ...grid, visible: event.target.checked })} />
             Show grid
-        </label>
-        <label className="guide-toggle" title="Turn off to select elements through grid lines. Guides remain visible and available for snapping.">
-            <input type="checkbox" checked={selectionEnabled}
-                onChange={(event) => onSelectionEnabledChange(event.target.checked)} />
-            Select grid lines
         </label>
         <div className="grid-axis-controls">
             {(['rows', 'columns'] as const).map((axis) => <div className="grid-axis" key={axis}>

@@ -35,6 +35,7 @@
 .workspace-footer { min-width: 0; }
 .canvas-context { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #90ac9b2e; }
 .canvas-selection { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; color: #d2e2d8; font-size: 11px; overflow-wrap: anywhere; }
+.canvas-edit-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .context-dot { flex-shrink: 0; width: 5px; height: 5px; border-radius: 2px; background: #9ac8af; }
 .selection-position { color: #a3bcaf; font-size: 10px; font-variant-numeric: tabular-nums; }
 .workspace-snap { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 8px; border: 1px solid #52675f; border-radius: 6px; background: #213831; color: #bdd3c6; font-size: 10px; }

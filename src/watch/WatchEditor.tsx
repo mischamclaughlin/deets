@@ -257,11 +257,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             <details className="document-group">
                                 <summary>Grid</summary>
                                 <div className="document-group-content">
-                                    <GridSettingsPanel grid={grid} onChange={setGrid} onSelect={setSelectedGridLineId}
-                                        selectionEnabled={gridSelectionEnabled} onSelectionEnabledChange={(enabled) => {
-                                            setGridSelectionEnabled(enabled);
-                                            setSelectedGridLines([]);
-                                        }} />
+                                    <GridSettingsPanel grid={grid} onChange={setGrid} onSelect={setSelectedGridLineId} />
                                 </div>
                             </details>
                         </div>
@@ -274,6 +270,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 editRevision={revision}
                 exportDisabled={!fontsReady || !!fontError}
                 onToggleSnapping={() => setSnapEnabled((enabled) => !enabled)}
+                gridSelectionEnabled={gridSelectionEnabled}
+                onToggleGridSelection={() => {
+                    setGridSelectionEnabled((enabled) => !enabled);
+                    setSelectedGridLines([]);
+                }}
                 showCircumference={showCircumference}
                 showGuideLines={showGuideLines}
                 outlineMode={outlineMode}
