@@ -15,13 +15,13 @@ export function DesignFilePanel({ scene, grid, disabled, savedDesignId, hasUnsav
     const [confirmingNew, setConfirmingNew] = useState(false);
     const [message, setMessage] = useState('');
     return <section className="design-files" aria-label="Design library">
-        <button className="design-new-button" type="button" disabled={disabled} onClick={() => {
-            if (hasUnsavedChanges) setConfirmingNew(true);
-            else { setMessage(''); onNew(); }
-        }}>New design</button>
-        <div className="design-file-actions">
-            <button type="button" disabled={disabled} onClick={() => setNaming(true)}>Save design</button>
-            <button data-browse-designs type="button" disabled={disabled} onClick={onBrowse}>Saved designs</button>
+        <div className="design-file-actions" role="group" aria-label="Design actions">
+            <button type="button" aria-label="New design" title="New design" disabled={disabled} onClick={() => {
+                if (hasUnsavedChanges) setConfirmingNew(true);
+                else { setMessage(''); onNew(); }
+            }}><DesignActionIcon kind="new" /></button>
+            <button type="button" aria-label="Save design" title="Save design" disabled={disabled} onClick={() => setNaming(true)}><DesignActionIcon kind="save" /></button>
+            <button data-browse-designs type="button" aria-label="Saved designs" title="Saved designs" disabled={disabled} onClick={onBrowse}><DesignActionIcon kind="browse" /></button>
         </div>
         <p className="design-file-hint">Saved in this browser.</p>
         {message && <p className="typography-status" role="status">{message}</p>}
@@ -37,6 +37,15 @@ export function DesignFilePanel({ scene, grid, disabled, savedDesignId, hasUnsav
                 setMessage(`Saved ${name} to your designs.`);
             }} />}
     </section>;
+}
+
+function DesignActionIcon({ kind }: { kind: 'new' | 'save' | 'browse' }) {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        {kind === 'new' ? <><path d="M14 3H5v18h14V8zM14 3v5h5M8 14h8m-4-4v8" /></>
+            : kind === 'save' ? <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2ZM7 3v6h10V3M7 21v-8h10v8" /></>
+                : <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7h18" />}
+    </svg>;
 }
 
 function SaveDesignDialog({ document, savedDesignId, onSaved, onDismiss }: {
