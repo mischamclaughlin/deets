@@ -1,0 +1,43 @@
+.canvas-settings-trigger { anchor-name: --canvas-options; }
+.canvas-settings-trigger:has(+ :popover-open) { border-color: var(--workspace-iris); }
+.canvas-settings-menu {
+    position: fixed;
+    inset: auto 24px 110px auto;
+    width: min(280px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--workspace-border);
+    border-radius: 12px;
+    background: var(--workspace-surface);
+    color: var(--workspace-text);
+    box-shadow: 0 8px 32px color-mix(in srgb, var(--rp-text) 18%, transparent);
+    font-size: 12px;
+}
+@supports (position-anchor: --canvas-options) {
+    .canvas-settings-menu {
+        position-anchor: --canvas-options;
+        inset: auto;
+        bottom: calc(anchor(top) + 8px);
+        right: anchor(right);
+        position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
+}
+.canvas-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.canvas-settings-heading h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.canvas-settings-heading button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--workspace-subtle); font-size: 20px; }
+.canvas-settings-menu fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.canvas-settings-menu fieldset + fieldset, .canvas-settings-extra { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--workspace-border); }
+.canvas-settings-menu legend { padding: 0; margin-bottom: 6px; color: var(--workspace-subtle); font-size: 11px; }
+.canvas-settings-menu label { display: flex; align-items: center; gap: 9px; min-height: 30px; line-height: 1.5; cursor: pointer; }
+.canvas-settings-menu input { flex-shrink: 0; width: 15px; height: 15px; margin: 0; accent-color: var(--rp-pine); }
+.canvas-settings-menu .canvas-outline-choice { display: grid; gap: 6px; margin-top: 8px; color: var(--workspace-subtle); font-size: 11px; }
+.canvas-settings-menu select { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--workspace-border); border-radius: 6px; background: var(--workspace-base); color: var(--workspace-text); font: inherit; font-size: 12px; }
+.canvas-settings-extra p { margin: 10px 0 0; color: var(--workspace-subtle); font-size: 11px; }
+.canvas-settings-extra kbd { font: inherit; color: var(--workspace-text); }
+.canvas-settings-menu :is(button, input, select):focus-visible { outline: 2px solid var(--workspace-iris); outline-offset: 3px; }
+@media (hover: hover) {
+    .canvas-settings-heading button:hover { background: var(--rp-overlay); color: var(--workspace-text); }
+}

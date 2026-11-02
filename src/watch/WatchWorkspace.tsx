@@ -5,12 +5,14 @@ import { WatchCanvas } from "./WatchCanvas.tsx";
 import { WorkspaceIcon } from "./WorkspaceIcon.tsx";
 import { WatchDeviceFrame } from "./WatchDeviceFrame.tsx";
 import { GarminExportButton } from "./GarminExportButton.tsx";
+import { CanvasSettingsMenu } from "./CanvasSettingsMenu.tsx";
 import "./workspace.css";
 
 type Props = ComponentProps<typeof WatchCanvas> & {
     onToggleSnapping: () => void;
     gridSelectionEnabled: boolean;
     onToggleGridSelection: () => void;
+    canvasSettings: Omit<ComponentProps<typeof CanvasSettingsMenu>, "disabled">;
     exportDisabled?: boolean;
     editRevision?: number;
     canUndo?: boolean;
@@ -20,7 +22,7 @@ type Props = ComponentProps<typeof WatchCanvas> & {
 };
 
 /** Viewing options stay outside the typed scene and Garmin export protocol. */
-export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
+export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, canvasSettings, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
     const [preview, setPreview] = useState(false);
     const [night, setNight] = useState(false);
     const size = devices[scene.device];
@@ -86,6 +88,7 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                         title="Select grid lines. Turn off to select elements through them; guides remain visible and available for snapping.">
                         <WorkspaceIcon kind="grid-select" />Grid selection <span>{gridSelectionEnabled ? "on" : "off"}</span>
                     </button>
+                    <CanvasSettingsMenu {...canvasSettings} disabled={preview} />
                 </div>
             </div>
             <div className="canvas-info" id="canvas-dimensions">

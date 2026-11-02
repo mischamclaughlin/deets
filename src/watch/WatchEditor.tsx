@@ -117,13 +117,14 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     return;
                 }
                 if (event.key !== "Escape") return;
+                if (event.currentTarget.querySelector(":popover-open")) return;
                 event.preventDefault();
                 clearSelection();
                 event.currentTarget.focus({ preventScroll: true });
             }}
             onPointerDown={(event) => {
                 if (event.button !== 0 || !(event.target instanceof Element)) return;
-                if (event.target.closest("[data-element-id], [data-grid-id], button, input, select, textarea, label, a, summary, [contenteditable], [role='button']")) return;
+                if (event.target.closest("[data-element-id], [data-grid-id], [popover], button, input, select, textarea, label, a, summary, [contenteditable], [role='button']")) return;
                 clearSelection();
                 event.currentTarget.focus({ preventScroll: true });
             }}>
@@ -205,56 +206,6 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                                 </div>
                             </details>
                             <details className="document-group">
-                                <summary>Guides and snapping</summary>
-                                <div className="document-group-content">
-                                    <label className="guide-toggle">
-                                        <input
-                                            type="checkbox"
-                                            checked={showGuideLines}
-                                            onChange={(event) => setShowGuideLines(event.target.checked)}
-                                        />
-                                        Show guide lines
-                                    </label>
-                                    <button
-                                        type="button"
-                                        className="snap-button"
-                                        aria-pressed={snapEnabled}
-                                        onClick={() => setSnapEnabled((enabled) => !enabled)}
-                                        title="Drag or use arrow keys. Shift: 10 px. Alt: bypass snapping."
-                                    >
-                                        Snapping {snapEnabled ? "on" : "off"}
-                                    </button>
-                                    <fieldset className="snap-targets">
-                                        <legend>Snap to</legend>
-                                        {[
-                                            { label: "Grid", checked: snapToGrid, change: setSnapToGrid },
-                                            { label: "Guide lines", checked: snapToGuides, change: setSnapToGuides },
-                                            { label: "Elements", checked: snapToElements, change: setSnapToElements },
-                                        ].map(({ label, checked, change }) => (
-                                            <label key={label} className="guide-toggle">
-                                                <input type="checkbox" checked={checked}
-                                                    onChange={(event) => change(event.target.checked)} />
-                                                {label}
-                                            </label>
-                                        ))}
-                                    </fieldset>
-                                    <label className="guide-toggle">
-                                        <input type="checkbox" checked={snapGridToElements}
-                                            onChange={(event) => setSnapGridToElements(event.target.checked)} />
-                                        Snap grid lines to elements
-                                    </label>
-                                    <p className="control-hint">Hold Alt to move freely while snapping is on.</p>
-                                    <label className="font-choice">
-                                        Element outlines
-                                        <select value={outlineMode} onChange={(event) => setOutlineMode(event.target.value as typeof outlineMode)}>
-                                            <option value="all">Always show all</option>
-                                            <option value="selected">Selected element only</option>
-                                            <option value="off">Off</option>
-                                        </select>
-                                    </label>
-                                </div>
-                            </details>
-                            <details className="document-group">
                                 <summary>Grid</summary>
                                 <div className="document-group-content">
                                     <GridSettingsPanel grid={grid} onChange={setGrid} onSelect={setSelectedGridLineId} />
@@ -270,6 +221,14 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 editRevision={revision}
                 exportDisabled={!fontsReady || !!fontError}
                 onToggleSnapping={() => setSnapEnabled((enabled) => !enabled)}
+                canvasSettings={{
+                    showGuideLines, onShowGuideLinesChange: setShowGuideLines,
+                    snapToGrid, onSnapToGridChange: setSnapToGrid,
+                    snapToGuides, onSnapToGuidesChange: setSnapToGuides,
+                    snapToElements, onSnapToElementsChange: setSnapToElements,
+                    snapGridToElements, onSnapGridToElementsChange: setSnapGridToElements,
+                    outlineMode, onOutlineModeChange: setOutlineMode,
+                }}
                 gridSelectionEnabled={gridSelectionEnabled}
                 onToggleGridSelection={() => {
                     setGridSelectionEnabled((enabled) => !enabled);
