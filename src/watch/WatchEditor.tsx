@@ -41,7 +41,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [theme, setTheme] = useState<"light" | "dark">("light");
     const [page, setPage] = useState<"editor" | "designs">("editor");
     const editor = useRef<HTMLDivElement>(null);
-    const { scene, setScene, grid, setGrid, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate } = useEditorHistory(initialScene);
+    const { scene, setScene, grid, setGrid, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
     const [fontsReady, setFontsReady] = useState(false);
     const [fontError, setFontError] = useState<string>();
     useEffect(() => {
@@ -139,7 +139,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "light" ? "dark" : "light")} />
                     </div>
                     <DesignFilePanel scene={scene} grid={grid} disabled={!fontsReady || !!fontError}
-                        savedDesignId={savedDesignId} onBrowse={() => setPage("designs")}
+                        savedDesignId={savedDesignId} hasUnsavedChanges={hasUnsavedChanges}
+                        onNew={() => { newDocument(); clearSelection(); }} onBrowse={() => setPage("designs")}
                         onSaved={markSaved} />
                     <div className="sidebar-switcher" role="group" aria-label="Sidebar view">
                         {(["elements", "styles", "canvas"] as const).map((view) => (

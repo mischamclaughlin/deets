@@ -215,7 +215,7 @@ export consume the same generated pixels. No new runtime dependencies are added.
 
 - `shared/scene.ts`: typed scenes, draw operations and mapped areas.
 - `src/watch/WatchEditor.tsx`: editor composition, sidebars and selection.
-- `src/watch/useEditorHistory.ts`: current scene/grid document and undo/redo.
+- `src/watch/useEditorHistory.ts` and `editor-document.ts`: current scene/grid document, undo/redo and saved-content checkpoints.
 - `src/watch/design-file.ts` and `saved-designs.ts`: document validation and browser-local saves.
 - `src/watch/WatchWorkspace.tsx`: canvas viewing controls, casing preview and toolbar export.
 - `src/watch/WatchCanvas.tsx`: watch canvas and translated area information.
@@ -228,7 +228,9 @@ export consume the same generated pixels. No new runtime dependencies are added.
 
 The TypeScript server invokes the Python Garmin boundary with JSON. It has no
 account or simulator-control layer. Saved designs are stored in browser-local
-storage; the server does not persist them. Chart and activity elements use the
+storage; the server does not persist them. **New design** starts an empty face on
+the current watch and asks before discarding unsaved scene or grid changes.
+Chart and activity elements use the
 same canonical scene and native validation boundary. The Python boundary
 retains shared bitmap masks, exact clipping, RGB565 conversion and live firmware
 fallbacks rather than replacing verified rendering rules during migration.
