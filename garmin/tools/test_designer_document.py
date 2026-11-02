@@ -48,6 +48,42 @@ class DesignerDocumentTests(unittest.TestCase):
             })
         self.assertEqual((scene, grid), original)
 
+    def test_layout_metadata_round_trips_without_entering_the_scene(self):
+        scene = self.scene()
+        scene["elements"].append({**scene["elements"][0], "id": "time2"})
+        layout = {"lockedIds": ["time1"], "groups": [{"id": "group-1", "name": "Clocks", "elementIds": ["time1", "time2"]}]}
+        original = copy.deepcopy((scene, layout))
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "resources").mkdir()
+            document.write_editable_document(project, scene, layout=layout)
+            restored = self.read_document(project)
+            self.assertEqual(restored["layout"], layout)
+            self.assertEqual(restored["scene"], scene)
+            self.assertNotIn("layout", restored["scene"])
+        self.assertEqual((scene, layout), original)
+
+    def test_malformed_layout_is_rejected_before_writing(self):
+        scene = self.scene()
+        valid = {"lockedIds": [], "groups": []}
+        invalid = [None, [], {}, {**valid, "extra": True}, {**valid, "lockedIds": ["missing"]},
+                   {**valid, "lockedIds": ["time1", "time1"]}, {**valid, "groups": [None]},
+                   {**valid, "groups": [{"id": "group-1", "name": "", "elementIds": ["time1"]}]}]
+        second = {**scene["elements"][0], "id": "time2"}
+        scene["elements"].append(second)
+        group = {"id": "group-1", "name": "Clocks", "elementIds": ["time1", "time2"]}
+        invalid += [{**valid, "groups": [group, group]},
+                    {**valid, "groups": [group, {**group, "id": "group-2"}]},
+                    {**valid, "groups": [{**group, "name": "x" * 61}]},
+                    {**valid, "groups": [{**group, "elementIds": ["time1", "missing"]}]}]
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "resources").mkdir()
+            for layout in invalid:
+                with self.subTest(layout=layout), self.assertRaises(ValueError):
+                    document.write_editable_document(project, scene, layout=layout)
+                self.assertFalse((project / "resources/deets_editable.xml").exists())
+
     def test_scene_only_exports_explicitly_omit_unspecified_grid(self):
         scene = self.scene()
         with tempfile.TemporaryDirectory() as directory:
@@ -68,7 +104,8 @@ class DesignerDocumentTests(unittest.TestCase):
             scene = self.scene()
             prepare_scene_project(project, scene)
             before = {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()}
-            document.write_editable_document(project, scene, {"visible": False})
+            document.write_editable_document(project, scene, {"visible": False},
+                                             {"lockedIds": [scene["elements"][0]["id"]], "groups": []})
             after = {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()}
             self.assertEqual(set(after) - set(before), {Path("resources/deets_editable.xml")})
             for path, content in before.items():

@@ -632,6 +632,7 @@ test("editable export metadata rejects invalid grids before native compilation",
     for (const grid of [null, [], { visible: true }, { visible: false, circumferences: 999 }]) {
         const result = await requestApi("/api/garmin/export", [Buffer.from(JSON.stringify({ scene, mapping: "unused", grid }))], { "content-type": "application/json" });
         assert.equal(result.status, 400);
+        assert.match(String(result.body.error), /grid/);
     }
 });
 
@@ -652,5 +653,15 @@ test("device library and custom text editing use strict canonical API mappings",
             assert.equal((await requestApi('/api/garmin/label-text', [Buffer.from(JSON.stringify(invalid))], headers)).status, 400);
         }
         assert.equal((await requestApi('/api/garmin/label-text', [Buffer.from(JSON.stringify(payload))], { ...headers, origin: 'https://attacker.example' })).status, 403);
+    }
+});
+
+test('editable export rejects malformed layer metadata before compilation', async () => {
+    const headers = { 'content-type': 'application/json' };
+    for (const layout of [null, {}, { lockedIds: ['missing'], groups: [] }, { lockedIds: [], groups: [null] }]) {
+        const payload = { scene, mapping: 'unused', layout };
+        const response = await requestApi('/api/garmin/export', [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(response.status, 400);
+        assert.match(String(response.body.error), /layer settings/);
     }
 });

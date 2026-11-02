@@ -102,7 +102,8 @@ def compile_scene(payload):
         for name in ("source", "resources"):
             shutil.copytree(ROOT / name, project / name)
         prepare_scene_project(project, scene, proof=proof, preview_night=night if proof else None)
-        write_editable_document(project, scene, payload.get("grid"))
+        write_editable_document(project, scene, payload.get("grid"),
+                                **({"layout": payload["layout"]} if "layout" in payload else {}))
         output = project / "Deets.prg"
         result = subprocess.run([str(compiler), "-f", "monkey.jungle", "-d", scene["device"],
                                  "-o", str(output), "-y", str(key), "-w"], cwd=project,

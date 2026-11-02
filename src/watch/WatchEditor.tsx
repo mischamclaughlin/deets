@@ -1,4 +1,3 @@
-import { TextLabelPanel } from "./TextLabelPanel.tsx";
 import { SliderValue } from "./SliderValue.tsx";
 import { DesignFileActions } from "./DesignFileActions.tsx";
 import { DesignFilePanel } from "./DesignFilePanel.tsx";
@@ -33,7 +32,9 @@ import { ThemeToggle } from "./ThemeToggle.tsx";
 import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 
 import { useEditorHistory } from "./useEditorHistory.ts";
-import { selectElement } from "./history.ts";
+import { selectionWithGroups } from "./editor-layout.ts";
+import { LayoutPanel } from "./LayoutPanel.tsx";
+import { TextLabelPanel } from "./TextLabelPanel.tsx";
 import { BatchPresetsPanel } from "./BatchPresetsPanel.tsx";
 import { BatchBoxPanel } from "./BatchBoxPanel.tsx";
 
@@ -42,7 +43,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [theme, setTheme] = useState<"light" | "dark">("light");
     const [page, setPage] = useState<"editor" | "designs">("editor");
     const editor = useRef<HTMLDivElement>(null);
-    const { scene, setScene, grid, setGrid, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
+    const { scene, setScene, grid, setGrid, layout, setLayout, setDocument, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
     const [fontsReady, setFontsReady] = useState(false);
     const [fontError, setFontError] = useState<string>();
     useEffect(() => {
@@ -77,10 +78,10 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [selectedGridLineIds, setSelectedGridLines] = useState<string[]>([]);
     const [gridAreaSelection, setGridAreaSelection] = useState<{ areas: GridArea[]; grid: typeof grid; device: string; inset: number }>();
     const setSelectedId = useCallback((id: string | undefined, additive = false) => {
-        setSelection((current) => selectElement(current, id, additive));
+        setSelection((current) => selectionWithGroups(current, id, additive, layout));
         setSelectedGridLines([]);
         setGridAreaSelection(undefined);
-    }, []);
+    }, [layout]);
     const setSelectedGridLineId = useCallback((id: string | undefined, additive = false) => {
         if (!gridSelectionEnabled) return;
         setGridAreaSelection(undefined);
@@ -139,7 +140,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <div><h1>deets</h1><p>Watch face studio</p></div>
                         <ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "light" ? "dark" : "light")} />
                     </div>
-                    <DesignFilePanel scene={scene} grid={grid} disabled={!fontsReady || !!fontError}
+                    <DesignFilePanel scene={scene} grid={grid} layout={layout} disabled={!fontsReady || !!fontError}
                         savedDesignId={savedDesignId} hasUnsavedChanges={hasUnsavedChanges}
                         onNew={() => { newDocument(); clearSelection(); }} onBrowse={() => setPage("designs")}
                         onSaved={markSaved} />
@@ -221,8 +222,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             </aside>
             <WatchWorkspace
                 scene={scene}
+                layout={layout}
                 editRevision={revision}
-                fileActions={<DesignFileActions scene={scene} grid={grid} revision={revision}
+                fileActions={<DesignFileActions scene={scene} grid={grid} layout={layout} revision={revision}
                     disabled={!fontsReady || !!fontError}
                     onImport={(document) => { importDocument(document); clearSelection(); }} />}
                 exportDisabled={!fontsReady || !!fontError}
@@ -263,7 +265,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 onUndo={() => navigate("undo")}
                 onRedo={() => navigate("redo")}
                 onSelectElement={setSelectedId}
-                onMoveElement={fontsReady ? (id, desired) => setScene((current) => moveSceneElement(current, id, desired, { enabled: false, showGuideLines, grid })) : undefined}
+                onMoveElement={fontsReady ? (id, desired) => setScene((current) => moveSceneElement(current, id, desired, { enabled: false, showGuideLines, grid, layout })) : undefined}
             />
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings">
                 <header className="inspector-header"><span className="inspector-dot" aria-hidden="true" />Inspector<span className="inspector-tag">Element</span></header>
@@ -271,22 +273,23 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     <details className="inspector-group" open={layersOpen} onToggle={(event) => setLayersOpen(event.currentTarget.open)}>
                         <summary>Layers<span className="element-count">{scene.elements.length}</span></summary>
                         <div className="inspector-group-content">
-                            <ElementsPanel scene={scene} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
+                            <ElementsPanel scene={scene} layout={layout} onLayoutChange={setLayout} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
                         </div>
                     </details>
                     <details className="inspector-group" open={selectionOpen} onToggle={(event) => setSelectionOpen(event.currentTarget.open)}>
                         <summary>{selectedIds.length > 1 ? "Selected elements" : selectedGridLines.length ? "Selected grid lines" : selectedGridAreas?.length ? "Selected area" : "Selected element"}</summary>
                         <div className="inspector-group-content">
+                            {selectedIds.length > 0 && <LayoutPanel key={selectedIds.join("|")} scene={scene} layout={layout} ids={selectedIds} onDocumentChange={setDocument} onSelect={setSelection} />}
                             {selectedIds.length > 1 && <BatchPresetsPanel key={selectedIds.join("|")} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
-                            {selectedIds.length > 1 && <BatchBoxPanel key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
-                            {!!selectedGridAreas?.length && <GridAreaPanel scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
+                            {selectedIds.length > 1 && <BatchBoxPanel layout={layout} key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
+                            {!!selectedGridAreas?.length && <GridAreaPanel layout={layout} scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
                                 selectionError={areaCollection.error} onClear={() => setGridAreaSelection(undefined)} onSceneChange={setScene} onSelect={setSelectedId} />}
                             {selectedGridLines.length > 0 && <GridLinePanel key={selectedGridLines.join("|")} size={size} inset={inset} grid={grid}
                                 selectedIds={selectedGridLines} onChange={setGrid} onSelect={setSelectedGridLines} onDelete={() => setSelectedGridLineId(undefined)} />}
-                            {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
+                            {selected && <ElementActionsPanel layout={layout} key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                                 onSceneChange={setScene} onSelect={setSelectedId} label={elementLabel(scene, selected.id)} />}
-                            {selected && <ActivitySettingsPanel scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
-                            {selected && <ElementBoxPanel key={selected.id}
+                            {selected && <ActivitySettingsPanel layout={layout} scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
+                            {selected && <ElementBoxPanel layout={layout} key={selected.id}
                                 scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                             {selected?.source === "label" && <TextLabelPanel key={`text-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                             {selected && isEditableTextSource(selected.source) && (

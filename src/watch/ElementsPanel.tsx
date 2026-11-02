@@ -7,17 +7,20 @@ import { frontToBack, moveLayer, type LayerAction } from "./layers.ts";
 import { useLayerChange } from "./useLayerChange.ts";
 import { useLayerDrag } from "./useLayerDrag.ts";
 import "./ElementsPanel.css";
+import { isSelectionLocked, setLayerLocks, type EditorLayout } from "./editor-layout.ts";
 
 interface Props {
     scene: Scene;
+    layout?: EditorLayout;
+    onLayoutChange?: (layout: EditorLayout) => void;
     selectedId?: string;
     selectedIds?: string[];
     onSelect: (id: string, additive?: boolean) => void;
     onSceneChange: (scene: Scene) => void;
 }
 
-export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onSceneChange }: Props) {
-    const { apply, busy, message, error } = useLayerChange(scene, onSceneChange);
+export function ElementsPanel({ scene, layout, onLayoutChange, selectedId, selectedIds, onSelect, onSceneChange }: Props) {
+    const { apply, busy, message, error } = useLayerChange(scene, onSceneChange, layout);
     const { list, preview, start, suppressClick } = useLayerDrag(scene, busy, apply, onSelect);
     return (
         <section className="elements-panel" aria-label="Layers">
@@ -27,19 +30,21 @@ export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onScen
                 data-drag-active={Boolean(preview)} onClickCapture={suppressClick}>
                 {frontToBack(scene).map((element, index) => {
                     const label = elementLabel(scene, element.id);
+                    const locked = isSelectionLocked([element.id], layout);
+                    const group = layout?.groups.find((item) => item.elementIds.includes(element.id));
                     return <li key={element.id} className="layer-row" data-selected={(selectedIds?.includes(element.id) ?? selectedId === element.id)}
                         data-layer-id={element.id} data-dragging={preview?.id === element.id}
                         data-settling={preview?.settling} aria-disabled={busy || Boolean(preview?.settling)}
                         style={preview ? { transform: `translateY(${preview.id === element.id ? preview.offset : preview.shifts.get(element.id) ?? 0}px)` } : undefined}
-                        onPointerDown={(event) => start(event, element.id)}
+                        onPointerDown={(event) => { if (!locked && !(event.target instanceof Element && event.target.closest(".layer-lock"))) start(event, element.id); }}
                         onDragStart={(event) => event.preventDefault()}>
-                        <button type="button" className="layer-handle" disabled={busy} aria-disabled={busy || Boolean(preview)}
+                        <button type="button" className="layer-handle" disabled={busy || locked} aria-disabled={busy || Boolean(preview)}
                             aria-label={`Reorder ${label}`} aria-keyshortcuts="ArrowUp ArrowDown Home End"
                             title="Drag tile to reorder, or use arrow keys"
                             onFocus={() => onSelect(element.id)}
                             onKeyDown={(event) => {
                                 const action: LayerAction | undefined = ({ ArrowUp: "forward", ArrowDown: "backward", Home: "front", End: "back" } as const)[event.key as "ArrowUp" | "ArrowDown" | "Home" | "End"];
-                                if (!action) return;
+                                if (!action || locked) return;
                                 event.preventDefault();
                                 if (preview) return;
                                 void apply(moveLayer(scene, element.id, action));
@@ -49,7 +54,7 @@ export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onScen
                         <button type="button" className="element-choice" disabled={busy || Boolean(preview?.settling)} aria-pressed={(selectedIds?.includes(element.id) ?? selectedId === element.id)}
                             onClick={(event) => onSelect(element.id, event.shiftKey)}>
                             <span className="element-symbol" aria-hidden="true"><ElementIcon kind={isClockSource(element.source) ? "time" : isDateSource(element.source) ? "date" : element.source === "divider" ? "divider" : "other"} /></span>
-                            <span className="element-name">{label}</span>
+                            <span className="element-name">{label}{group && <span className="layer-group-name">{group.name}</span>}</span>
                             {isClockSource(element.source) && (
                                 <span className="element-format">{element.source === "secondsRing" ? "SS · Ring" : clockModes.find((mode) => mode.source === element.source)?.label}</span>
                             )}
@@ -61,6 +66,14 @@ export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onScen
                             )}
                             <span className="layer-number" aria-label={`Layer ${index + 1} of ${scene.elements.length}`}>{index + 1}</span>
                         </button>
+                        {onLayoutChange && <button type="button" className="layer-lock" disabled={busy}
+                            aria-label={`${locked ? 'Unlock' : 'Lock'} ${label}`} aria-pressed={locked}
+                            onClick={() => onLayoutChange(setLayerLocks(layout, [element.id], !locked))}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                                <rect x="5" y="10" width="14" height="11" rx="2" />
+                                <path d={locked ? 'M8 10V6a4 4 0 0 1 8 0v4' : 'M8 10V6a4 4 0 0 1 8 0'} />
+                            </svg>
+                        </button>}
                     </li>;
                 })}
             </ul>

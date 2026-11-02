@@ -4,6 +4,7 @@ import { previewWatch, fitElementBox } from "./api.ts";
 import { moveSceneElement } from "./snapping.ts";
 import { evaluatePixelExpression } from "./arithmetic.ts";
 import "./ElementBoxPanel.css";
+import { isSelectionLocked, type EditorLayout } from "./editor-layout.ts";
 
 const fields = ["x", "y", "width", "height"] as const;
 type Field = typeof fields[number];
@@ -33,8 +34,9 @@ function BoxInput({ field, value, onCommit, invalid }: {
 }
 
 /** Native box dimensions are independent of font rasterisation. */
-export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
+export function ElementBoxPanel({ scene, layout, elementId, onSceneChange }: {
     scene: Scene;
+    layout?: EditorLayout;
     elementId: string;
     onSceneChange: Dispatch<SetStateAction<Scene>>;
 }) {
@@ -44,7 +46,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     const [request, setRequest] = useState<{ base: Scene; next: Scene; fit: boolean }>();
     const [error, setError] = useState<string>();
     useEffect(() => {
-        if (!request) return;
+        if (!request || isSelectionLocked([elementId], layout)) return;
         const controller = new AbortController();
         void (request.fit ? fitElementBox(request.next, elementId, controller.signal) : previewWatch(request.next, false, controller.signal)).then((mapped) => {
             if (controller.signal.aborted) return;
@@ -57,11 +59,11 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
             setError(failure instanceof Error ? failure.message : "The element box could not be changed.");
         });
         return () => controller.abort();
-    }, [request, elementId, onSceneChange]);
+    }, [request, elementId, layout, onSceneChange]);
 
     return <section className="element-box-panel" aria-labelledby="element-box-heading">
         <h2 id="element-box-heading">Position and size <span className="section-unit">px</span></h2>
-        <fieldset>
+        <fieldset disabled={isSelectionLocked([elementId], layout)}>
             <legend className="element-box-legend">Position and size in native pixels</legend>
             <div className="element-box-fields">
                 {fields.map((field) => <BoxInput key={`${field}-${element[field]}`} field={field} value={element[field]}
@@ -76,7 +78,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
                                     const target = next.elements.find((item) => item.id === elementId)!;
                                     return { base, fit: false, next: moveSceneElement(next, elementId,
                                         { x: changed === "x" ? value : target.x, y: changed === "y" ? value : target.y },
-                                        { enabled: false, showGuideLines: false }) };
+                                        { enabled: false, showGuideLines: false, layout }) };
                                 }
                                 return { base, fit: false, next: { ...next, elements: next.elements.map((item) => item.id === elementId
                                     ? { ...item, [changed]: value,

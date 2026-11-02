@@ -2,17 +2,18 @@ import type { Scene } from '../../shared/scene.ts';
 import type { DesignDocument } from './design-file.ts';
 import { createHistory, recordHistory, redoHistory, undoHistory, type History } from './history.ts';
 import { defaultGrid } from './grid.ts';
+import { tidyLayout } from './editor-layout.ts';
 
-export interface EditorDocument extends DesignDocument { savedDesignId?: string; documentId: number }
+export interface EditorDocument extends DesignDocument { savedDesignId?: string; recovered?: boolean; documentId: number }
 
 /** All history sessions for the same saved record share its latest savepoint. */
 export function documentCheckpointKey(document: EditorDocument): string {
-    return document.savedDesignId ? `saved:${document.savedDesignId}` : `session:${document.documentId}`;
+    return document.savedDesignId && !document.recovered ? `saved:${document.savedDesignId}` : `session:${document.documentId}`;
 }
 
 /** Workspace preferences and saved-record identifiers do not change design content. */
-export function documentFingerprint({ scene, grid }: DesignDocument): string {
-    return JSON.stringify({ scene, grid });
+export function documentFingerprint({ scene, grid, layout }: DesignDocument): string {
+    return JSON.stringify({ scene, grid, ...(layout ? { layout } : {}) });
 }
 
 export function hasDocumentChanges(document: DesignDocument, checkpoint?: string): boolean {
@@ -37,6 +38,7 @@ type EditorAction =
     | { type: 'save'; id: string; name: string }
     | { type: 'prepare'; scene: Scene }
     | { type: 'import'; document: DesignDocument & { savedDesignId?: string } }
+    | { type: 'recover'; document: DesignDocument & { savedDesignId?: string } }
     | { type: 'new' }
     | { type: 'undo' | 'redo' };
 
@@ -53,12 +55,15 @@ export function reduceEditor(state: EditorState, action: EditorAction, expectedG
     const checkpoints = new Map(state.checkpoints);
     const remember = (document: EditorDocument) => checkpoints.set(documentCheckpointKey(document), documentFingerprint(document));
     switch (action.type) {
-        case 'edit':
-            history = recordHistory(history, action.change(history.present));
+        case 'edit': {
+            const changed = action.change(history.present);
+            const layout = tidyLayout(changed.layout, changed.scene);
+            history = recordHistory(history, { ...changed, ...(layout ? { layout } : {}) });
             if (history === state.history) return state;
             break;
+        }
         case 'save': {
-            const document = { ...history.present, savedDesignId: action.id, scene: { ...history.present.scene, name: action.name } };
+            const document = { ...history.present, recovered: false, savedDesignId: action.id, scene: { ...history.present.scene, name: action.name } };
             history = recordHistory(history, document);
             remember(document);
             const sessions = new Set([document.documentId, ...[...history.past, ...history.future]
@@ -73,9 +78,15 @@ export function reduceEditor(state: EditorState, action: EditorAction, expectedG
             if (checkpoint !== undefined) {
                 const clean = JSON.parse(checkpoint) as DesignDocument;
                 if (JSON.stringify(clean.scene) === JSON.stringify(before.scene))
-                    checkpoints.set(documentCheckpointKey(before), documentFingerprint({ scene: action.scene, grid: clean.grid }));
+                    checkpoints.set(documentCheckpointKey(before), documentFingerprint({ ...clean, scene: action.scene }));
             }
             history = createHistory({ ...before, scene: action.scene });
+            break;
+        }
+        case 'recover': {
+            const document = { ...action.document, recovered: true, documentId: ++sequence };
+            history = recordHistory(history, document);
+            generation++;
             break;
         }
         case 'import': {

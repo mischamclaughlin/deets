@@ -6,12 +6,15 @@ import { gridLines, type GridSettings } from "./grid.ts";
 import type { GridArea } from "./grid-area.ts";
 import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement, moveSceneElement } from "./snapping.ts";
+import type { EditorLayout } from "./editor-layout.ts";
+import { linkedElementIds } from "./snapping.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
 import "./WatchAnnotations.css";
 
 interface Props {
     scene: Scene;
+    layout?: EditorLayout;
     night?: boolean;
     showAreas?: boolean;
     showCircumference?: boolean;
@@ -58,7 +61,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showAreas = true, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, selectedGridAreas, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId, selectedElementIds }: Props) {
+export function WatchCanvas({ scene, layout, night = false, showAreas = true, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, selectedGridAreas, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId, selectedElementIds }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -71,8 +74,8 @@ export function WatchCanvas({ scene, night = false, showAreas = true, showCircum
     const [active, setActive] = useState<string>();
     const selectedId = onSelectElement ? selectedElementId : active;
     const pixelScene = useMemo(() => preview
-        ? moveSceneElement(scene, preview.element.id, preview.position, { enabled: false, showGuideLines: false })
-        : scene, [scene, preview]);
+        ? moveSceneElement(scene, preview.element.id, preview.position, { enabled: false, showGuideLines: false, layout })
+        : scene, [scene, preview, layout]);
     const prepared = preparedMapping(pixelScene, night);
     const current = result?.scene === pixelScene && result.night === night ? result
         : prepared ? { scene: pixelScene, night, layout: prepared } : undefined;
@@ -146,6 +149,7 @@ export function WatchCanvas({ scene, night = false, showAreas = true, showCircum
             x: currentDrag.element.x + point.x - currentDrag.start.x,
             y: currentDrag.element.y + point.y - currentDrag.start.y,
         }, {
+            layout,
             enabled: snapEnabled && !event.altKey,
             snapToGrid,
             snapToGuides,
@@ -236,7 +240,7 @@ export function WatchCanvas({ scene, night = false, showAreas = true, showCircum
                         pointerSelecting.current = true;
                         target?.closest("g")?.focus();
                         pointerSelecting.current = false;
-                        if (event.shiftKey || element.source === "secondsRing") return;
+                        if (event.shiftKey || element.source === "secondsRing" || linkedElementIds(scene, element.id, layout).some((id) => layout?.lockedIds.includes(id))) return;
                         event.currentTarget.setPointerCapture(event.pointerId);
                         drag.current = { pointerId: event.pointerId, element, start, position: { x: element.x, y: element.y } };
                         setPreview(drag.current);
@@ -282,7 +286,7 @@ export function WatchCanvas({ scene, night = false, showAreas = true, showCircum
                                         onMoveElement(element.id, moveElement(scene, element, {
                                             x: element.x + direction[0] * step,
                                             y: element.y + direction[1] * step,
-                                        }, { enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, grid }));
+                                        }, { layout, enabled: snapEnabled && !event.altKey, snapToGrid, snapToGuides, snapToElements, night, showGuideLines, grid }));
                                     }
                                     if (event.key === "Escape") {
                                         const cancelled = drag.current;

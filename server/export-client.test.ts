@@ -61,3 +61,20 @@ test("editable exports capture the clicked grid independently of ongoing edits",
     await exportGarmin(scene, undefined, grid);
     assert.deepEqual(exported, { scene, mapping: "validated-token", grid: original });
 });
+
+
+test("editable exports capture layer locks and groups independently of in-flight editing", async (context) => {
+    const layout = { lockedIds: [scene.elements[0].id], groups: [] };
+    const original = structuredClone(layout);
+    let exported: unknown;
+    context.mock.method(globalThis, "fetch", async (path: string, options: RequestInit) => {
+        if (path.endsWith("/layout")) {
+            layout.lockedIds.length = 0;
+            return Response.json({ scene, mapping: "validated-token" });
+        }
+        exported = JSON.parse(options.body as string);
+        return new Response(new Uint8Array([1, 2, 3]));
+    });
+    await exportGarmin(scene, undefined, defaultGrid, layout);
+    assert.deepEqual(exported, { scene, mapping: "validated-token", grid: defaultGrid, layout: original });
+});

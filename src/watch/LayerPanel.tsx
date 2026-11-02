@@ -2,6 +2,7 @@ import type { Scene } from "../../shared/scene.ts";
 import { moveLayer, type LayerAction } from "./layers.ts";
 import { useLayerChange } from "./useLayerChange.ts";
 import "./LayerPanel.css";
+import type { EditorLayout } from "./editor-layout.ts";
 
 const actions: Array<{ action: LayerAction; description: string }> = [
     { action: "front", description: "Bring selected element to the front" },
@@ -21,14 +22,15 @@ function LayerArrow({ action }: { action: LayerAction }) {
     </svg>;
 }
 
-export function LayerPanel({ scene, elementId, disabled, onSceneChange }: {
+export function LayerPanel({ scene, layout, elementId, disabled, onSceneChange }: {
     scene: Scene;
+    layout?: EditorLayout;
     elementId: string;
     disabled: boolean;
     onSceneChange: (scene: Scene) => void;
 }) {
     const index = scene.elements.findIndex((element) => element.id === elementId);
-    const { apply, busy, message, error } = useLayerChange(scene, onSceneChange);
+    const { apply, busy, message, error } = useLayerChange(scene, onSceneChange, layout);
 
     return <div className="layer-panel" role="group" aria-label="Layer order">
         <div className="layer-toolbar">

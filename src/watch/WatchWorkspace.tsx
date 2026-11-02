@@ -40,7 +40,7 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
             <div className="workspace-header-actions">
                 <div className="workspace-file-actions" role="group" aria-label="Import and export">
                     {fileActions}
-                    <GarminExportButton scene={scene} grid={canvasProps.grid ?? defaultGrid} disabled={exportDisabled} />
+                    <GarminExportButton scene={scene} grid={canvasProps.grid ?? defaultGrid} layout={canvasProps.layout} disabled={exportDisabled} />
                 </div>
             </div>
         </header>

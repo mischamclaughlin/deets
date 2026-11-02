@@ -64,3 +64,14 @@ test('cancelled imports do not return an editable document', async () => {
     controller.abort();
     await assert.rejects(readPrgDesign(program(), controller.signal), { name: 'AbortError' });
 });
+
+
+test('editable PRG resources preserve browser layer metadata and reject malformed locks', async () => {
+    const layout = { lockedIds: [linkedScene.elements[0].id], groups: [] };
+    const editable = { ...document, layout };
+    assert.deepEqual(await readPrgDesign(program(envelope(JSON.stringify(editable)))), {
+        scene: linkedScene, grid: document.grid, layout,
+    });
+    for (const malformed of [null, {}, { ...layout, lockedIds: ['missing'] }, { ...layout, groups: [null] }])
+        await assert.rejects(readPrgDesign(program(envelope(JSON.stringify({ ...document, layout: malformed })))));
+});

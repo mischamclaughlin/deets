@@ -3,15 +3,15 @@ import { maxDesignBytes, prepareDesign, serialiseDesign, type DesignDocument } f
 import { maxPrgBytes, readPrgDesign } from './prg-design.ts';
 import './GarminExportButton.css';
 
-export function DesignFileActions({ scene, grid, revision, disabled, onImport }: DesignDocument & {
+export function DesignFileActions({ scene, grid, layout, revision, disabled, onImport }: DesignDocument & {
     revision: number;
     disabled: boolean;
     onImport: (document: DesignDocument) => void;
 }) {
     const input = useRef<HTMLInputElement>(null);
     const request = useRef<AbortController | undefined>(undefined);
-    const current = useRef({ scene, grid, revision });
-    useLayoutEffect(() => { current.current = { scene, grid, revision }; }, [scene, grid, revision]);
+    const current = useRef({ scene, grid, layout, revision });
+    useLayoutEffect(() => { current.current = { scene, grid, layout, revision }; }, [scene, grid, layout, revision]);
     useEffect(() => () => request.current?.abort(), []);
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
@@ -32,7 +32,7 @@ export function DesignFileActions({ scene, grid, revision, disabled, onImport }:
             const text = prg ? serialiseDesign(await readPrgDesign(new Uint8Array(await file.arrayBuffer()), controller.signal)) : await file.text();
             const document = await prepareDesign(text, controller.signal);
             if (controller.signal.aborted) return;
-            if (current.current.scene !== snapshot.scene || current.current.grid !== snapshot.grid || current.current.revision !== snapshot.revision)
+            if (current.current.scene !== snapshot.scene || current.current.grid !== snapshot.grid || current.current.layout !== snapshot.layout || current.current.revision !== snapshot.revision)
                 throw new Error('Your design changed during import. Import the file again.');
             onImport(document);
             setMessage(`Imported ${document.scene.name}. Choose Save design to add it to your library.`);

@@ -1,8 +1,9 @@
 import { devices, type Scene } from '../../shared/scene.ts';
 import { defaultGrid, gridLines, type GridSettings } from './grid.ts';
 import { refreshFonts } from './api.ts';
+import { parseLayout, type EditorLayout } from './editor-layout.ts';
 
-export interface DesignDocument { scene: Scene; grid: GridSettings }
+export interface DesignDocument { scene: Scene; grid: GridSettings; layout?: EditorLayout }
 export const maxDesignBytes = 1024 * 1024;
 const object = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -30,7 +31,8 @@ export function parseDesign(text: string): DesignDocument {
         throw new Error('This file contains invalid edge clearance.');
     // Validate hidden grids as well, using the same geometry rules as the editor.
     gridLines(size, inset, { ...grid, visible: true } as unknown as GridSettings);
-    return { scene: scene as unknown as Scene, grid: grid as unknown as GridSettings };
+    return { scene: scene as unknown as Scene, grid: grid as unknown as GridSettings,
+        ...(value.layout === undefined ? {} : { layout: parseLayout(value.layout, scene.elements.map((element) => object(element) ? String(element.id) : '')) }) };
 }
 
 export function serialiseDesign(document: DesignDocument): string {
@@ -43,7 +45,7 @@ export async function prepareDesign(text: string, signal?: AbortSignal): Promise
     signal?.throwIfAborted();
     const mapped = await refreshFonts(document.scene, signal);
     signal?.throwIfAborted();
-    return { scene: mapped.scene, grid: document.grid };
+    return { ...document, scene: mapped.scene };
 }
 
 export function designFilename(name: string): string {

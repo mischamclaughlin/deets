@@ -1,9 +1,13 @@
 import { isEditableTextSource, type Scene } from "../../shared/scene.ts";
 
+import { expandGroups, isSelectionLocked, type EditorLayout } from "./editor-layout.ts";
+
 export interface PlacementBox { x: number; y: number; width: number; height: number }
 
 /** Grid geometry stays outside the scene; only explicit element boxes are saved. */
-export function placeElementsInArea(scene: Scene, ids: readonly string[], box: PlacementBox): Scene {
+export function placeElementsInArea(scene: Scene, ids: readonly string[], box: PlacementBox, layout?: EditorLayout): Scene {
+    ids = expandGroups(ids, layout);
+    if (isSelectionLocked(ids, layout)) throw new Error("Unlock the selected layers before placing them in an area.");
     if (![box.x, box.y, box.width, box.height].every(Number.isSafeInteger) || box.width < 1 || box.height < 1)
         throw new Error("Choose a grid area with room for an element.");
     const selected = scene.elements.filter((element) => ids.includes(element.id));

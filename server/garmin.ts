@@ -4,6 +4,7 @@ import { mkdir, lstat, rename, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
+import { defaultGrid } from "../src/watch/grid.ts";
 import { parseDesign } from "../src/watch/design-file.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 import { callBridge, GarminError } from "./bridge.ts";
@@ -210,7 +211,7 @@ export function garmin(): Plugin {
                 const watchFont = request.url === "/api/garmin/watch-font";
                 const inheritFont = request.url === "/api/garmin/inherit-font";
                 const allowed = exporting
-                    ? ["scene", "mapping", "grid"]
+                    ? ["scene", "mapping", "grid", "layout"]
                     : colourPresets ? ["scene", "presets"]
                         : elementColour ? ["scene", "elementId", "channel", "colour"]
                         : elementColourPreset ? ["scene", "elementId", "channel", "presetId"]
@@ -254,11 +255,11 @@ export function garmin(): Plugin {
                         400,
                         "The request has unsupported or missing fields.",
                     );
-                if (exporting && "grid" in payload) {
+                if (exporting && ("grid" in payload || "layout" in payload)) {
                     try {
-                        parseDesign(JSON.stringify({ format: "deets", version: 1, scene: payload.scene, grid: payload.grid }));
+                        parseDesign(JSON.stringify({ format: "deets", version: 1, scene: payload.scene, grid: "grid" in payload ? payload.grid : defaultGrid, ...(payload.layout === undefined ? {} : { layout: payload.layout }) }));
                     } catch {
-                        throw new RequestError(400, "Choose valid editable design and grid settings.");
+                        throw new RequestError(400, "Choose valid editable design, grid and layer settings.");
                     }
                 }
                 if (!exporting) {

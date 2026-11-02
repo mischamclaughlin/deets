@@ -1,0 +1,11 @@
+.layout-actions, .layout-alignment { display: flex; flex-wrap: wrap; gap: 6px; }
+.layout-panel button { border: 1px solid var(--rp-border); border-radius: 6px; padding: 6px 8px; background: var(--rp-surface); color: var(--rp-text); font: inherit; font-size: 11px; cursor: pointer; }
+.layout-panel button:disabled { opacity: 0.5; cursor: default; }
+.layout-panel button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: 2px; }
+.layout-panel button:hover:enabled { border-color: var(--rp-pine); background: var(--rp-low); }
+.layout-group-name { display: grid; gap: 5px; margin: 12px 0 6px; color: var(--rp-subtle); font-size: 11px; }
+.layout-group-name input { min-width: 0; width: 100%; box-sizing: border-box; }
+.layout-alignment { margin-top: 12px; }
+.layer-lock { align-self: center; margin-right: 6px; border: 0; border-radius: 4px; padding: 5px; background: transparent; color: var(--rp-subtle); cursor: pointer; }
+.layer-lock[aria-pressed="true"] { color: var(--rp-pine); }
+.layer-group-name { display: block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--rp-subtle); font-size: 9px; }

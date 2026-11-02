@@ -3,7 +3,7 @@ import type { DesignDocument } from './design-file.ts';
 import { saveDesign } from './saved-designs.ts';
 import './DesignFilePanel.css';
 
-export function DesignFilePanel({ scene, grid, disabled, savedDesignId, hasUnsavedChanges, onNew, onSaved, onBrowse }: DesignDocument & {
+export function DesignFilePanel({ scene, grid, layout, disabled, savedDesignId, hasUnsavedChanges, onNew, onSaved, onBrowse }: DesignDocument & {
     disabled: boolean;
     savedDesignId?: string;
     hasUnsavedChanges: boolean;
@@ -30,7 +30,7 @@ export function DesignFilePanel({ scene, grid, disabled, savedDesignId, hasUnsav
             setMessage('');
             onNew();
         }} />}
-        {naming && <SaveDesignDialog document={{ scene, grid }} savedDesignId={savedDesignId} onDismiss={() => setNaming(false)}
+        {naming && <SaveDesignDialog document={{ scene, grid, ...(layout === undefined ? {} : { layout }) }} savedDesignId={savedDesignId} onDismiss={() => setNaming(false)}
             onSaved={(id, name) => {
                 onSaved(id, name);
                 setNaming(false);

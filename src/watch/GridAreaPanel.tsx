@@ -8,9 +8,11 @@ import { ElementPicker } from "./ElementPicker.tsx";
 import type { LibrarySource } from "./library-catalogue.ts";
 import "./ElementPicker.css";
 import "./GridAreaPanel.css";
+import { isSelectionLocked, type EditorLayout } from "./editor-layout.ts";
 
-export function GridAreaPanel({ scene, area, areaCount, selectionError, onClear, onSceneChange, onSelect }: {
+export function GridAreaPanel({ scene, layout, area, areaCount, selectionError, onClear, onSceneChange, onSelect }: {
     scene: Scene;
+    layout?: EditorLayout;
     area?: GridArea;
     areaCount: number;
     selectionError?: string;
@@ -25,8 +27,8 @@ export function GridAreaPanel({ scene, area, areaCount, selectionError, onClear,
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
     const request = useRef<AbortController | undefined>(undefined);
-    const latest = useRef({ scene, area });
-    useLayoutEffect(() => { latest.current = { scene, area }; }, [scene, area]);
+    const latest = useRef({ scene, area, layout });
+    useLayoutEffect(() => { latest.current = { scene, area, layout }; }, [scene, area, layout]);
     useEffect(() => () => request.current?.abort(), []);
 
     function dismiss() {
@@ -46,9 +48,9 @@ export function GridAreaPanel({ scene, area, areaCount, selectionError, onClear,
         try {
             const next = source ? (await addElement(scene, source, controller.signal, options)).scene : scene;
             const ids = source ? next.elements.filter((element) => !scene.elements.some((item) => item.id === element.id)).map((item) => item.id) : [existing];
-            const placed = await previewWatch(placeElementsInArea(next, ids, area.box), false, controller.signal);
+            const placed = await previewWatch(placeElementsInArea(next, ids, area.box, layout), false, controller.signal);
             if (controller.signal.aborted) return;
-            if (latest.current.scene !== scene || latest.current.area !== area)
+            if (latest.current.scene !== scene || latest.current.area !== area || latest.current.layout !== layout)
                 throw new Error("The canvas or grid area changed. Select the area and try again.");
             onSceneChange(placed.scene);
             onSelect(ids[0]);
@@ -72,11 +74,11 @@ export function GridAreaPanel({ scene, area, areaCount, selectionError, onClear,
             <select value={existing} disabled={busy || !area} onChange={(event) => setExisting(event.target.value)}>
                 <option value="">Choose an element…</option>
                 {scene.elements.filter((element) => element.source !== "secondsRing").map((element) =>
-                    <option key={element.id} value={element.id}>{elementName(scene, element.id)}</option>)}
+                    <option key={element.id} value={element.id} disabled={isSelectionLocked([element.id], layout)}>{elementName(scene, element.id)}</option>)}
             </select>
         </label>
         <div className="grid-area-actions">
-            <button type="button" disabled={busy || !area || !existing} onClick={() => void place()}>{busy && !adding ? "Placing…" : "Place element"}</button>
+            <button type="button" disabled={busy || !area || !existing || isSelectionLocked([existing], layout)} onClick={() => void place()}>{busy && !adding ? "Placing…" : "Place element"}</button>
             <button type="button" disabled={busy || !area || scene.elements.length >= 40} aria-haspopup="dialog" aria-expanded={open}
                 onClick={() => { setError(undefined); setOpen(true); }}>Add from library</button>
         </div>

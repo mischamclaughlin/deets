@@ -3,19 +3,22 @@ import { devices, type Scene } from '../../shared/scene.ts';
 import { applyBatchGeometry, type BoxField } from './batch-geometry.ts';
 import { SliderValue } from './SliderValue.tsx';
 import './BatchBoxPanel.css';
+import { isSelectionLocked, type EditorLayout } from './editor-layout.ts';
 
 const fields = ['x', 'y', 'width', 'height'] as const;
 const fieldLabel = (field: BoxField) => field === 'x' || field === 'y' ? field.toUpperCase() : field === 'width' ? 'Width' : 'Height';
 
 /** Shared absolute geometry, committed as one native-validated history snapshot. */
-export function BatchBoxPanel({ scene, ids, onSceneChange }: {
+export function BatchBoxPanel({ scene, layout, ids, onSceneChange }: {
     scene: Scene;
+    layout?: EditorLayout;
     ids: string[];
     onSceneChange: Dispatch<SetStateAction<Scene>>;
 }) {
     const request = useRef<AbortController | undefined>(undefined);
     const latestScene = useRef(scene);
-    useLayoutEffect(() => { latestScene.current = scene; }, [scene]);
+    const latestLayout = useRef(layout);
+    useLayoutEffect(() => { latestScene.current = scene; latestLayout.current = layout; }, [scene, layout]);
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState(false);
@@ -24,7 +27,7 @@ export function BatchBoxPanel({ scene, ids, onSceneChange }: {
     const size = devices[scene.device];
 
     async function apply(field: BoxField, value: number) {
-        if (request.current) return;
+        if (request.current || isSelectionLocked(ids, layout)) return;
         const controller = new AbortController();
         request.current = controller;
         setBusy(true);
@@ -33,7 +36,7 @@ export function BatchBoxPanel({ scene, ids, onSceneChange }: {
         try {
             const next = await applyBatchGeometry(scene, ids, field, value, controller.signal);
             if (controller.signal.aborted) return;
-            if (latestScene.current !== scene) throw new Error('The canvas changed while applying these values. Try again.');
+            if (latestScene.current !== scene || latestLayout.current !== layout) throw new Error('The canvas changed while applying these values. Try again.');
             onSceneChange((current) => current === scene ? next : current);
             setMessage('');
         } catch (failure) {
@@ -54,7 +57,7 @@ export function BatchBoxPanel({ scene, ids, onSceneChange }: {
                 const shared = selected.every((element) => element[field] === value) ? value : undefined;
                 return <label key={field}>{fieldLabel(field)}
                     <SliderValue label={fieldLabel(field)} value={shared} min={field === 'x' || field === 'y' ? 0 : 1}
-                        max={field === 'x' || field === 'y' ? size - 1 : size} disabled={busy || !selected.length}
+                        max={field === 'x' || field === 'y' ? size - 1 : size} disabled={busy || !selected.length || isSelectionLocked(ids, layout)}
                         onChange={(value) => void apply(field, value)} />
                 </label>;
             })}

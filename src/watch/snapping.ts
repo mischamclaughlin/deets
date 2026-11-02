@@ -1,10 +1,12 @@
 import { devices, type Scene, type SceneElement } from "../../shared/scene.ts";
 import { gridLines, gridLineValues, gridRadii, type GridSettings } from "./grid.ts";
-import { activityParts } from "./library-catalogue.ts";
+import { linkedElementIds, type EditorLayout } from "./editor-layout.ts";
+export { linkedElementIds } from "./editor-layout.ts";
 
 interface Point { x: number; y: number }
 export interface SnapOptions {
     enabled: boolean;
+    layout?: EditorLayout;
     showGuideLines: boolean;
     snapToGrid?: boolean;
     snapToGuides?: boolean;
@@ -14,21 +16,6 @@ export interface SnapOptions {
     threshold?: number;
 }
 
-/** Only an activity's icon and data share movement; its graph is independent. */
-export function linkedElementIds(scene: Scene, elementId: string): string[] {
-    const selected = scene.elements.find((element) => element.id === elementId);
-    if (!selected) return [];
-    const root = selected.activityId
-        ? scene.elements.find((element) => element.id === selected.activityId)
-        : selected;
-    if (!root || root.moveTogether === false) return [elementId];
-    const iconSource = activityParts[root.source as keyof typeof activityParts]?.icon;
-    if (selected.id !== root.id && selected.source !== iconSource) return [elementId];
-    return scene.elements.filter((element) => element.id === root.id ||
-        (element.activityId === root.id && element.source === iconSource))
-        .map((element) => element.id);
-}
-
 /** Apply a single bounded native-pixel translation to the selected activity. */
 export function moveSceneElement(scene: Scene, elementId: string, desired: Point, options: SnapOptions): Scene {
     const selected = scene.elements.find((element) => element.id === elementId);
@@ -36,19 +23,19 @@ export function moveSceneElement(scene: Scene, elementId: string, desired: Point
     const position = moveElement(scene, selected, desired, options);
     const dx = position.x - selected.x, dy = position.y - selected.y;
     if (!dx && !dy) return scene;
-    const linked = new Set(linkedElementIds(scene, elementId));
+    const linked = new Set(linkedElementIds(scene, elementId, options.layout));
     return { ...scene, elements: scene.elements.map((element) => linked.has(element.id)
         ? { ...element, x: element.x + dx, y: element.y + dy } : element) };
 }
 
 /** All geometry is in native pixels, independent of browser text and CSS. */
 export function moveElement(scene: Scene, element: SceneElement, desired: Point, options: SnapOptions): Point {
-    if (element.source === "secondsRing") return { x: element.x, y: element.y };
+    if (element.source === "secondsRing" || linkedElementIds(scene, element.id, options.layout).some((id) => options.layout?.lockedIds.includes(id))) return { x: element.x, y: element.y };
     const size = devices[scene.device];
     const centre = size / 2;
     const radius = centre - (scene.edgeInset ?? 0);
     const { width, height } = element;
-    const linked = new Set(linkedElementIds(scene, element.id));
+    const linked = new Set(linkedElementIds(scene, element.id, options.layout));
     const members = scene.elements.filter((item) => linked.has(item.id) && item.id !== element.id).concat(element);
     const valid = (point: Point) => members.every((member) => {
         const x = point.x + member.x - element.x, y = point.y + member.y - element.y;

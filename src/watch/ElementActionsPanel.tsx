@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
 import { activityName } from "./element-name.ts";
 import { copyElement, deleteElement } from "./api.ts";
+import { isSelectionLocked, type EditorLayout } from "./editor-layout.ts";
 import { LayerPanel } from "./LayerPanel.tsx";
 
-export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect, label }: {
+export function ElementActionsPanel({ scene, layout, elementId, onSceneChange, onSelect, label }: {
     scene: Scene;
+    layout?: EditorLayout;
     label: string;
     elementId: string;
     onSceneChange: (scene: Scene) => void;
@@ -14,7 +16,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
     const [action, setAction] = useState<"copy" | "delete">();
     const [error, setError] = useState<string>();
     useEffect(() => {
-        if (action === undefined) return;
+        if (action === undefined || (action === "delete" && isSelectionLocked([elementId], layout))) return;
         const controller = new AbortController();
         void (action === "copy" ? copyElement : deleteElement)(scene, elementId, controller.signal).then((layout) => {
             if (controller.signal.aborted) return;
@@ -32,7 +34,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
             setError(failure instanceof Error ? failure.message : "The element could not be changed.");
         });
         return () => controller.abort();
-    }, [action, scene, elementId, onSceneChange, onSelect]);
+    }, [action, scene, layout, elementId, onSceneChange, onSelect]);
     return <section className="selection-heading" aria-labelledby="element-actions-heading">
         <div className="selection-heading-row">
             <h2 id="element-actions-heading">{activityName(scene, elementId) ?? label}</h2>
@@ -45,7 +47,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
                         <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V4H4v12h4" />
                     </svg>
                 </button>
-                <button type="button" className="element-action element-action-danger" disabled={action !== undefined}
+                <button type="button" className="element-action element-action-danger" disabled={action !== undefined || isSelectionLocked([elementId], layout)}
                     aria-label={action === "delete" ? "Deleting element…" : "Delete element"} title="Delete element"
                     onClick={() => { setError(undefined); setAction("delete"); }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -55,7 +57,7 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
                 </button>
             </div>
         </div>
-        <LayerPanel scene={scene} elementId={elementId} disabled={action !== undefined} onSceneChange={onSceneChange} />
+        <LayerPanel layout={layout} scene={scene} elementId={elementId} disabled={action !== undefined || isSelectionLocked([elementId], layout)} onSceneChange={onSceneChange} />
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;
 }
