@@ -20,8 +20,7 @@ export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onScen
     const { apply, busy, message, error } = useLayerChange(scene, onSceneChange);
     const { list, preview, start, suppressClick } = useLayerDrag(scene, busy, apply, onSelect);
     return (
-        <section className="elements-panel" aria-labelledby="elements-heading">
-            <div className="section-heading"><h2 id="elements-heading">Layers</h2><span className="element-count">{scene.elements.length}</span></div>
+        <section className="elements-panel" aria-label="Layers">
             {scene.elements.length > 0 && <p className="layers-caption">Front at top <span>Drag to reorder</span></p>}
             {scene.elements.length === 0 && <p className="panel-intro">Your canvas is ready. Add an element from the library to get started.</p>}
             <ul ref={list} className="element-list layer-list" aria-busy={busy}

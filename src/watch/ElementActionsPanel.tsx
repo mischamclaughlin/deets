@@ -34,7 +34,6 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
         return () => controller.abort();
     }, [action, scene, elementId, onSceneChange, onSelect]);
     return <section className="selection-heading" aria-labelledby="element-actions-heading">
-        <p className="selection-caption">Selected element</p>
         <h2 id="element-actions-heading">{activityName(scene, elementId) ?? label}</h2>
         <div className="element-actions">
             <button type="button" className="element-action" disabled={action !== undefined || scene.elements.length >= 40}

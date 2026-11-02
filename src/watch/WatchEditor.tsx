@@ -58,6 +58,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         return () => controller.abort();
     }, [scene, fontsReady, replaceInitialScene]);
     const [sidebarView, setSidebarView] = useState<"elements" | "styles" | "canvas">("elements");
+    const [layersOpen, setLayersOpen] = useState(true);
+    const [selectionOpen, setSelectionOpen] = useState(true);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
     const [outlineMode, setOutlineMode] = useState<"all" | "selected" | "off">("selected");
@@ -261,32 +263,42 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings">
                 <header className="inspector-header"><span className="inspector-dot" aria-hidden="true" />Inspector<span className="inspector-tag">Element</span></header>
                 <div className="sidebar-scroll" key={revision} inert={!fontsReady}>
-                    <ElementsPanel scene={scene} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
-                    {selectedIds.length > 1 && <BatchPresetsPanel key={selectedIds.join("|")} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
-                    {selectedIds.length > 1 && <BatchBoxPanel key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
-                    {!!selectedGridAreas?.length && <GridAreaPanel scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
-                        selectionError={areaCollection.error} onClear={() => setGridAreaSelection(undefined)} onSceneChange={setScene} onSelect={setSelectedId} />}
-                    {selectedGridLines.length > 0 && <GridLinePanel key={selectedGridLines.join("|")} size={size} inset={inset} grid={grid}
-                        selectedIds={selectedGridLines} onChange={setGrid} onSelect={setSelectedGridLines} onDelete={() => setSelectedGridLineId(undefined)} />}
-                    {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
-                        onSceneChange={setScene} onSelect={setSelectedId} label={elementLabel(scene, selected.id)} />}
-                    {selected && <ActivitySettingsPanel scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
-                    {selected && <ElementBoxPanel key={selected.id}
-                        scene={scene} elementId={selected.id} onSceneChange={setScene} />}
-                    {selected && isEditableTextSource(selected.source) && (
-                        <>
-                            {selected?.source === "divider"
-                                ? <DividerPanel key={`divider-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                                : isDateSource(selected.source)
-                                    ? <DateDisplayPanel key={`date-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                                    : isClockSource(selected.source)
-                                        ? <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
-                                        : null}
-                            {selected?.source !== "secondsRing" && <TypographyPanel key={`typography-${selectedId}-${inheritsFont(selected)}-${selected?.typography?.family ?? scene.fontFamily}-${selected?.textPresetId ?? "custom"}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />}
-                        </>
-                    )}
-                    {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
-                    {selectedIds.length === 0 && selectedGridLines.length === 0 && !selectedGridAreas?.length && <div className="selection-empty"><h2>Make it yours</h2><p>Select an element on the canvas or in the Layers list to adjust its appearance and position.</p></div>}
+                    <details className="inspector-group" open={layersOpen} onToggle={(event) => setLayersOpen(event.currentTarget.open)}>
+                        <summary>Layers<span className="element-count">{scene.elements.length}</span></summary>
+                        <div className="inspector-group-content">
+                            <ElementsPanel scene={scene} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
+                        </div>
+                    </details>
+                    <details className="inspector-group" open={selectionOpen} onToggle={(event) => setSelectionOpen(event.currentTarget.open)}>
+                        <summary>{selectedIds.length > 1 ? "Selected elements" : selectedGridLines.length ? "Selected grid lines" : selectedGridAreas?.length ? "Selected area" : "Selected element"}</summary>
+                        <div className="inspector-group-content">
+                            {selectedIds.length > 1 && <BatchPresetsPanel key={selectedIds.join("|")} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
+                            {selectedIds.length > 1 && <BatchBoxPanel key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
+                            {!!selectedGridAreas?.length && <GridAreaPanel scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
+                                selectionError={areaCollection.error} onClear={() => setGridAreaSelection(undefined)} onSceneChange={setScene} onSelect={setSelectedId} />}
+                            {selectedGridLines.length > 0 && <GridLinePanel key={selectedGridLines.join("|")} size={size} inset={inset} grid={grid}
+                                selectedIds={selectedGridLines} onChange={setGrid} onSelect={setSelectedGridLines} onDelete={() => setSelectedGridLineId(undefined)} />}
+                            {selected && <ElementActionsPanel key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
+                                onSceneChange={setScene} onSelect={setSelectedId} label={elementLabel(scene, selected.id)} />}
+                            {selected && <ActivitySettingsPanel scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
+                            {selected && <ElementBoxPanel key={selected.id}
+                                scene={scene} elementId={selected.id} onSceneChange={setScene} />}
+                            {selected && isEditableTextSource(selected.source) && (
+                                <>
+                                    {selected?.source === "divider"
+                                        ? <DividerPanel key={`divider-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                                        : isDateSource(selected.source)
+                                            ? <DateDisplayPanel key={`date-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                                            : isClockSource(selected.source)
+                                                ? <ClockDisplayPanel key={`display-${selectedId}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} />
+                                                : null}
+                                    {selected?.source !== "secondsRing" && <TypographyPanel key={`typography-${selectedId}-${inheritsFont(selected)}-${selected?.typography?.family ?? scene.fontFamily}-${selected?.textPresetId ?? "custom"}`} scene={scene} elementId={selectedId!} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />}
+                                </>
+                            )}
+                            {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
+                            {selectedIds.length === 0 && selectedGridLines.length === 0 && !selectedGridAreas?.length && <div className="selection-empty"><h2>Make it yours</h2><p>Select an element on the canvas or in the Layers list to adjust its appearance and position.</p></div>}
+                        </div>
+                    </details>
                 </div>
             </aside>
             {page === "designs" && <SavedDesignsPage themeControl={<ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "light" ? "dark" : "light")} />}

@@ -1,4 +1,9 @@
-.elements-panel { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--rp-border); }
+.inspector-group + .inspector-group { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--rp-border); }
+.inspector-group > summary { display: flex; align-items: center; gap: 10px; min-height: 36px; list-style: none; color: var(--rp-text); font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 6px; }
+.inspector-group > summary::-webkit-details-marker { display: none; }
+.inspector-group > summary::after { content: ""; width: 7px; height: 7px; margin: 0 4px 0 auto; border-right: 1.5px solid var(--rp-subtle); border-bottom: 1.5px solid var(--rp-subtle); transform: rotate(-45deg); }
+.inspector-group[open] > summary::after { transform: rotate(45deg); }
+.inspector-group-content { padding-top: 14px; }
 .layers-caption { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 12px; color: var(--rp-subtle); font-size: 10px; }
 .layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); touch-action: pan-x; user-select: none; cursor: grab; transition: border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
 .layer-list .layer-row + .layer-row { margin-top: 6px; }
