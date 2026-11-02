@@ -627,3 +627,10 @@ test("selected activity graph API preserves linked icon/data and strict requests
     const origin = await requestApi("/api/garmin/activity-graph", [Buffer.from(JSON.stringify({ scene: initial, elementId: value.id, enabled: true }))], { ...headers, origin: "https://attacker.example" });
     assert.equal(origin.status, 403);
 });
+
+test("editable export metadata rejects invalid grids before native compilation", async () => {
+    for (const grid of [null, [], { visible: true }, { visible: false, circumferences: 999 }]) {
+        const result = await requestApi("/api/garmin/export", [Buffer.from(JSON.stringify({ scene, mapping: "unused", grid }))], { "content-type": "application/json" });
+        assert.equal(result.status, 400);
+    }
+});

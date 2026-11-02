@@ -235,6 +235,21 @@ fallbacks rather than replacing verified rendering rules during migration.
 
 ## Garmin export
 
+New Deets `.prg` exports include a compressed editable design resource. Use
+**Import design** to restore the scene and grid from those files, or from an
+existing `.deets.json` file. Older PRGs and other Garmin apps do not contain this
+resource and cannot be imported. Custom fonts still need their original local
+files. Imports validate the document and rebuild native font mappings before
+replacing the current design; failed imports preserve the accepted document.
+
+The compiler signs the complete PRG, including the metadata. No bytes are
+appended or patched after compilation. The metadata adds file size and a small
+resource-table overhead, but is never loaded by the watch code. Adding it leaves
+the generated renderer, glyph resources, geometry, colours, layer order and power
+behaviour unchanged. Grid settings are stored only for editing and are never
+rendered on the watch. PRG imports are limited to 16 MB, with a 1 MB limit on the
+expanded editable document.
+
 `npm run export:garmin -- --out /absolute/path/Deets.prg` compiles the scene in
 `src/watch/scene.ts` with live watch data. Install the matching `.prg` in
 `GARMIN/APPS` using the watch's supported USB transfer method.

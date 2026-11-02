@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { callBridge } from "../server/bridge.ts";
 import { scene } from "../src/watch/scene.ts";
+import { defaultGrid } from "../src/watch/grid.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 
 const args = process.argv.slice(2);
@@ -33,6 +34,7 @@ const mapped = await callBridge<WatchMapping>("refresh-fonts", { scene: snapshot
 const result = await callBridge<{ application: string }>("export", {
     scene: mapped.scene,
     mapping: mapped.mapping,
+    grid: defaultGrid,
     proof: args.includes("--proof"),
     night: args.includes("--night"),
 });

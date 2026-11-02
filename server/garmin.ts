@@ -4,6 +4,7 @@ import { mkdir, lstat, rename, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
+import { parseDesign } from "../src/watch/design-file.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 import { callBridge, GarminError } from "./bridge.ts";
 import { devicePreview } from "./device-preview.ts";
@@ -208,7 +209,7 @@ export function garmin(): Plugin {
                 const watchFont = request.url === "/api/garmin/watch-font";
                 const inheritFont = request.url === "/api/garmin/inherit-font";
                 const allowed = exporting
-                    ? ["scene", "mapping"]
+                    ? ["scene", "mapping", "grid"]
                     : colourPresets ? ["scene", "presets"]
                         : elementColour ? ["scene", "elementId", "channel", "colour"]
                         : elementColourPreset ? ["scene", "elementId", "channel", "presetId"]
@@ -250,6 +251,13 @@ export function garmin(): Plugin {
                         400,
                         "The request has unsupported or missing fields.",
                     );
+                if (exporting && "grid" in payload) {
+                    try {
+                        parseDesign(JSON.stringify({ format: "deets", version: 1, scene: payload.scene, grid: payload.grid }));
+                    } catch {
+                        throw new RequestError(400, "Choose valid editable design and grid settings.");
+                    }
+                }
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
                         action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : refreshFonts ? "refresh-fonts" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : date ? "date" : clock ? "clock" : activityGraph ? "activity-graph" : adding ? "add"

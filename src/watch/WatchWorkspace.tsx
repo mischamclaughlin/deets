@@ -1,4 +1,5 @@
 import { useState, type ReactNode, type ComponentProps } from "react";
+import { defaultGrid } from "./grid.ts";
 import { devices } from "../../shared/scene.ts";
 import { elementLabel } from "./element-label.ts";
 import { WatchCanvas } from "./WatchCanvas.tsx";
@@ -39,7 +40,7 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
             <div className="workspace-header-actions">
                 <div className="workspace-file-actions" role="group" aria-label="Import and export">
                     {fileActions}
-                    <GarminExportButton scene={scene} disabled={exportDisabled} />
+                    <GarminExportButton scene={scene} grid={canvasProps.grid ?? defaultGrid} disabled={exportDisabled} />
                 </div>
             </div>
         </header>

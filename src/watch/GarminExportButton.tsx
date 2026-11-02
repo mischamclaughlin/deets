@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
+import type { GridSettings } from "./grid.ts";
 import { exportGarmin } from "./api.ts";
 import "./GarminExportButton.css";
 
-export function GarminExportButton({ scene, disabled = false }: { scene: Scene; disabled?: boolean }) {
+export function GarminExportButton({ scene, grid, disabled = false }: { scene: Scene; grid: GridSettings; disabled?: boolean }) {
     const running = useRef(false);
     const [exporting, setExporting] = useState(false);
     const [result, setResult] = useState<{ scene: Scene; filename?: string; error?: string }>();
@@ -15,7 +16,7 @@ export function GarminExportButton({ scene, disabled = false }: { scene: Scene; 
         setResult(undefined);
         const snapshot = structuredClone(scene);
         try {
-            const program = await exportGarmin(snapshot);
+            const program = await exportGarmin(snapshot, undefined, grid);
             const filename = `Deets-${snapshot.device}.prg`;
             const url = URL.createObjectURL(program);
             const link = document.createElement("a");

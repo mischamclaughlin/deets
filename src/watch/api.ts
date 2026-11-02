@@ -1,4 +1,5 @@
 import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourChannel, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { GridSettings } from "./grid.ts";
 import { preparedMapping, rememberMapping } from "./mapping-cache.ts";
 
 async function post<T>(
@@ -39,13 +40,15 @@ export const previewWatch = (scene: Scene, night = false, signal?: AbortSignal) 
 export async function exportGarmin(
     scene: Scene,
     signal?: AbortSignal,
+    grid?: GridSettings,
 ): Promise<Blob> {
     const snapshot = structuredClone(scene);
+    const gridSnapshot = grid === undefined ? undefined : structuredClone(grid);
     const mapped = await mapWatch(snapshot, false, signal);
     const response = await fetch("/api/garmin/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scene: mapped.scene, mapping: mapped.mapping }),
+        body: JSON.stringify({ scene: mapped.scene, mapping: mapped.mapping, ...(gridSnapshot === undefined ? {} : { grid: gridSnapshot }) }),
         signal,
     });
     if (!response.ok) {

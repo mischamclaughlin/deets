@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { maxDesignBytes, prepareDesign, type DesignDocument } from './design-file.ts';
+import { maxDesignBytes, prepareDesign, serialiseDesign, type DesignDocument } from './design-file.ts';
+import { maxPrgBytes, readPrgDesign } from './prg-design.ts';
 import './GarminExportButton.css';
 
 export function DesignFileActions({ scene, grid, revision, disabled, onImport }: DesignDocument & {
@@ -25,8 +26,11 @@ export function DesignFileActions({ scene, grid, revision, disabled, onImport }:
         setError(false);
         setMessage('Checking design…');
         try {
-            if (file.size > maxDesignBytes) throw new Error('Choose a design file up to 1 MB.');
-            const document = await prepareDesign(await file.text(), controller.signal);
+            const prg = /\.prg$/i.test(file.name);
+            if (file.size > (prg ? maxPrgBytes : maxDesignBytes))
+                throw new Error(prg ? 'Choose a Garmin file up to 16 MB.' : 'Choose a design file up to 1 MB.');
+            const text = prg ? serialiseDesign(await readPrgDesign(new Uint8Array(await file.arrayBuffer()), controller.signal)) : await file.text();
+            const document = await prepareDesign(text, controller.signal);
             if (controller.signal.aborted) return;
             if (current.current.scene !== snapshot.scene || current.current.grid !== snapshot.grid || current.current.revision !== snapshot.revision)
                 throw new Error('Your design changed during import. Import the file again.');
@@ -43,14 +47,14 @@ export function DesignFileActions({ scene, grid, revision, disabled, onImport }:
 
     return <div className="design-transfer" aria-label="Design files" aria-busy={busy}>
         <button type="button" className="workspace-file-button" disabled={disabled || busy}
-            title="Open an editable .deets.json design; Garmin .prg files cannot be imported"
+            title="Open a Deets .prg export or an editable .deets.json design"
             onClick={() => input.current?.click()}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 16V4m-4 4 4-4 4 4M4 16v5h16v-5" />
             </svg>
             {busy ? 'Importing…' : 'Import design'}
         </button>
-        <input ref={input} type="file" accept=".json,application/json" aria-label="Import editable .deets.json design" hidden
+        <input ref={input} type="file" accept=".prg,.json,application/json,application/octet-stream" aria-label="Import Deets .prg or .deets.json design" hidden
             onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';

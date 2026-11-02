@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 import designer_model as model
 from designer_charts import chart_ops, device_colour, ring_tick_radius, ring_tick_inner_radius, ring_font, ring_asset_key
 from designer_export import prepare_scene_project
+from designer_document import write_editable_document
 
 ROOT = Path(__file__).resolve().parent.parent
 ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
@@ -101,6 +102,7 @@ def compile_scene(payload):
         for name in ("source", "resources"):
             shutil.copytree(ROOT / name, project / name)
         prepare_scene_project(project, scene, proof=proof, preview_night=night if proof else None)
+        write_editable_document(project, scene, payload.get("grid"))
         output = project / "Deets.prg"
         result = subprocess.run([str(compiler), "-f", "monkey.jungle", "-d", scene["device"],
                                  "-o", str(output), "-y", str(key), "-w"], cwd=project,
