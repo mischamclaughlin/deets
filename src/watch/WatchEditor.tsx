@@ -34,6 +34,7 @@ import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 import { useEditorHistory } from "./useEditorHistory.ts";
 import { selectionWithGroups } from "./editor-layout.ts";
 import { LayoutPanel } from "./LayoutPanel.tsx";
+import { DraftRecovery } from "./DraftRecovery.tsx";
 import { TargetWatchPanel } from "./TargetWatchPanel.tsx";
 import { TextLabelPanel } from "./TextLabelPanel.tsx";
 import { BatchPresetsPanel } from "./BatchPresetsPanel.tsx";
@@ -44,7 +45,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [theme, setTheme] = useState<"light" | "dark">("light");
     const [page, setPage] = useState<"editor" | "designs">("editor");
     const editor = useRef<HTMLDivElement>(null);
-    const { scene, setScene, grid, setGrid, layout, setLayout, setDocument, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
+    const { scene, setScene, grid, setGrid, layout, setLayout, setDocument, recoverDocument, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
     const document = useMemo(() => ({ scene, grid, layout }), [scene, grid, layout]);
     const [fontsReady, setFontsReady] = useState(false);
     const [fontError, setFontError] = useState<string>();
@@ -146,6 +147,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         savedDesignId={savedDesignId} hasUnsavedChanges={hasUnsavedChanges}
                         onNew={() => { newDocument(); clearSelection(); }} onBrowse={() => setPage("designs")}
                         onSaved={markSaved} />
+                    <DraftRecovery document={document} savedDesignId={savedDesignId} dirty={hasUnsavedChanges}
+                        ready={fontsReady && !fontError} revision={revision}
+                        onRestore={(recovered) => { recoverDocument(recovered); clearSelection(); }} />
                     <div className="sidebar-switcher" role="group" aria-label="Sidebar view">
                         {(["elements", "styles", "canvas"] as const).map((view) => (
                             <button key={view} type="button" aria-pressed={sidebarView === view}

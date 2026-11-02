@@ -102,6 +102,23 @@ for supported shared edits. Layers can be reordered by dragging or with the
 layer controls. Batch scene changes are validated together, preserving the
 accepted scene if the operation fails.
 
+The library's **Device & text** category adds battery percentage, enabled alarm
+count and custom text. Select a custom text layer to edit its text, then choose
+**Apply text**. Text supports up to 80 characters covered by the selected font;
+unsupported characters or text that cannot fit leave the accepted design intact.
+
+Use the padlock beside a layer or **Layout → Lock layers** to protect it from
+movement, resizing, reordering, deletion and area placement. Unlock it to make
+those changes; typography and colours remain editable. Select multiple layers,
+enter a group name and choose **Group selection** to move and select them together.
+Groups can be renamed, duplicated or ungrouped, and keep their relative positions
+when dragged or aligned. Linked activity icons and values move as one unit too.
+The outer seconds ring cannot join a movable group. Alignment offers left,
+centre, right, top, middle and bottom edges; spacing requires at least three
+independent layers or groups. Invalid arrangements are rejected as a whole.
+Locks and groups are undoable editing metadata, included in saved designs and
+editable exports without changing the watch renderer.
+
 Click a grid area to use its rectangle as an element box. Shift-click neighbouring
 areas to combine them, or Shift-click again to remove one. The area inspector
 can place an existing element or add one from the library. Text size stays
@@ -122,11 +139,34 @@ Undo/redo keeps up to 100 prior document states, including scene and grid edits.
 Use the toolbar or Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z or Ctrl+Y to redo.
 Theme, selection and workspace viewing preferences stay outside document history.
 
+Unsaved designs are backed up automatically in browser storage. After a refresh
+or interrupted session, **Restore draft** validates the document and prepares its
+fonts before applying it; **Discard draft** removes that backup. Separate editing
+sessions keep separate drafts. Saving or starting a new design clears the active
+session's backup. Leaving with unsaved changes also requests the browser's usual
+confirmation. Drafts remain local to this browser and depend on available storage;
+custom font files still need their original local cache. Failed recovery keeps
+both the accepted document and the recovery record.
+
 The circular sun/moon button switches the studio between Rosé Pine Light and
 Dark themes independently of the watch design. **Edit/Preview** switches between
 the annotated canvas and a casing preview for the selected watch. **Day/Night**
 changes the watch preview only. Casing artwork comes from the local Garmin SDK;
 its screen placement never supplies native layout or exported coordinates.
+
+In **Preview → Preview values**, choose a time and date, sample/large/unavailable
+readings, and a weather condition, then **Apply preview**. **Reset** returns to the
+standard samples. These viewing values stay outside the saved document and undo
+history; normal Garmin exports always use live watch data.
+
+In **Canvas → Target watch**, choose the 42, 47 or 51 mm Epix Pro. Conversion
+rebuilds fonts for that watch and repositions element centres proportionally
+within the usable circle. Typography size and fixed clipping boxes retain their
+native-pixel dimensions; seconds rings follow the physical screen size. Grid
+positions retain their normalised coordinates and spacing retains its native
+pixel value. Conversion is one undoable document change. If any element does not
+fit, the original design stays intact: move it towards the centre or reduce its
+size before trying again.
 
 ## Dates
 

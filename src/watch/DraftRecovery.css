@@ -1,0 +1,10 @@
+.draft-recovery:empty { display: none; }
+.draft-recovery { max-height: 190px; overflow: auto; font-size: 11px; color: var(--rp-text); }
+.draft-recovery-item { margin-top: 10px; padding: 10px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); }
+.draft-recovery-item p { margin: 0; line-height: 1.5; }
+.draft-recovery-item time { display: block; color: var(--rp-subtle); font-size: 10px; }
+.draft-recovery-item .design-name-actions { justify-content: flex-start; margin-top: 8px; gap: 6px; }
+.draft-recovery-item button { border: 1px solid var(--rp-border); border-radius: 6px; padding: 6px 8px; background: var(--rp-base); color: var(--rp-text); font: inherit; cursor: pointer; }
+.draft-recovery-item button:hover:enabled { background: var(--rp-overlay); }
+.draft-recovery-item button:focus-visible { outline: 2px solid var(--rp-iris); outline-offset: 2px; }
+.draft-recovery-item button:disabled { opacity: .5; cursor: default; }
