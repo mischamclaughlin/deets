@@ -9,6 +9,21 @@ import type { WatchMapping } from "../shared/scene.ts";
 
 const blankScene = { ...initialScene, elements: [] };
 
+test("watch backgrounds reach native day pixels while night stays black", async () => {
+    const black = await callBridge<WatchMapping>("layout", { scene: blankScene });
+    const coloured = { ...blankScene, background: 0x24273a };
+    const day = await callBridge<WatchMapping>("layout", { scene: coloured });
+    const night = await callBridge<WatchMapping>("layout", { scene: coloured, night: true });
+    assert.equal(day.scene.background, coloured.background);
+    // RGB565 is the same device palette used by exported Garmin pixels.
+    assert.equal(day.background, 0x202439);
+    assert.equal(night.background, 0);
+    assert.equal(night.scene.background, coloured.background);
+    assert.notEqual(day.mapping, black.mapping);
+    await assert.rejects(callBridge("export", { scene: coloured, mapping: black.mapping }), /render the canvas again/);
+    await assert.rejects(callBridge("layout", { scene: { ...coloured, background: 0x1000000 } }), GarminError);
+});
+
 test("native mapping round-trips the typed scene and exposes exact element bounds", async () => {
     const layout = await callBridge<WatchMapping>("layout", { scene });
     assert.deepEqual(layout.scene, scene);

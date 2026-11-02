@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Scene } from "../../shared/scene.ts";
+import { defaultZoneColours, type ColourChannel, type Scene } from "../../shared/scene.ts";
 import { setElementColour, setElementColourPreset } from "./api.ts";
 import { TextBackgroundControls } from "./TextBackgroundControls.tsx";
 import { ColourInput } from "./ColourInput.tsx";
+import { WorkspaceIcon } from "./WorkspaceIcon.tsx";
 
-type Channel = "day" | "night";
+type Channel = ColourChannel;
 type Change = { channel: Channel } & ({ kind: "colour"; colour: number } | { kind: "preset"; presetId: string | null });
 
 export function ElementColourPanel({ scene, elementId, onSceneChange }: {
@@ -13,6 +14,7 @@ export function ElementColourPanel({ scene, elementId, onSceneChange }: {
     onSceneChange: (scene: Scene) => void;
 }) {
     const element = scene.elements.find((item) => item.id === elementId)!;
+    const zones = element.source === "heartZones" || element.source === "temperatureZones";
     const [pending, setPending] = useState<Change[]>([]);
     const [error, setError] = useState<string>();
     function queue(change: Change) {
@@ -42,22 +44,33 @@ export function ElementColourPanel({ scene, elementId, onSceneChange }: {
     }, [pending, scene, elementId, onSceneChange]);
     return <section aria-labelledby="element-colours-heading">
         <h2 id="element-colours-heading">Colours</h2>
-        {(["day", "night"] as const).map((channel) => {
+        {(["day", "night"] as const).flatMap((appearance) => zones
+            ? ([0, 1, 2, 3, 4] as const).map((index): Channel => `${appearance}:zone:${index}`)
+            : [appearance]).map((channel) => {
+            const night = channel.startsWith("night");
+            const band = channel.includes(":zone:") ? Number(channel.at(-1)) : undefined;
+            const label = `${night ? "Night" : "Day"}${band === undefined ? "" : ` band ${band + 1}`}`;
             const change = pending.find((item) => item.channel === channel);
-            const savedPreset = channel === "day" ? element.colourPresetId : element.nightColourPresetId;
+            const savedPreset = band === undefined ? (night ? element.nightColourPresetId : element.colourPresetId)
+                : (night ? element.nightZoneColourPresetIds : element.zoneColourPresetIds)?.[band]
+                    ?? (night ? element.nightColourPresetId : element.colourPresetId);
             const presetId = change ? change.kind === "preset" ? change.presetId : null : savedPreset;
             const preset = scene.colourPresets?.find((item) => item.id === presetId);
             const colour = change?.kind === "colour" ? change.colour
-                : preset?.colour ?? (channel === "day" ? element.colour : element.nightColour);
-            return <div key={channel}>
+                : preset?.colour ?? (band === undefined ? (night ? element.nightColour : element.colour)
+                    : (night ? element.nightZoneColours : element.zoneColours)?.[band] ?? defaultZoneColours[band]);
+            return <div key={channel} className="colour-channel">
+                <div className="colour-channel-heading"><WorkspaceIcon kind={night ? "moon" : "sun"} />
+                    {label}
+                </div>
                 {!!scene.colourPresets?.length && <label className="font-choice">
-                    {channel === "day" ? "Day preset" : "Night preset"}
+                    {label} preset
                     <select value={presetId ?? ""} onChange={(event) => queue({ channel, kind: "preset", presetId: event.target.value || null })}>
                         <option value="">Custom</option>
                         {scene.colourPresets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                     </select>
                 </label>}
-                <ColourInput label={channel === "day" ? "Day colour" : "Night colour"} value={colour}
+                <ColourInput label={`${label} colour`} value={colour}
                     disabled={!!presetId || change?.kind === "preset"}
                     onChange={(value) => queue({ channel, kind: "colour", colour: value })} />
             </div>;

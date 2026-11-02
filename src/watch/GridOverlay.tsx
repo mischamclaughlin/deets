@@ -18,7 +18,8 @@ interface Props {
     onSelect: (id: string | undefined, additive?: boolean) => void;
     onChange: (grid: GridSettings) => void;
     selectedArea?: GridArea;
-    onSelectArea?: (area: GridArea) => void;
+    selectedAreas?: readonly GridArea[];
+    onSelectArea?: (area: GridArea, additive?: boolean) => void;
 }
 interface Drag {
     pointerId: number;
@@ -36,14 +37,15 @@ function pointer(event: ReactPointerEvent<SVGSVGElement>) {
 }
 
 /** Editable annotations use native coordinates but never enter the exported scene. */
-export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedIds = [], onSelect, onChange, selectedArea, onSelectArea }: Props) {
+export function GridOverlay({ size, inset, grid, mirror, scene, night = false, snapToElements = false, selectedIds = [], onSelect, onChange, selectedArea, selectedAreas, onSelectArea }: Props) {
     const drag = useRef<Drag | undefined>(undefined);
     const pointerFocus = useRef(false);
+    const keyboardPoint = useRef<{ grid: GridSettings; point: { x: number; y: number } } | undefined>(undefined);
     const [preview, setPreview] = useState<GridSettings>();
     const radius = size / 2 - inset;
     const clip = useId();
-    const { hoveredArea, hoverAt, clearHover } = useGridAreaHover({ size, inset, grid, scene, selectedArea, enabled: !!onSelectArea });
-    const hover = hoveredArea?.path !== selectedArea?.path ? hoveredArea : undefined;
+    const { hoveredArea, hoverAt, clearHover } = useGridAreaHover({ size, inset, grid, scene, selectedArea, selectedAreas, enabled: !!onSelectArea });
+    const hover = hoveredArea?.path !== selectedArea?.path && !selectedAreas?.some((area) => (area.key ?? area.path) === (hoveredArea?.key ?? hoveredArea?.path)) ? hoveredArea : undefined;
     function move(event: ReactPointerEvent<SVGSVGElement>) {
         const current = drag.current;
         const point = pointer(event);
@@ -98,7 +100,8 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
                 if (!area) return;
                 event.preventDefault();
                 event.stopPropagation();
-                onSelectArea(area);
+                keyboardPoint.current = { grid, point: { x: start.x, y: start.y } };
+                onSelectArea(area, event.shiftKey || event.metaKey || event.ctrlKey);
                 return;
             }
             event.preventDefault();
@@ -125,23 +128,26 @@ export function GridOverlay({ size, inset, grid, mirror, scene, night = false, s
         onLostPointerCapture={() => { clearHover(); drag.current = undefined; setPreview(undefined); }}>
         <defs><clipPath id={clip}><circle cx={size / 2} cy={size / 2} r={radius} /></clipPath></defs>
         {onSelectArea && <circle className="grid-area-hit" cx={size / 2} cy={size / 2} r={radius}
-            tabIndex={0} role="button" aria-label="Select a grid area. Enter selects the centre; arrow keys move the selection."
+            tabIndex={0} role="button" aria-label="Select grid areas. Arrow keys preview an area; Enter selects it. Shift-click or Shift-Enter adds or removes an area."
             onKeyDown={(event) => {
                 const step = event.shiftKey ? 10 : 1;
                 const direction = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, number[]>)[event.key];
                 if (!direction && event.key !== "Enter" && event.key !== " ") return;
                 event.preventDefault();
                 event.stopPropagation();
-                const anchor = selectedArea?.anchor ?? { x: size / 2, y: size / 2 };
-                const area = selectGridArea(size, inset, grid, { x: anchor.x + (direction?.[0] ?? 0), y: anchor.y + (direction?.[1] ?? 0) });
-                if (area) { clearHover(); onSelectArea(area); }
+                const anchor = keyboardPoint.current?.grid === grid ? keyboardPoint.current.point
+                    : selectedAreas?.at(-1)?.anchor ?? selectedArea?.anchor ?? { x: size / 2, y: size / 2 };
+                const point = { x: anchor.x + (direction?.[0] ?? 0), y: anchor.y + (direction?.[1] ?? 0) };
+                if (direction) { keyboardPoint.current = { grid, point }; hoverAt(point); return; }
+                const area = selectGridArea(size, inset, grid, point);
+                if (area) { clearHover(); onSelectArea(area, event.shiftKey || event.metaKey || event.ctrlKey); }
             }} />}
         {hover && <g className="grid-area-hover" clipPath={`url(#${clip})`} aria-hidden="true">
             <path d={hover.path} />
         </g>}
-        {selectedArea && <g className="grid-area-selection" clipPath={`url(#${clip})`} aria-hidden="true">
-            <path d={selectedArea.path} />
-            <rect x={selectedArea.box.x} y={selectedArea.box.y} width={selectedArea.box.width} height={selectedArea.box.height} />
+        {(selectedArea || !!selectedAreas?.length) && <g className="grid-area-selection" clipPath={`url(#${clip})`} aria-hidden="true">
+            {selectedArea ? <path d={selectedArea.path} /> : selectedAreas?.map((area) => <path key={area.key ?? area.path} d={area.path} />)}
+            {selectedArea && <rect x={selectedArea.box.x} y={selectedArea.box.y} width={selectedArea.box.width} height={selectedArea.box.height} />}
         </g>}
         {gridLines(size, inset, preview ?? grid).map((line) => <g key={line.id} data-grid-id={line.id}
             className={selectedIds.includes(line.id) ? "grid-line selected" : "grid-line"}

@@ -9,9 +9,12 @@ import type { LibrarySource } from "./library-catalogue.ts";
 import "./ElementPicker.css";
 import "./GridAreaPanel.css";
 
-export function GridAreaPanel({ scene, area, onSceneChange, onSelect }: {
+export function GridAreaPanel({ scene, area, areaCount, selectionError, onClear, onSceneChange, onSelect }: {
     scene: Scene;
-    area: GridArea;
+    area?: GridArea;
+    areaCount: number;
+    selectionError?: string;
+    onClear: () => void;
     onSceneChange: (scene: Scene) => void;
     onSelect: (id: string) => void;
 }) {
@@ -34,7 +37,7 @@ export function GridAreaPanel({ scene, area, onSceneChange, onSelect }: {
         setBusy(false);
     }
     async function place(source?: LibrarySource, options?: ActivityAddOptions) {
-        if (request.current) return;
+        if (request.current || !area) return;
         const controller = new AbortController();
         request.current = controller;
         setBusy(true);
@@ -60,20 +63,24 @@ export function GridAreaPanel({ scene, area, onSceneChange, onSelect }: {
         }
     }
     return <section className="grid-area-panel" aria-labelledby={heading} aria-busy={busy}>
-        <h2 id={heading}>Selected grid area <span className="section-unit">{area.box.width} × {area.box.height} px</span></h2>
-        <p className="control-hint">Use this area as the element’s box. Text size stays unchanged.</p>
+        <h2 id={heading}>{areaCount > 1 ? `${areaCount} grid areas selected` : "Selected grid area"}
+            {area && <span className="section-unit"> {area.box.width} × {area.box.height} px</span>}</h2>
+        <p className="control-hint">Shift-click neighbouring areas to combine them. Shift-click again to remove an area.</p>
+        {selectionError && <p className="grid-area-selection-status" role="status">{selectionError}</p>}
+        {area && <p className="control-hint">{areaCount > 1 ? "Use the combined rectangle" : "Use this area"} as the element’s box. Text size stays unchanged.</p>}
         <label className="font-choice">Existing element
-            <select value={existing} disabled={busy} onChange={(event) => setExisting(event.target.value)}>
+            <select value={existing} disabled={busy || !area} onChange={(event) => setExisting(event.target.value)}>
                 <option value="">Choose an element…</option>
                 {scene.elements.filter((element) => element.source !== "secondsRing").map((element) =>
                     <option key={element.id} value={element.id}>{elementName(scene, element.id)}</option>)}
             </select>
         </label>
         <div className="grid-area-actions">
-            <button type="button" disabled={busy || !existing} onClick={() => void place()}>{busy && !adding ? "Placing…" : "Place element"}</button>
-            <button type="button" disabled={busy || scene.elements.length >= 40} aria-haspopup="dialog" aria-expanded={open}
+            <button type="button" disabled={busy || !area || !existing} onClick={() => void place()}>{busy && !adding ? "Placing…" : "Place element"}</button>
+            <button type="button" disabled={busy || !area || scene.elements.length >= 40} aria-haspopup="dialog" aria-expanded={open}
                 onClick={() => { setError(undefined); setOpen(true); }}>Add from library</button>
         </div>
+        <button type="button" className="grid-area-clear" onClick={onClear}>Clear area selection</button>
         {!open && error && <p className="typography-status" role="alert">{error}</p>}
         {open && <ElementPicker scene={scene} adding={adding} error={error} onAdd={(source, options) => void place(source, options)} onDismiss={dismiss} />}
     </section>;

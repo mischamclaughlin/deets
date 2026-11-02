@@ -13,13 +13,15 @@ import "./WatchAnnotations.css";
 interface Props {
     scene: Scene;
     night?: boolean;
+    showAreas?: boolean;
     showCircumference?: boolean;
     showGuideLines?: boolean;
     grid?: GridSettings;
     mirrorGrid?: boolean;
     selectedGridLineIds?: string[];
     selectedGridArea?: GridArea;
-    onSelectGridArea?: (area: GridArea) => void;
+    selectedGridAreas?: readonly GridArea[];
+    onSelectGridArea?: (area: GridArea, additive?: boolean) => void;
     onSelectGridLine?: (id: string | undefined, additive?: boolean) => void;
     onChangeGrid?: (grid: GridSettings) => void;
     snapEnabled?: boolean;
@@ -29,7 +31,8 @@ interface Props {
     snapGridToElements?: boolean;
     outlineMode?: "all" | "selected" | "off";
     selectedElementId?: string;
-    onSelectElement?: (id: string | undefined) => void;
+    selectedElementIds?: string[];
+    onSelectElement?: (id: string | undefined, additive?: boolean) => void;
     onMoveElement?: (id: string, position: { x: number; y: number }) => void;
 }
 interface Drag {
@@ -55,7 +58,7 @@ interface Result {
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, night = false, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId }: Props) {
+export function WatchCanvas({ scene, night = false, showAreas = true, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, selectedGridAreas, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId, selectedElementIds }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -63,6 +66,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
     const [result, setResult] = useState<Result>();
     const [painted, setPainted] = useState<{ layout: WatchMapping; signature: string }>();
     const drag = useRef<Drag | undefined>(undefined);
+    const pointerSelecting = useRef(false);
     const [preview, setPreview] = useState<Drag>();
     const [active, setActive] = useState<string>();
     const selectedId = onSelectElement ? selectedElementId : active;
@@ -174,7 +178,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 style={{ visibility: ready ? "visible" : "hidden" }}
             />
             {(!ready || !current?.layout || current?.error) && (
-                <span className="watch-status" role="status">
+                <span className="watch-status" role={current?.error ? "alert" : "status"}>
                     {current?.error ?? "Mapping watch pixels…"}
                 </span>
             )}
@@ -182,7 +186,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 <GridOverlay key={`${size}-${scene.edgeInset ?? 0}`} size={size} inset={scene.edgeInset ?? 0}
                     grid={grid} mirror={mirrorGrid} selectedIds={selectedGridLineIds}
                     scene={scene} night={night} snapToElements={snapEnabled && snapGridToElements}
-                    selectedArea={selectedGridArea} onSelectArea={onSelectGridArea}
+                    selectedArea={selectedGridArea} selectedAreas={selectedGridAreas} onSelectArea={onSelectGridArea}
                     onSelect={onSelectGridLine} onChange={onChangeGrid} />
             )}
             {grid?.visible && !onChangeGrid && (
@@ -215,7 +219,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                     />
                 </svg>
             )}
-            {mapping && ready && (
+            {showAreas && mapping && ready && (
                 <svg
                     ref={areas}
                     data-outline-mode={outlineMode}
@@ -224,18 +228,15 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                         if (!onMoveElement || event.button !== 0 || drag.current) return;
                         const target = event.target instanceof Element ? event.target.closest("[data-element-id]") : null;
                         const element = scene.elements.find((item) => item.id === target?.getAttribute("data-element-id"));
-                        if (element?.source === "secondsRing") {
-                            setActive(element.id);
-                            onSelectElement?.(element.id);
-                            target?.closest("g")?.focus();
-                            return;
-                        }
                         const start = nativePointer(event);
                         if (!element || !start) return;
                         event.preventDefault();
                         setActive(element.id);
-                        onSelectElement?.(element.id);
+                        onSelectElement?.(element.id, event.shiftKey);
+                        pointerSelecting.current = true;
                         target?.closest("g")?.focus();
+                        pointerSelecting.current = false;
+                        if (event.shiftKey || element.source === "secondsRing") return;
                         event.currentTarget.setPointerCapture(event.pointerId);
                         drag.current = { pointerId: event.pointerId, element, start, position: { x: element.x, y: element.y } };
                         setPreview(drag.current);
@@ -252,7 +253,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                 >
                     {mapping.areas.map((area) => {
                         const position = preview?.element.id === area.id ? preview.position : area;
-                        const selected = area.id === selectedId;
+                        const selected = selectedElementIds?.includes(area.id) ?? area.id === selectedId;
                         const ring = scene.elements.find((element) => element.id === area.id);
                         const clearance = scene.edgeInset ?? 0;
                         const tickHitInset = ring?.ringTicksStretchToCircumference ? (4 + clearance) / 2
@@ -269,8 +270,8 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                 aria-label={label}
                                 aria-keyshortcuts={onMoveElement ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
                                 className={selected ? "area selected" : "area"}
-                                onFocus={() => { setActive(area.id); onSelectElement?.(area.id); }}
-                                onClick={() => { setActive(area.id); onSelectElement?.(area.id); }}
+                                onFocus={() => { if (!pointerSelecting.current) { setActive(area.id); onSelectElement?.(area.id); } }}
+                                onClick={(event) => { if (event.detail === 0) { setActive(area.id); onSelectElement?.(area.id, event.shiftKey); } }}
                                 onKeyDown={(event) => {
                                     const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
                                     const element = scene.elements.find((item) => item.id === area.id);
@@ -300,6 +301,7 @@ export function WatchCanvas({ scene, night = false, showCircumference = false, s
                                     ) {
                                         event.preventDefault();
                                         setActive(area.id);
+                                        onSelectElement?.(area.id, event.shiftKey);
                                     }
                                 }}
                             >

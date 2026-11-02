@@ -1,5 +1,6 @@
+import { SliderValue } from "./SliderValue.tsx";
 import { useEffect, useState } from "react";
-import type { Scene, Typography } from "../../shared/scene.ts";
+import { inheritsFont, type Scene, type Typography } from "../../shared/scene.ts";
 import { applyTextPreset, setFontInheritance, setTypography } from "./api.ts";
 import { TextAlignmentControls } from "./TextAlignmentControls.tsx";
 import { textPresets } from "./text-presets.ts";
@@ -17,7 +18,7 @@ interface Props {
 /** Every accepted edit comes back through the native glyph and layout validator. */
 export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUpload }: Props) {
     const element = scene.elements.find((item) => item.id === elementId)!;
-    const inherits = element.inheritFont ?? !element.typography;
+    const inherits = inheritsFont(element);
     const [pendingInheritance, setPendingInheritance] = useState<boolean>();
     const [draft, setDraft] = useState<Typography>(element.typography ?? {
         family: inherits ? scene.fontFamily ?? "time" : element.font === "widget" ? "widget" : "time",
@@ -124,11 +125,15 @@ export function TypographyPanel({ scene, elementId, onSceneChange, uploads, onUp
             <FontPicker family={inherits ? scene.fontFamily ?? "time" : displayed.family}
                 uploads={uploads} onUpload={onUpload} disabled={applyingDefaults || inherits || pendingInheritance !== undefined}
                 onChange={(family) => change({ ...displayed, family })} />
+            {inherits && <p className="control-hint">Using the shared watch font. Change it in Styles, or choose a custom font above.</p>}
+            {element.textPresetId && <p className="control-hint">Typography follows the selected preset. Choose Custom to adjust these values independently.</p>}
             {typographyControls.map(({ key, label, min, max, unit }) => (
                 <div className="typography-control" key={key}>
                     <div className="control-heading">
                         <label htmlFor={`type-${key}`}>{label}</label>
-                        <output htmlFor={`type-${key}`}>{displayed[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
+                        <SliderValue label={label} value={displayed[key]} min={min} max={max} unit={unit}
+                            disabled={!!element.textPresetId || applyingDefaults || pendingInheritance !== undefined}
+                            onChange={(value) => change({ ...displayed, [key]: value })} />
                     </div>
                     <input id={`type-${key}`} type="range" min={min} max={max} step={1} value={displayed[key]} disabled={!!element.textPresetId || applyingDefaults || pendingInheritance !== undefined}
                         onChange={(event) => change({ ...displayed, [key]: Number(event.target.value) })} />

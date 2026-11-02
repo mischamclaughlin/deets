@@ -39,7 +39,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     onSceneChange: Dispatch<SetStateAction<Scene>>;
 }) {
     const element = scene.elements.find((item) => item.id === elementId)!;
-    const text = !["floorsIcon", "stepsIcon", "walkIcon", "runIcon", "walkWeek", "stepsWeek", "floorsWeek", "runWeek", "heartZones", "temperatureZones", "solarTimeline", "secondsRing"].includes(element.source);
+    const text = isEditableTextSource(element.source) && element.source !== "secondsRing";
     const canFit = isEditableTextSource(element.source) && element.source !== "secondsRing";
     const [request, setRequest] = useState<{ base: Scene; next: Scene; fit: boolean }>();
     const [error, setError] = useState<string>();
@@ -60,7 +60,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
     }, [request, elementId, onSceneChange]);
 
     return <section className="element-box-panel" aria-labelledby="element-box-heading">
-        <h2 id="element-box-heading">Element box</h2>
+        <h2 id="element-box-heading">Position and size <span className="section-unit">px</span></h2>
         <fieldset>
             <legend className="element-box-legend">Position and size in native pixels</legend>
             <div className="element-box-fields">
@@ -93,7 +93,7 @@ export function ElementBoxPanel({ scene, elementId, onSceneChange }: {
                 <button type="button" disabled={request !== undefined} onClick={() => {
                     setError(undefined);
                     setRequest({ base: scene, next: scene, fit: true });
-                }}>Fit automatically</button>
+                }}>Fit to content</button>
             </div>}
         </fieldset>
         {error && <p className="typography-status" role="alert">{error}</p>}

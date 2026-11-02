@@ -6,6 +6,7 @@ import { basename, extname, join } from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import type { WatchMapping } from "../shared/scene.ts";
 import { callBridge, GarminError } from "./bridge.ts";
+import { devicePreview } from "./device-preview.ts";
 
 const MAX_BODY = 65_536;
 const MAX_FONT = 5 * 1024 * 1024;
@@ -130,6 +131,12 @@ export function garmin(): Plugin {
                         403,
                         "A same-origin request is required.",
                     );
+                if (request.method === "GET" && request.url?.startsWith("/api/garmin/device-preview/")) {
+                    const preview = await devicePreview(request.url.slice("/api/garmin/device-preview/".length));
+                    response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+                    response.end(JSON.stringify(preview));
+                    return;
+                }
                 if (
                     request.method === "GET" &&
                     request.url === "/api/garmin/health"

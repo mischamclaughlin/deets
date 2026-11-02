@@ -1,0 +1,13 @@
+.grid-settings { display: grid; gap: 12px; }
+.grid-axis-controls, .grid-ring-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.grid-axis { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.grid-axis button {
+    width: 100%; min-height: 30px; padding: 4px 0; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--rp-text); background: var(--panel); font-size: 10px;
+}
+.grid-axis .guide-toggle { gap: 6px; min-height: 26px; margin-top: 4px; font-size: 10px; }
+.grid-axis .guide-toggle input { width: 13px; height: 13px; }
+.grid-ring-controls .font-choice select { min-height: 32px; margin-top: 5px; padding: 6px 8px; font-size: 11px; }
+.watch-sidebar .grid-ring-controls .font-choice + .font-choice { margin-top: 0; }
+.grid-settings .control-heading { margin: 0; }
+.watch-sidebar .grid-settings input[type="range"] { margin: -5px 0 2px; }

@@ -33,6 +33,7 @@ export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onS
     }
     return <section aria-labelledby="colour-presets-heading">
         <h2 id="colour-presets-heading">Colour presets</h2>
+        {!selected && <p className="preset-empty">Save a colour to update every linked element together.</p>}
         {selected && <>
             <label className="font-choice">Preset
                 <select value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>
@@ -56,7 +57,7 @@ export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onS
             setDirty(true);
             setError(undefined);
         }}>New preset</button>
-        <button type="button" className="add-element" disabled={!selected} onClick={() => {
+        <button type="button" className="add-element preset-delete" disabled={!selected} onClick={() => {
             const remaining = presets.filter((preset) => preset.id !== selectedId);
             setPresets(remaining);
             setSelectedId(remaining[0]?.id);

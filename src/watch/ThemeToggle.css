@@ -1,0 +1,27 @@
+:is(.watch-sidebar, .saved-designs-page) .theme-toggle {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid var(--rp-border);
+    border-radius: 50%;
+    background: var(--rp-base);
+    color: var(--rp-subtle);
+    overflow: hidden;
+}
+.theme-toggle svg {
+    position: absolute;
+    inset: 8px;
+    width: 18px;
+    height: 18px;
+    transition: opacity 260ms ease, transform 360ms cubic-bezier(.2, .8, .2, 1);
+}
+.theme-toggle-sun { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle-moon { opacity: 0; transform: rotate(-70deg) scale(.45); }
+[data-theme="dark"] .theme-toggle-sun { opacity: 0; transform: rotate(70deg) scale(.45); }
+[data-theme="dark"] .theme-toggle-moon { opacity: 1; transform: rotate(0) scale(1); }
+@media (prefers-reduced-motion: reduce) {
+    .theme-toggle svg { transition: none; }
+}

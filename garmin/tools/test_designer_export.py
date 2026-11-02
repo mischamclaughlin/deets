@@ -75,6 +75,18 @@ class DesignerExportTests(unittest.TestCase):
         self.assertEqual(original_app, (ROOT / "source/EpixCanvasApp.mc").read_bytes())
         self.assertEqual(original_provider, (ROOT / "source/EpixCanvasComplications.mc").read_bytes())
 
+    def test_custom_background_is_exported_and_low_power_background_stays_black(self):
+        scene = self.scene()
+        original_identity = exporter.scene_application_id(scene)
+        scene["background"] = 0x24273A
+        self.assertNotEqual(original_identity, exporter.scene_application_id(scene))
+        with tempfile.TemporaryDirectory() as temporary:
+            project = self.project(temporary)
+            exporter.prepare_scene_project(project, scene)
+            source = (project / "source/DesignerView.mc").read_text()
+            self.assertIn("var background = night ? 0 : 2369338;", source)
+            self.assertIn("dc.setColor(background, background);\n        dc.clear();", source)
+
     def test_every_layout_change_affects_the_export_application_identity(self):
         original = self.scene()
         identity = exporter.scene_application_id(original)

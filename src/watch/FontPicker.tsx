@@ -42,6 +42,7 @@ export function FontPicker({ family, onChange, uploads, onUpload, disabled = fal
         <button className="font-upload" type="button" disabled={disabled || uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Upload font…"}
         </button>
+        {!disabled && <p className="upload-hint">TrueType (.ttf) or OpenType (.otf)</p>}
         {error && <p className="typography-status" role="alert">{error}</p>}
     </>;
 }

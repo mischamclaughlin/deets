@@ -1,0 +1,41 @@
+.workspace-header:has(.garmin-export) { flex-wrap: wrap; }
+.workspace-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.garmin-export { position: relative; }
+.garmin-export-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 9px 12px;
+    border: 1px solid #b3dac3;
+    border-radius: 7px;
+    background: #d3eadd;
+    color: #173d2c;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.garmin-export-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.garmin-export-feedback {
+    position: absolute;
+    z-index: 2;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(280px, 65vw);
+    border: 1px solid #52675f;
+    border-radius: 8px;
+    background: #1d302b;
+    box-shadow: 0 4px 16px #0003;
+    color: #d3eadd;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+.garmin-export-feedback:not(:has(p:not(:empty))) { display: none; }
+.garmin-export-feedback p { margin: 0; }
+.garmin-export-feedback p:not(:empty) { padding: 10px 12px; }
+.garmin-export-feedback [role="alert"] { color: #ffd0c5; }
+@media (hover: hover) {
+    .garmin-export-button:not(:disabled):hover { background: #e5f5ec; border-color: #d3eadd; }
+}

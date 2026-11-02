@@ -3,15 +3,49 @@ import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, createHash } from "node:crypto";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile, unlink, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
 import { garmin } from "./garmin.ts";
+import { devicePreview } from "./device-preview.ts";
 import { scene } from "../src/watch/scene.ts";
 import type { WatchMapping } from "../shared/scene.ts";
 
 type Middleware = (request: IncomingMessage, response: ServerResponse, next: () => void) => void;
+
+test("device previews reject arbitrary paths and preserve the local host restriction", async () => {
+    for (const device of ["../epix2pro47mm", "__proto__", "unknown", "epix2pro47mm?file=secret"]) {
+        assert.equal((await requestApi(`/api/garmin/device-preview/${device}`, [], {}, "GET")).status, 400);
+    }
+    assert.equal((await requestApi("/api/garmin/device-preview/epix2pro47mm", [], { host: "attacker.example" }, "GET")).status, 403);
+});
+
+test("device previews use the selected model's screen rectangle and reject mismatched geometry", async () => {
+    const root = await mkdtemp(join(tmpdir(), "deets-device-preview-"));
+    try {
+        const directory = join(root, "epix2pro47mm");
+        await mkdir(directory);
+        const image = Buffer.alloc(24);
+        Buffer.from("89504e470d0a1a0a", "hex").copy(image);
+        image.writeUInt32BE(646, 16);
+        image.writeUInt32BE(887, 20);
+        await writeFile(join(directory, "epix2pro47mm.png"), image);
+        const metadata = join(directory, "simulator.json");
+        const screen = { x: 122, y: 238, width: 416, height: 416 };
+        await writeFile(metadata, JSON.stringify({ display: { location: screen } }));
+        assert.deepEqual(await devicePreview("epix2pro47mm", root), {
+            image: `data:image/png;base64,${image.toString("base64")}`, width: 646, height: 887, screen,
+        });
+        for (const invalid of [{ ...screen, width: 390 }, { ...screen, x: 600 }, { ...screen, y: -1 }]) {
+            await writeFile(metadata, JSON.stringify({ display: { location: invalid } }));
+            await assert.rejects(devicePreview("epix2pro47mm", root), /Watch casing unavailable/);
+        }
+        await assert.rejects(devicePreview("epix2pro42mm", root), /Watch casing unavailable/);
+    } finally {
+        await rm(root, { recursive: true, force: true });
+    }
+});
 
 function assertFitsContent(mapping: WatchMapping, elementId: string) {
     const element = mapping.scene.elements.find((item) => item.id === elementId)!;

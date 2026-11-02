@@ -1,3 +1,4 @@
+import { SliderValue } from "./SliderValue.tsx";
 import { useEffect, useState } from "react";
 import type { Scene, TextPreset } from "../../shared/scene.ts";
 import { setTextPresets } from "./api.ts";
@@ -41,6 +42,7 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
 
     return <section className="typography-panel" aria-labelledby="text-defaults-heading">
         <h2 id="text-defaults-heading">Text presets</h2>
+        {!selected && <p className="preset-empty">Save a type style to keep size and spacing consistent across elements.</p>}
         {selected && <>
         <label className="font-choice">
             Preset
@@ -56,7 +58,8 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
         {typographyControls.map(({ key, label, min, max, unit }) => <div className="typography-control" key={key}>
             <div className="control-heading">
                 <label htmlFor={`default-type-${key}`}>{label}</label>
-                <output htmlFor={`default-type-${key}`}>{selected[key]}{unit === "%" ? "%" : ` ${unit}`}</output>
+                <SliderValue label={label} value={selected[key]} min={min} max={max} unit={unit}
+                    onChange={(value) => edit({ [key]: value })} />
             </div>
             <input id={`default-type-${key}`} type="range" min={min} max={max} step={1} value={selected[key]}
                 onChange={(event) => edit({ [key]: Number(event.target.value) })} />
@@ -74,7 +77,7 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             setDirty(true);
             setError(undefined);
         }}>New preset</button>
-        <button type="button" className="add-element" disabled={!selected} onClick={() => {
+        <button type="button" className="add-element preset-delete" disabled={!selected} onClick={() => {
             const presets = draft.presets.filter((preset) => preset.id !== selectedId);
             setDraft({ presets, defaultPresetId: draft.defaultPresetId === selectedId ? presets[0]?.id ?? null : draft.defaultPresetId });
             setSelectedId(presets[0]?.id ?? null);

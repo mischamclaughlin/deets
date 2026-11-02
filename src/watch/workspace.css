@@ -1,0 +1,85 @@
+.watch-workspace {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 22px;
+    min-width: 0;
+    min-height: 0;
+    padding: 28px 32px 20px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: #dceae3;
+    color-scheme: dark;
+    background: radial-gradient(ellipse at 50% 44%, #304443 0%, #1d2c2e 62%, #182528 100%);
+}
+.workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.workspace-eyebrow { color: #9bb6ac; font-size: 9px; font-weight: 600; letter-spacing: 1.8px; }
+.workspace-header h2 { display: flex; align-items: center; gap: 10px; margin: 7px 0 0; font-size: 19px; font-weight: 500; letter-spacing: -0.5px; }
+.workspace-title-dot { width: 5px; height: 5px; border-radius: 50%; background: #a4ddbe; }
+.canvas-badge { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #52675f; border-radius: 7px; color: #c1d4cb; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.canvas-badge span { color: #9bb6ac; font-size: 10px; }
+.workspace-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.workspace-segment { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid #4c6159; border-radius: 9px; background: #15242280; }
+.workspace-segment button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; color: #aec4b9; font-size: 11px; font-weight: 500; }
+.workspace-segment button[aria-pressed="true"] { color: #173d2c; background: #d3eadd; box-shadow: 0 1px 4px #0002; }
+.watch-stage { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 24px; container-type: size; isolation: isolate; }
+.watch-stage::before { position: absolute; z-index: -1; content: ""; inset: 0; border: 1px solid #708f7e1f; border-radius: 18px; background-image: radial-gradient(#a2c3b62b 0.7px, transparent 0.7px); background-size: 16px 16px; mask-image: radial-gradient(ellipse, transparent 25%, #000 85%); pointer-events: none; }
+.watch-stage .watch { width: min(100cqw - 48px, 100cqh - 48px, 640px); box-shadow: 0 0 0 1px #758e80, 0 0 0 9px #142223, 0 0 0 10px #77958640, 0 16px 40px #0004; }
+.watch-workspace[data-preview="true"] .watch-stage::before { opacity: 0.3; }
+.watch-device-frame { position: absolute; inset: 24px; --artwork-width: min(calc(100cqw - 32px), calc((100cqh - 32px) * var(--device-ratio, 1)), 640px); }
+.watch-device-artwork { position: absolute; left: 50%; top: 50%; display: block; width: var(--artwork-width); height: auto; opacity: 0; transform: translate(-50%, -50%) scale(0.96); pointer-events: none; transition: opacity 320ms ease, transform 320ms ease; }
+.watch-stage .watch-device-frame .watch { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); transition: width 320ms ease, left 320ms ease, top 320ms ease, box-shadow 320ms ease; }
+.watch-device-frame[data-active="true"] .watch-device-artwork { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.watch-stage .watch-device-frame[data-active="true"] .watch { left: calc(50% + var(--artwork-width) * var(--screen-offset-x)); top: calc(50% + var(--artwork-width) * var(--screen-offset-y)); width: calc(var(--artwork-width) * var(--screen-ratio)); box-shadow: none; }
+.watch-stage::before { transition: opacity 320ms ease; }
+.watch-device-message { position: absolute; bottom: 0; inset-inline: 0; text-align: center; color: #bdd3c6; font-size: 11px; }
+.workspace-footer { min-width: 0; }
+.canvas-context { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #90ac9b2e; }
+.canvas-selection { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; color: #d2e2d8; font-size: 11px; overflow-wrap: anywhere; }
+.context-dot { flex-shrink: 0; width: 5px; height: 5px; border-radius: 2px; background: #9ac8af; }
+.selection-position { color: #a3bcaf; font-size: 10px; font-variant-numeric: tabular-nums; }
+.workspace-snap { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 8px; border: 1px solid #52675f; border-radius: 6px; background: #213831; color: #bdd3c6; font-size: 10px; }
+.workspace-snap span { color: #a3bcae; }
+.workspace-snap[aria-pressed="true"] { border-color: #98c5aa; background: #c8e5d4; color: #194c31; }
+.workspace-snap[aria-pressed="true"] span { color: #28633f; }
+.workspace-snap:disabled { opacity: 0.4; }
+.canvas-info { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin: 12px 0 0; color: #afc7b9; font-size: 10px; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.canvas-view-note { color: #9bb4a6; }
+.canvas-shortcuts { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; min-height: 19px; margin: 15px 0 0; color: #b1c6ba; font-size: 9px; line-height: 1.7; }
+.canvas-shortcuts > span { margin: 0 3px; color: #849d8e; }
+.canvas-shortcuts kbd { min-width: 16px; padding: 0 3px; border: 1px solid #65816f70; border-radius: 4px; color: #c6dccd; font: inherit; text-align: center; }
+.watch-workspace button:focus-visible { outline: 2px solid #b7edcf; outline-offset: 4px; }
+@media (hover: hover) {
+    .workspace-segment button:not([aria-pressed="true"]):hover { background: #ffffff12; color: #edf8f2; }
+    .workspace-snap:not(:disabled):hover { border-color: #bbd5c5; }
+}
+@media (min-width: 901px) and (max-width: 1180px) {
+    .watch-workspace { padding-inline: 20px; gap: 18px; }
+    .workspace-segment button { padding-inline: 7px; }
+    .appearance-switch button { gap: 4px; }
+    .canvas-shortcuts { gap: 3px; }
+}
+@media (max-width: 900px) {
+    .watch-workspace { grid-column: 1 / -1; grid-row: 1; padding: 18px 24px 16px; gap: 12px; }
+    .workspace-header h2 { font-size: 17px; margin-top: 4px; }
+    .canvas-shortcuts { display: none; }
+    .canvas-context { padding-bottom: 8px; }
+    .canvas-info { margin-top: 8px; }
+    .watch-stage { padding: 16px; }
+    .watch-device-frame { inset: 16px; }
+    .watch-stage .watch { width: min(100cqw - 32px, 100cqh - 32px, 640px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .watch-device-artwork, .watch-stage .watch-device-frame .watch, .watch-stage::before { transition: none; }
+}
+@media (max-width: 520px) {
+    .watch-workspace { order: -1; height: 65dvh; min-height: 460px; padding: 18px 20px 14px; }
+    .workspace-toolbar { gap: 6px; }
+    .workspace-segment button { padding-inline: 8px; }
+    .selection-position { display: none; }
+    .watch-stage::before { border-radius: 12px; }
+}
+@media (max-width: 340px) {
+    .watch-workspace { padding-inline: 12px; }
+    .workspace-segment button { padding-inline: 6px; gap: 4px; }
+    .workspace-segment svg { width: 13px; height: 13px; }
+}

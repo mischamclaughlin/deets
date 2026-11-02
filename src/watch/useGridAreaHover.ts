@@ -9,11 +9,12 @@ interface Context {
     grid: GridSettings;
     scene: Scene;
     selectedArea?: GridArea;
+    selectedAreas?: readonly GridArea[];
     enabled: boolean;
 }
 interface Feedback { context: Context; area?: GridArea }
 const matches = (left: Context, right: Context) => left.size === right.size && left.inset === right.inset
-    && left.grid === right.grid && left.scene === right.scene && left.selectedArea === right.selectedArea && left.enabled === right.enabled;
+    && left.grid === right.grid && left.scene === right.scene && left.selectedArea === right.selectedArea && left.selectedAreas === right.selectedAreas && left.enabled === right.enabled;
 
 /** Pointer feedback belongs to its scene, so placing an element clears it immediately. */
 export function useGridAreaHover(context: Context) {

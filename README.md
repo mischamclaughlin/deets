@@ -75,7 +75,8 @@ metrics determine the new width and snapping bounds. The preview shows 10:08,
 10, 08, 23 or 10:08:23; Garmin exports use live hours/minutes/seconds and the watch's clock settings.
 Typography remains in the right sidebar for all five time display modes. HH:MM:SS offers full-size or half-size seconds;
 the final :SS group is bottom-aligned and uses native glyph masks.
-Divider entries show only their symbol in the element list.
+Date entries are labelled Date 1, Date 2 and so on; divider entries are labelled
+Divider 1, Divider 2 and so on.
 Dividers have their own right-hand controls for colon (:), dot (.), dash (-),
 slash (/) and vertical bar (|). Their visible symbol can sit at the top, middle
 (default) or bottom of the native element box, with independent typography and
@@ -126,6 +127,23 @@ Dark themes independently of the watch design. **Edit/Preview** switches between
 the annotated canvas and a casing preview for the selected watch. **Day/Night**
 changes the watch preview only. Casing artwork comes from the local Garmin SDK;
 its screen placement never supplies native layout or exported coordinates.
+
+## Dates
+
+Open **Library** and choose **+ Date** to add an independent, centred date element.
+Its display buttons offer DD/MM/YY, weekday, day of month, month or year.
+Combine separate date elements to build other arrangements. The design preview uses 26 October 2026; the Garmin export uses the
+watch's live local date, with English weekday and month abbreviations.
+Changing the format keeps the same element and preserves its centre to the
+nearest native pixel. Native glyph metrics reserve space for changing live
+values, including different weekday and month names.
+
+Dates start with a compact custom font and support the same typography, font
+inheritance, text presets, day/night colours, copy, delete and dragging controls
+as clocks. Included and uploaded fonts use their selected face for every date
+character, including letters and slashes.
+Font changes that cannot fit inside the clearance boundary are
+rejected without replacing the accepted scene.
 
 ## Colours
 

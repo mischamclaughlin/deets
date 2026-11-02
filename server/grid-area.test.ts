@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mergeGridAreas, toggleGridArea } from '../src/watch/grid-area-selection.ts';
 import { defaultGrid, type GridSettings } from '../src/watch/grid.ts';
 import { selectGridArea, type GridArea } from '../src/watch/grid-area.ts';
 
@@ -115,4 +116,108 @@ test('hidden, empty, invalid or exterior selections do not produce a placement a
     assert.equal(selectGridArea(100000, 0, settings, { x: 50, y: 50 }), undefined);
     assert.equal(selectGridArea(100, 0, settings, { x: NaN, y: 50 }), undefined);
     assert.equal(selectGridArea(100, 0, grid({ 'rows-1': Infinity }), { x: 50, y: 50 }), undefined);
+});
+
+
+const rectangleGrid = () => grid({ 'rows-1': -.4, 'rows-2': 0, 'rows-3': .4,
+    'columns-1': -.4, 'columns-2': 0, 'columns-3': .4 });
+const rectangleCells = (settings = rectangleGrid()) => [
+    { x: 40, y: 40 }, { x: 60, y: 40 }, { x: 40, y: 60 }, { x: 60, y: 60 },
+].map((point) => selectGridArea(100, 0, settings, point)!);
+
+test('two adjacent cells and complete two-by-two collections merge into one seam-free placement rectangle', () => {
+    const cells = rectangleCells();
+    const row = mergeGridAreas(100, 0, cells.slice(0, 2));
+    assert.equal(row.error, undefined);
+    assert.deepEqual(row.area!.box, { x: 30, y: 30, width: 40, height: 20 });
+    assert.equal(row.area!.path, 'M30 30h40v20h-40Z');
+    const square = mergeGridAreas(100, 0, cells);
+    assert.equal(square.error, undefined);
+    assert.deepEqual(square.area!.box, { x: 30, y: 30, width: 40, height: 40 });
+    insideCircle(square.area!, 100, 0);
+    assert.deepEqual(mergeGridAreas(100, 0, [cells[0], cells[0], cells[1]]).area!.box, row.area!.box);
+});
+
+test('L shapes and diagonal contact stay selected but cannot become a placement rectangle', () => {
+    const cells = rectangleCells();
+    for (const collection of [[cells[0], cells[3]], cells.slice(0, 3)]) {
+        const merged = mergeGridAreas(100, 0, collection);
+        assert.equal(merged.area, undefined);
+        assert.match(merged.error!, /connected.*rectangle.*gaps/);
+    }
+});
+
+test('gaps and a missing central cell cannot be filled by the collection bounding box', () => {
+    const settings = grid(Object.fromEntries(['rows', 'columns'].flatMap((axis) =>
+        [-.6, -.2, .2, .6].map((value, index) => [`${axis}-${index + 1}`, value]))));
+    const cells = [30, 50, 70].flatMap((y) => [30, 50, 70].map((x) => selectGridArea(100, 0, settings, { x, y })!));
+    assert.equal(mergeGridAreas(100, 0, cells.filter((_, index) => index !== 4)).area, undefined);
+    assert.equal(mergeGridAreas(100, 0, [cells[0], cells[2]]).area, undefined);
+    assert.deepEqual(mergeGridAreas(100, 0, cells).area!.box, { x: 20, y: 20, width: 60, height: 60 });
+});
+
+test('fractional cell boundaries merge continuously and round only the final placement box inward', () => {
+    const settings = grid({ 'rows-1': -.394, 'rows-2': .006,
+        'columns-1': -.396, 'columns-2': .004, 'columns-3': .404 });
+    const cells = [40, 60].map((x) => selectGridArea(100, 0, settings, { x, y: 40 })!);
+    const merged = mergeGridAreas(100, 0, cells);
+    assert.equal(merged.error, undefined);
+    assert.ok(Math.abs(merged.area!.rectangle!.x - 30.2) < 1e-8);
+    assert.ok(Math.abs(merged.area!.rectangle!.y - 30.3) < 1e-8);
+    assert.deepEqual(merged.area!.box, { x: 31, y: 31, width: 39, height: 19 });
+    const tinyGap = grid({ 'rows-1': -.4, 'rows-2': .4, 'columns-1': -.4,
+        'columns-2': -.002, 'columns-3': .002, 'columns-4': .4 });
+    const separated = [40, 60].map((x) => selectGridArea(100, 0, tinyGap, { x, y: 50 })!);
+    assert.equal(mergeGridAreas(100, 0, separated).area, undefined, 'a subpixel slit must not disappear when merging');
+});
+
+test('stretched band interiors can join neighbouring cells into one continuous rectangle', () => {
+    const settings = grid({ 'rows-1': 0, 'rows-2': -.4, 'rows-3': .4,
+        'columns-1': -.4, 'columns-2': .4 }, { gaps: { 'rows-1': 10 } });
+    const cells = [40, 50, 60].map((y) => selectGridArea(100, 0, settings, { x: 50, y })!);
+    assert.deepEqual(mergeGridAreas(100, 0, cells).area!.box, { x: 30, y: 30, width: 40, height: 40 });
+});
+
+test('curved or circumference-cut outer edges and annular holes never produce a false rectangle', () => {
+    const quarters = grid({ 'rows-1': 0, 'columns-1': 0 });
+    const clipped = [25, 75].map((x) => selectGridArea(100, 0, quarters, { x, y: 25 })!);
+    assert.equal(mergeGridAreas(100, 0, clipped).area, undefined);
+    const curved = rectangleGrid();
+    curved.curvedRows = true;
+    const curvedCells = rectangleCells(curved);
+    assert.equal(mergeGridAreas(100, 0, curvedCells.slice(0, 2)).area, undefined);
+    const annular = grid({ 'rings-1': .5, 'rows-1': 0 });
+    const ringCells = [10, 90].map((y) => selectGridArea(100, 0, annular, { x: 50, y })!);
+    assert.equal(mergeGridAreas(100, 0, ringCells).area, undefined);
+    // A distant ring is redundant: it must not prevent ordinary rectangles.
+    const redundant = rectangleGrid();
+    redundant.edits!['rings-1'] = .9;
+    assert.deepEqual(mergeGridAreas(100, 0, rectangleCells(redundant)).area!.box,
+        { x: 30, y: 30, width: 40, height: 40 });
+});
+
+test('single-cell placement is preserved and mixed grid provenance cannot be combined', () => {
+    const cell = rectangleCells()[0];
+    assert.equal(mergeGridAreas(100, 0, [cell]).area, cell);
+    assert.equal(mergeGridAreas(100, 1, [cell]).area, undefined);
+    assert.equal(mergeGridAreas(100, -1, [cell]).area, undefined);
+    assert.deepEqual(mergeGridAreas(100, 0, []), {});
+    const changed = rectangleGrid();
+    changed.edits!['columns-2'] = .1;
+    const other = selectGridArea(100, 0, changed, { x: 60, y: 40 })!;
+    assert.match(mergeGridAreas(100, 0, [cell, other]).error!, /grid changed/i);
+    assert.equal(mergeGridAreas(100, 1, rectangleCells().slice(0, 2)).area, undefined);
+});
+
+test('additive selection toggles stable cells without depending on the click point or changing prior arrays', () => {
+    const settings = rectangleGrid();
+    const [first, second] = rectangleCells(settings);
+    const collection = toggleGridArea([], first, true);
+    const both = toggleGridArea(collection, second, true);
+    assert.deepEqual(collection, [first]);
+    assert.deepEqual(both, [first, second]);
+    const same = selectGridArea(100, 0, settings, { x: 44, y: 44 })!;
+    assert.equal(first.key, same.key);
+    assert.deepEqual(toggleGridArea(both, same, true), [second]);
+    assert.deepEqual(toggleGridArea(both, first, false), [first]);
 });

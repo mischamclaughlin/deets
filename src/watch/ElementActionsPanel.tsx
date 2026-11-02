@@ -1,11 +1,12 @@
-import { activityName } from "./element-name.ts";
 import { useEffect, useState } from "react";
 import type { Scene } from "../../shared/scene.ts";
+import { activityName } from "./element-name.ts";
 import { copyElement, deleteElement } from "./api.ts";
 import { LayerPanel } from "./LayerPanel.tsx";
 
-export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect }: {
+export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect, label }: {
     scene: Scene;
+    label: string;
     elementId: string;
     onSceneChange: (scene: Scene) => void;
     onSelect: (id: string | undefined) => void;
@@ -32,16 +33,19 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect 
         });
         return () => controller.abort();
     }, [action, scene, elementId, onSceneChange, onSelect]);
-    return <section aria-labelledby="element-actions-heading">
-        <h2 id="element-actions-heading">{activityName(scene, elementId) ?? "Element"}</h2>
-        <button type="button" className="add-element" disabled={action !== undefined || scene.elements.length >= 40}
-            onClick={() => { setError(undefined); setAction("copy"); }}>
-            {action === "copy" ? "Copying…" : "Copy"}
-        </button>
-        <button type="button" className="add-element" disabled={action !== undefined}
-            onClick={() => { setError(undefined); setAction("delete"); }}>
-            {action === "delete" ? "Deleting…" : "Delete"}
-        </button>
+    return <section className="selection-heading" aria-labelledby="element-actions-heading">
+        <p className="selection-caption">Selected element</p>
+        <h2 id="element-actions-heading">{activityName(scene, elementId) ?? label}</h2>
+        <div className="element-actions">
+            <button type="button" className="element-action" disabled={action !== undefined || scene.elements.length >= 40}
+                onClick={() => { setError(undefined); setAction("copy"); }}>
+                {action === "copy" ? "Duplicating…" : "Duplicate"}
+            </button>
+            <button type="button" className="element-action element-action-danger" disabled={action !== undefined}
+                onClick={() => { setError(undefined); setAction("delete"); }}>
+                {action === "delete" ? "Deleting…" : "Delete"}
+            </button>
+        </div>
         <LayerPanel scene={scene} elementId={elementId} disabled={action !== undefined} onSceneChange={onSceneChange} />
         {error && <p className="typography-status" role="alert">{error}</p>}
     </section>;

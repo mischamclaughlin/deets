@@ -9,6 +9,11 @@ export interface GridArea {
     /** Largest whole-pixel rectangle contained by every continuous boundary. */
     box: GridAreaBox;
     pixels: number;
+    /** Exact continuous cell bounds, present only when all outer edges are straight. */
+    rectangle?: GridAreaBox;
+    /** Browser-only provenance and identity, independent of the click anchor. */
+    geometry?: { size: number; inset: number; signature: string };
+    key?: string;
 }
 interface Boundary { axis: 'rows' | 'columns' | 'rings'; offset: number; curved: boolean; positive: boolean }
 const epsilon = 1e-8;
@@ -40,6 +45,7 @@ export function selectGridArea(size: number, inset: number, grid: GridSettings,
         return (vertical ? x : y) - (boundary.curved
             ? curve(boundary.offset, vertical ? y : x) : centre + boundary.offset);
     }
+    const signature = JSON.stringify(boundaries.map(({ axis, offset, curved }) => [axis, offset, curved]));
     for (const boundary of boundaries) boundary.positive = distance(boundary, point.x, point.y) >= 0;
 
     function matches(x: number, y: number) {
@@ -47,6 +53,22 @@ export function selectGridArea(size: number, inset: number, grid: GridSettings,
         return boundaries.every((boundary) => boundary.positive
             ? distance(boundary, x, y) >= -epsilon : distance(boundary, x, y) <= epsilon);
     }
+    // Straight boundaries supply a candidate continuous rectangle. Curved and
+    // circular constraints may be redundant, but must not trim any of its interior.
+    let rectangleLeft = 0, rectangleRight = size, rectangleTop = 0, rectangleBottom = size;
+    for (const boundary of boundaries) {
+        if (boundary.axis === 'rings' || boundary.curved && Math.abs(boundary.offset) > epsilon) continue;
+        const coordinate = centre + boundary.offset;
+        if (boundary.axis === 'columns') {
+            if (boundary.positive) rectangleLeft = Math.max(rectangleLeft, coordinate);
+            else rectangleRight = Math.min(rectangleRight, coordinate);
+        } else {
+            if (boundary.positive) rectangleTop = Math.max(rectangleTop, coordinate);
+            else rectangleBottom = Math.min(rectangleBottom, coordinate);
+        }
+    }
+    const candidateRectangle = { x: rectangleLeft, y: rectangleTop,
+        width: rectangleRight - rectangleLeft, height: rectangleBottom - rectangleTop };
     // Classify using the actual pointer first. A fractional guide can pass between
     // that point and the centre of its pixel, so consider adjacent pixel centres.
     let start = -1, closest = Infinity;
@@ -79,31 +101,33 @@ export function selectGridArea(size: number, inset: number, grid: GridSettings,
         }
     }
 
-    function safeCell(x: number, y: number) {
-        const farX = Math.max(Math.abs(x - centre), Math.abs(x + 1 - centre));
-        const farY = Math.max(Math.abs(y - centre), Math.abs(y + 1 - centre));
+    function safeRectangle(x: number, y: number, width: number, height: number) {
+        const farX = Math.max(Math.abs(x - centre), Math.abs(x + width - centre));
+        const farY = Math.max(Math.abs(y - centre), Math.abs(y + height - centre));
         if (farX * farX + farY * farY > radiusSquared + epsilon) return false;
         for (const boundary of boundaries) {
             let low: number, high: number;
             if (boundary.axis === 'rings') {
-                const nearX = Math.max(x - centre, centre - x - 1, 0);
-                const nearY = Math.max(y - centre, centre - y - 1, 0);
+                const nearX = Math.max(x - centre, centre - x - width, 0);
+                const nearY = Math.max(y - centre, centre - y - height, 0);
                 low = nearX * nearX + nearY * nearY - boundary.offset ** 2;
                 high = farX * farX + farY * farY - boundary.offset ** 2;
             } else {
                 const vertical = boundary.axis === 'columns';
                 const cross = vertical ? y : x;
                 const coordinate = vertical ? x : y;
+                const crossSpan = vertical ? height : width;
+                const span = vertical ? width : height;
                 let minimum = centre + boundary.offset, maximum = minimum;
                 if (boundary.curved) {
-                    const a = curve(boundary.offset, cross), b = curve(boundary.offset, cross + 1);
+                    const a = curve(boundary.offset, cross), b = curve(boundary.offset, cross + crossSpan);
                     minimum = Math.min(a, b); maximum = Math.max(a, b);
-                    if (cross <= centre && cross + 1 >= centre) {
+                    if (cross <= centre && cross + crossSpan >= centre) {
                         minimum = Math.min(minimum, centre + boundary.offset);
                         maximum = Math.max(maximum, centre + boundary.offset);
                     }
                 }
-                low = coordinate - maximum; high = coordinate + 1 - minimum;
+                low = coordinate - maximum; high = coordinate + span - minimum;
             }
             if (boundary.positive ? low < -epsilon : high > epsilon) return false;
         }
@@ -130,7 +154,7 @@ export function selectGridArea(size: number, inset: number, grid: GridSettings,
         }
         for (const [key, run] of openRuns) if (!runs.has(key)) flush(run);
         openRuns = runs;
-        for (let x = left; x < right; x++) heights[x] = visited[y * size + x] === 1 && safeCell(x, y) ? heights[x] + 1 : 0;
+        for (let x = left; x < right; x++) heights[x] = visited[y * size + x] === 1 && safeRectangle(x, y, 1, 1) ? heights[x] + 1 : 0;
         const stack: Array<{ x: number; height: number }> = [];
         for (let x = left; x <= right; x++) {
             const height = x === right ? 0 : heights[x];
@@ -150,5 +174,12 @@ export function selectGridArea(size: number, inset: number, grid: GridSettings,
     }
     for (const run of openRuns.values()) flush(run);
     if (!box) return;
-    return { anchor: { ...point }, path: paths.join(' '), bounds: { x: left, y: top, width: right - left, height: bottom - top }, box, pixels: tail };
+    const rectangle = candidateRectangle.width > 0 && candidateRectangle.height > 0
+        && safeRectangle(candidateRectangle.x, candidateRectangle.y, candidateRectangle.width, candidateRectangle.height)
+        ? candidateRectangle : undefined;
+    const path = paths.join(' ');
+    return { anchor: { ...point }, path, bounds: { x: left, y: top, width: right - left, height: bottom - top }, box, pixels: tail,
+        ...(rectangle ? { rectangle } : {}), geometry: { size, inset, signature },
+        key: `${signature}:${boundaries.map((boundary) => Number(boundary.positive)).join('')}:${path}` };
+
 }
