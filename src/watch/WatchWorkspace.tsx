@@ -47,29 +47,31 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                 </div>
             </div>
         </header>
-        <div className="workspace-toolbar" role="group" aria-label="Canvas controls">
-            <div className="workspace-segment" role="group" aria-label="Canvas mode">
-                <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>
-                    <WorkspaceIcon kind="edit" />Edit
-                </button>
-                <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>
-                    <WorkspaceIcon kind="preview" />Preview
-                </button>
+        <div className="workspace-controls">
+            <div className="workspace-toolbar" role="group" aria-label="Canvas controls">
+                <div className="workspace-segment" role="group" aria-label="Canvas mode">
+                    <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>
+                        <WorkspaceIcon kind="edit" />Edit
+                    </button>
+                    <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>
+                        <WorkspaceIcon kind="preview" />Preview
+                    </button>
+                </div>
+                <div className="workspace-segment" role="group" aria-label="Edit history">
+                    <button type="button" onClick={onUndo} disabled={!canUndo} title="Undo (⌘/Ctrl+Z)" aria-keyshortcuts="Meta+Z Control+Z">Undo</button>
+                    <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
+                </div>
+                <div className="workspace-segment appearance-switch" role="group" aria-label="Preview appearance">
+                    <button type="button" aria-pressed={!night} onClick={() => setNight(false)}>
+                        <WorkspaceIcon kind="sun" />Day
+                    </button>
+                    <button type="button" aria-pressed={night} onClick={() => setNight(true)}>
+                        <WorkspaceIcon kind="moon" />Night
+                    </button>
+                </div>
             </div>
-            <div className="workspace-segment" role="group" aria-label="Edit history">
-                <button type="button" onClick={onUndo} disabled={!canUndo} title="Undo (⌘/Ctrl+Z)" aria-keyshortcuts="Meta+Z Control+Z">Undo</button>
-                <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
-            </div>
-            <div className="workspace-segment appearance-switch" role="group" aria-label="Preview appearance">
-                <button type="button" aria-pressed={!night} onClick={() => setNight(false)}>
-                    <WorkspaceIcon kind="sun" />Day
-                </button>
-                <button type="button" aria-pressed={night} onClick={() => setNight(true)}>
-                    <WorkspaceIcon kind="moon" />Night
-                </button>
-            </div>
+            {preview && <PreviewScenarioPanel value={scenario} onChange={setScenario} />}
         </div>
-        {preview && <PreviewScenarioPanel value={scenario} onChange={setScenario} />}
         <div className="watch-stage">
             <WatchDeviceFrame device={scene.device} active={preview}>
             <WatchCanvas key={editRevision} {...canvasProps} scene={scene} night={night} previewScenario={preview ? scenario : undefined}
