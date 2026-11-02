@@ -34,16 +34,26 @@ export function ElementActionsPanel({ scene, elementId, onSceneChange, onSelect,
         return () => controller.abort();
     }, [action, scene, elementId, onSceneChange, onSelect]);
     return <section className="selection-heading" aria-labelledby="element-actions-heading">
-        <h2 id="element-actions-heading">{activityName(scene, elementId) ?? label}</h2>
-        <div className="element-actions">
-            <button type="button" className="element-action" disabled={action !== undefined || scene.elements.length >= 40}
-                onClick={() => { setError(undefined); setAction("copy"); }}>
-                {action === "copy" ? "Duplicating…" : "Duplicate"}
-            </button>
-            <button type="button" className="element-action element-action-danger" disabled={action !== undefined}
-                onClick={() => { setError(undefined); setAction("delete"); }}>
-                {action === "delete" ? "Deleting…" : "Delete"}
-            </button>
+        <div className="selection-heading-row">
+            <h2 id="element-actions-heading">{activityName(scene, elementId) ?? label}</h2>
+            <div className="element-actions" role="group" aria-label="Element actions" aria-busy={action !== undefined}>
+                <button type="button" className="element-action" disabled={action !== undefined || scene.elements.length >= 40}
+                    aria-label={action === "copy" ? "Duplicating element…" : "Duplicate element"} title="Duplicate element"
+                    onClick={() => { setError(undefined); setAction("copy"); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                        <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V4H4v12h4" />
+                    </svg>
+                </button>
+                <button type="button" className="element-action element-action-danger" disabled={action !== undefined}
+                    aria-label={action === "delete" ? "Deleting element…" : "Delete element"} title="Delete element"
+                    onClick={() => { setError(undefined); setAction("delete"); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                        <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+                    </svg>
+                </button>
+            </div>
         </div>
         <LayerPanel scene={scene} elementId={elementId} disabled={action !== undefined} onSceneChange={onSceneChange} />
         {error && <p className="typography-status" role="alert">{error}</p>}

@@ -94,9 +94,10 @@ button:disabled, input:disabled, select:disabled { opacity: 0.5; cursor: not-all
 .inspector-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d9876; }
 .inspector-tag { margin-left: auto; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-size: 10px; font-weight: 400; }
 .selection-caption { margin: 0 0 8px; color: var(--muted); font-size: 11px; }
-.selection-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; overflow-wrap: anywhere; margin-bottom: 18px; }
-.element-actions { display: flex; gap: 8px; }
-.element-action { flex: 1; }
+.selection-heading-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.selection-heading h2 { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; overflow-wrap: anywhere; margin: 0; }
+.element-actions { display: flex; flex-shrink: 0; gap: 6px; }
+.element-action { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; }
 .element-action-danger { color: #b34444; }
 .selection-empty { padding: 28px 2px; color: var(--muted); line-height: 1.8; }
 .selection-empty h2 { color: #253332; font-size: 18px; margin-bottom: 8px; }
