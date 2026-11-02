@@ -1,8 +1,11 @@
-.text-background-controls { margin-top: 16px; }
+.text-background-controls { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rp-border); }
 .text-background-controls h3 { margin: 0 0 10px; color: var(--rp-subtle); font-size: 11px; font-weight: 500; }
-.text-background-channel + .text-background-channel { margin-top: 10px; }
-.text-background-toggle, .text-background-toggle > span:last-child { display: flex; align-items: center; gap: 6px; }
-.text-background-toggle { justify-content: space-between; color: var(--rp-text); font-size: 11px; }
-.text-background-toggle > span:last-child { color: var(--rp-subtle); }
-.text-background-toggle input { margin: 0; accent-color: var(--rp-pine); }
-.text-background-toggle + .colour-control { margin-top: 8px; }
+.text-background-controls .text-background-channel { margin-top: 8px; padding: 12px; }
+.text-background-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; }
+.text-background-heading .colour-channel-heading { margin-bottom: 0; }
+.text-background-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 24px; color: var(--rp-subtle); font-size: 11px; cursor: pointer; }
+.text-background-toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--rp-pine); }
+.text-background-channel .colour-control { margin-top: 10px; }
+.text-background-channel .colour-inputs { margin-top: 0; }
+/* Retain specific accessible colour labels without repeating the channel heading. */
+.text-background-channel .colour-control > label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
