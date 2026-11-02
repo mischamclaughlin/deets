@@ -37,17 +37,13 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                 <h2>Watch face <span className="workspace-title-dot" aria-hidden="true" /></h2>
             </div>
             <div className="workspace-header-actions">
-                <div className="workspace-segment" role="group" aria-label="Edit history">
-                    <button type="button" onClick={onUndo} disabled={!canUndo} title="Undo (⌘/Ctrl+Z)" aria-keyshortcuts="Meta+Z Control+Z">Undo</button>
-                    <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
-                </div>
                 <div className="workspace-file-actions" role="group" aria-label="Import and export">
                     {fileActions}
                     <GarminExportButton scene={scene} disabled={exportDisabled} />
                 </div>
             </div>
         </header>
-        <div className="workspace-toolbar" role="group" aria-label="Canvas view">
+        <div className="workspace-toolbar" role="group" aria-label="Canvas controls">
             <div className="workspace-segment" role="group" aria-label="Canvas mode">
                 <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>
                     <WorkspaceIcon kind="edit" />Edit
@@ -55,6 +51,10 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                 <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>
                     <WorkspaceIcon kind="preview" />Preview
                 </button>
+            </div>
+            <div className="workspace-segment" role="group" aria-label="Edit history">
+                <button type="button" onClick={onUndo} disabled={!canUndo} title="Undo (⌘/Ctrl+Z)" aria-keyshortcuts="Meta+Z Control+Z">Undo</button>
+                <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
             </div>
             <div className="workspace-segment appearance-switch" role="group" aria-label="Preview appearance">
                 <button type="button" aria-pressed={!night} onClick={() => setNight(false)}>
