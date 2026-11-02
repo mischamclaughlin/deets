@@ -1,0 +1,22 @@
+.group-panel { display: grid; gap: 12px; color: var(--rp-text); }
+.group-field { display: grid; gap: 6px; color: var(--rp-subtle); font-size: 10px; }
+.group-field input, .group-field select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 32px; padding: 7px 9px; border: 1px solid var(--rp-border); border-radius: 7px; background: var(--rp-base); color: var(--rp-text); font: inherit; font-size: 11px; }
+.group-members-heading { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; color: var(--rp-subtle); font-size: 10px; }
+.group-members-heading > :last-child { font-variant-numeric: tabular-nums; }
+.group-members { display: grid; gap: 2px; max-height: 160px; overflow-y: auto; margin: -5px 0 0; padding: 4px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-base); list-style: none; }
+.group-members li { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.group-member { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 7px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--rp-text); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.group-member[aria-pressed="true"] { background: var(--rp-overlay); }
+.group-member-dot { width: 5px; height: 5px; flex: 0 0 5px; border: 1px solid var(--rp-subtle); border-radius: 2px; }
+.group-member[aria-pressed="true"] .group-member-dot { border-color: var(--rp-iris); background: var(--rp-iris); }
+.group-remove { display: grid; place-items: center; flex: 0 0 26px; height: 26px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--rp-subtle); cursor: pointer; }
+.group-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+.group-actions button, .group-create-button { min-height: 30px; padding: 6px; border: 1px solid var(--rp-border); border-radius: 6px; background: var(--rp-base); color: var(--rp-text); font: inherit; font-size: 10px; cursor: pointer; }
+.group-actions .group-ungroup { color: var(--rp-love); }
+.group-create { display: grid; gap: 8px; }
+.group-create-button { color: var(--rp-pine); }
+.group-hint { margin: 0; color: var(--rp-subtle); font-size: 10px; line-height: 1.6; }
+.group-panel :is(button, input, select):focus-visible { outline: 2px solid var(--rp-iris); outline-offset: 2px; }
+.group-panel button:hover:enabled { background: var(--rp-overlay); }
+.group-panel .group-remove:hover:enabled { color: var(--rp-love); }
+.group-panel :disabled { opacity: .5; cursor: default; }

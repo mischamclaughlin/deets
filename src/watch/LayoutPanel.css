@@ -3,8 +3,6 @@
 .layout-panel button:disabled { opacity: 0.5; cursor: default; }
 .layout-panel button:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: 2px; }
 .layout-panel button:hover:enabled { border-color: var(--rp-pine); background: var(--rp-low); }
-.layout-group-name { display: grid; gap: 5px; margin: 12px 0 6px; color: var(--rp-subtle); font-size: 11px; }
-.layout-group-name input { min-width: 0; width: 100%; box-sizing: border-box; }
 .layout-alignment { margin-top: 12px; }
 .layer-lock { align-self: center; margin-right: 6px; border: 0; border-radius: 4px; padding: 5px; background: transparent; color: var(--rp-subtle); cursor: pointer; }
 .layer-lock[aria-pressed="true"] { color: var(--rp-pine); }

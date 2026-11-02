@@ -107,11 +107,16 @@ count and custom text. Select a custom text layer to edit its text, then choose
 **Apply text**. Text supports up to 80 characters covered by the selected font;
 unsupported characters or text that cannot fit leave the accepted design intact.
 
-Use the padlock beside a layer or **Layout → Lock layers** to protect it from
+Use the padlock beside a layer or the lock button in **Layout** to protect it from
 movement, resizing, reordering, deletion and area placement. Unlock it to make
 those changes; typography and colours remain editable. Select multiple layers,
-enter a group name and choose **Group selection** to move and select them together.
-Groups can be renamed, duplicated or ungrouped, and keep their relative positions
+open the right sidebar's **Group** panel, enter a name and choose **Create group**.
+Use **Membership** to add the selected element to an existing group or choose
+**No group** to remove it. The member list lets you inspect individual elements
+without ungrouping them; **Select group** selects them together again. Selecting a
+layer also inspects individual members, while canvas selection selects the
+group. Edit a group's name on Enter or blur; Escape cancels the draft name.
+Groups can be duplicated or ungrouped from this panel, and keep their relative positions
 when dragged or aligned. Linked activity icons and values move as one unit too.
 The outer seconds ring cannot join a movable group. Alignment offers left,
 centre, right, top, middle and bottom edges; spacing requires at least three

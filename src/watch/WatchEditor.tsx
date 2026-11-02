@@ -33,6 +33,8 @@ import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 
 import { useEditorHistory } from "./useEditorHistory.ts";
 import { selectionWithGroups } from "./editor-layout.ts";
+import { GroupPanel } from "./GroupPanel.tsx";
+import { selectElement } from "./history.ts";
 import { LayoutPanel } from "./LayoutPanel.tsx";
 import { DraftRecovery } from "./DraftRecovery.tsx";
 import { TargetWatchPanel } from "./TargetWatchPanel.tsx";
@@ -65,6 +67,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     }, [scene, fontsReady, replaceInitialScene]);
     const [sidebarView, setSidebarView] = useState<"elements" | "styles" | "canvas">("elements");
     const [layersOpen, setLayersOpen] = useState(true);
+    const [groupOpen, setGroupOpen] = useState(true);
     const [selectionOpen, setSelectionOpen] = useState(true);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
@@ -72,6 +75,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [selection, setSelection] = useState<string[]>(initialScene.elements[0] ? [initialScene.elements[0].id] : []);
     const selectedIds = useMemo(() => selection.filter((id) => scene.elements.some((element) => element.id === id)), [selection, scene.elements]);
     const selectedId = selectedIds.length === 1 ? selectedIds[0] : undefined;
+    const selectedGroup = layout?.groups.find((group) => selectedIds.length > 0 && selectedIds.every((id) => group.elementIds.includes(id)));
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(true);
     const [snapToGuides, setSnapToGuides] = useState(true);
@@ -85,6 +89,11 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
         setSelectedGridLines([]);
         setGridAreaSelection(undefined);
     }, [layout]);
+    const setSelectedMember = useCallback((id: string | undefined, additive = false) => {
+        setSelection((current) => selectElement(current, id, additive));
+        setSelectedGridLines([]);
+        setGridAreaSelection(undefined);
+    }, []);
     const setSelectedGridLineId = useCallback((id: string | undefined, additive = false) => {
         if (!gridSelectionEnabled) return;
         setGridAreaSelection(undefined);
@@ -280,13 +289,20 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     <details className="inspector-group" open={layersOpen} onToggle={(event) => setLayersOpen(event.currentTarget.open)}>
                         <summary>Layers<span className="element-count">{scene.elements.length}</span></summary>
                         <div className="inspector-group-content">
-                            <ElementsPanel scene={scene} layout={layout} onLayoutChange={setLayout} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
+                            <ElementsPanel scene={scene} layout={layout} onLayoutChange={setLayout} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedMember} onSceneChange={setScene} />
                         </div>
                     </details>
-                    <details className="inspector-group" open={selectionOpen} onToggle={(event) => setSelectionOpen(event.currentTarget.open)}>
-                        <summary>{selectedIds.length > 1 ? "Selected elements" : selectedGridLines.length ? "Selected grid lines" : selectedGridAreas?.length ? "Selected area" : "Selected element"}</summary>
+                    {selectedIds.length > 0 && <details className="inspector-group" open={groupOpen} onToggle={(event) => setGroupOpen(event.currentTarget.open)}>
+                        <summary>Group{selectedGroup && <span className="element-count">{selectedGroup.elementIds.length}</span>}</summary>
                         <div className="inspector-group-content">
-                            {selectedIds.length > 0 && <LayoutPanel key={selectedIds.join("|")} scene={scene} layout={layout} ids={selectedIds} onDocumentChange={setDocument} onSelect={setSelection} />}
+                            <GroupPanel key={selectedGroup?.id ?? `selection:${selectedIds.join("|")}`} scene={scene} layout={layout} ids={selectedIds} onDocumentChange={setDocument}
+                                onSelect={(ids) => { setSelection(ids); setSelectedGridLines([]); setGridAreaSelection(undefined); }} />
+                        </div>
+                    </details>}
+                    <details className="inspector-group" open={selectionOpen} onToggle={(event) => setSelectionOpen(event.currentTarget.open)}>
+                        <summary>{selectedIds.length > 1 ? selectedGroup ? "Selected group" : "Selected elements" : selectedGridLines.length ? "Selected grid lines" : selectedGridAreas?.length ? "Selected area" : "Selected element"}</summary>
+                        <div className="inspector-group-content">
+                            {selectedIds.length > 0 && <LayoutPanel key={`layout:${selectedIds.join("|")}`} scene={scene} layout={layout} ids={selectedIds} onDocumentChange={setDocument} />}
                             {selectedIds.length > 1 && <BatchPresetsPanel key={selectedIds.join("|")} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
                             {selectedIds.length > 1 && <BatchBoxPanel layout={layout} key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
                             {!!selectedGridAreas?.length && <GridAreaPanel layout={layout} scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
