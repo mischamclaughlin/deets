@@ -152,7 +152,7 @@ export function garmin(): Plugin {
                     return;
                 }
                 if (
-                    !["/api/garmin/activity-graph", "/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/refresh-fonts", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/date", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/fit-box", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset", "/api/garmin/colour-presets", "/api/garmin/element-colour", "/api/garmin/element-colour-preset"].includes(
+                    !["/api/garmin/activity-graph", "/api/garmin/layout", "/api/garmin/export", "/api/garmin/typography", "/api/garmin/refresh-fonts", "/api/garmin/font", "/api/garmin/clock", "/api/garmin/date", "/api/garmin/add", "/api/garmin/watch-font", "/api/garmin/inherit-font", "/api/garmin/divider", "/api/garmin/label-text", "/api/garmin/seconds-size", "/api/garmin/text-defaults", "/api/garmin/apply-text-defaults", "/api/garmin/fit-box", "/api/garmin/copy-element", "/api/garmin/delete-element", "/api/garmin/text-presets", "/api/garmin/apply-text-preset", "/api/garmin/colour-presets", "/api/garmin/element-colour", "/api/garmin/element-colour-preset"].includes(
                         request.url ?? "",
                     )
                 )
@@ -203,6 +203,7 @@ export function garmin(): Plugin {
                 const clock = request.url === "/api/garmin/clock";
                 const date = request.url === "/api/garmin/date";
                 const secondsSize = request.url === "/api/garmin/seconds-size";
+                const labelText = request.url === "/api/garmin/label-text";
                 const divider = request.url === "/api/garmin/divider";
                 const activityGraph = request.url === "/api/garmin/activity-graph";
                 const adding = request.url === "/api/garmin/add";
@@ -220,6 +221,7 @@ export function garmin(): Plugin {
                         : refreshFonts ? ["scene"]
                         : typography ? ["scene", "elementId", "typography"]
                         : secondsSize ? ["scene", "elementId", "size"]
+                        : labelText ? ["scene", "elementId", "text"]
                         : divider ? ["scene", "elementId", "symbol"]
                         : clock || date ? ["scene", "elementId", "source"]
                             : activityGraph ? ["scene", "elementId", "enabled"] : adding ? ["scene", "source", "options"]
@@ -240,6 +242,7 @@ export function garmin(): Plugin {
                     (typography && (!("elementId" in payload) || !("typography" in payload))) ||
                     ((clock || date) && (!("elementId" in payload) || !("source" in payload))) ||
                     (secondsSize && (!("elementId" in payload) || !("size" in payload))) ||
+                    (labelText && (!("elementId" in payload) || !("text" in payload))) ||
                     (divider && (!("elementId" in payload) || !("symbol" in payload))) ||
                     (adding && !("source" in payload)) ||
                     (activityGraph && (!("elementId" in payload) || !("enabled" in payload))) ||
@@ -260,7 +263,7 @@ export function garmin(): Plugin {
                 }
                 if (!exporting) {
                     const result = await callBridge<WatchMapping>(
-                        action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : refreshFonts ? "refresh-fonts" : typography ? "typography" : secondsSize ? "seconds-size" : divider ? "divider" : date ? "date" : clock ? "clock" : activityGraph ? "activity-graph" : adding ? "add"
+                        action ?? (colourPresets ? "colour-presets" : elementColour ? "element-colour" : elementColourPreset ? "element-colour-preset" : presets ? "text-presets" : applyPreset ? "apply-text-preset" : defaults ? "text-defaults" : refreshFonts ? "refresh-fonts" : typography ? "typography" : secondsSize ? "seconds-size" : labelText ? "label-text" : divider ? "divider" : date ? "date" : clock ? "clock" : activityGraph ? "activity-graph" : adding ? "add"
                             : watchFont ? "watch-font" : inheritFont ? "inherit-font" : "layout"),
                         payload,
                     );

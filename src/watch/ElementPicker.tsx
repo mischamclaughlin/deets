@@ -50,7 +50,7 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
                 <input ref={search} type="search" aria-label="Search elements" placeholder="Search elements…" value={query} onChange={(event) => setQuery(event.target.value)} />
             </label>
             <div className="picker-filters" role="group" aria-label="Filter elements">
-                {([['all', 'All'], ['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun']] as const).map(([value, label]) =>
+                {([['all', 'All'], ['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun'], ['device', 'Device & text']] as const).map(([value, label]) =>
                     <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)}>{label}</button>)}
             </div>
         </div>

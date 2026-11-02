@@ -1,3 +1,4 @@
+import { TextLabelPanel } from "./TextLabelPanel.tsx";
 import { SliderValue } from "./SliderValue.tsx";
 import { DesignFileActions } from "./DesignFileActions.tsx";
 import { DesignFilePanel } from "./DesignFilePanel.tsx";
@@ -287,6 +288,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             {selected && <ActivitySettingsPanel scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
                             {selected && <ElementBoxPanel key={selected.id}
                                 scene={scene} elementId={selected.id} onSceneChange={setScene} />}
+                            {selected?.source === "label" && <TextLabelPanel key={`text-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                             {selected && isEditableTextSource(selected.source) && (
                                 <>
                                     {selected?.source === "divider"

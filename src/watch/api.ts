@@ -140,8 +140,12 @@ export const refreshFonts = (scene: Scene, signal?: AbortSignal) =>
 export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSignal) =>
     post<WatchMapping>("fit-box", { scene, elementId }, signal);
 
-export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider", signal?: AbortSignal, options?: ActivityAddOptions) =>
+export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider" | "battery" | "alarms" | "label", signal?: AbortSignal, options?: ActivityAddOptions) =>
     post<WatchMapping>("add", { scene, source, ...(options ? { options } : {}) }, signal);
 
 export const setActivityGraph = (scene: Scene, elementId: string, enabled: boolean, signal?: AbortSignal) =>
     post<WatchMapping>("activity-graph", { scene, elementId, enabled }, signal);
+
+/** Edit literal text through native validation and native box fitting. */
+export const setLabelText = (scene: Scene, elementId: string, text: string, signal?: AbortSignal) =>
+    post<WatchMapping>("label-text", { scene, elementId, text }, signal);

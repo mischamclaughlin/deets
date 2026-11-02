@@ -634,3 +634,23 @@ test("editable export metadata rejects invalid grids before native compilation",
         assert.equal(result.status, 400);
     }
 });
+
+test("device library and custom text editing use strict canonical API mappings", async () => {
+    const headers = { "content-type": "application/json" };
+    const blank = { ...scene, elements: [] };
+    for (const source of ["battery", "alarms", "label"]) {
+        const added = await requestApi("/api/garmin/add", [Buffer.from(JSON.stringify({ scene: blank, source }))], headers);
+        assert.equal(added.status, 200, source);
+        const design = added.body.scene as WatchMapping['scene'];
+        assert.equal(design.elements[0].source, source);
+        if (source !== 'label') continue;
+        const payload = { scene: design, elementId: design.elements[0].id, text: 'My watch' };
+        const changed = await requestApi('/api/garmin/label-text', [Buffer.from(JSON.stringify(payload))], headers);
+        assert.equal(changed.status, 200);
+        assert.equal((changed.body.scene as WatchMapping['scene']).elements[0].text, 'My watch');
+        for (const invalid of [{ scene: design }, { ...payload, extra: true }, { ...payload, text: '☃' }]) {
+            assert.equal((await requestApi('/api/garmin/label-text', [Buffer.from(JSON.stringify(invalid))], headers)).status, 400);
+        }
+        assert.equal((await requestApi('/api/garmin/label-text', [Buffer.from(JSON.stringify(payload))], { ...headers, origin: 'https://attacker.example' })).status, 403);
+    }
+});

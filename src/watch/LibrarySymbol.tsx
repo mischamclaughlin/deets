@@ -15,6 +15,9 @@ export function LibrarySymbol({ source }: { source: LibrarySource }) {
     return <svg className="compact-library-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {source === "time" ? <><circle cx="12" cy="12" r="8" /><path d="M12 7v5h4" /></>
             : source === "numericDate" ? <><rect x="4" y="5" width="16" height="15" rx="3" /><path d="M8 3v4m8-4v4M4 10h16" /></>
-                : <><circle cx="12" cy="8" r="1" /><circle cx="12" cy="16" r="1" /></>}
+                : source === "battery" ? <><rect x="3" y="7" width="17" height="10" rx="2" /><path d="M22 10v4M6 10v4m3-4v4m3-4v4" /></>
+                    : source === "alarms" ? <><circle cx="12" cy="13" r="7" /><path d="m4 3-3 3m19-3 3 3M12 9v4h3M7 20l-2 2m12-2 2 2" /></>
+                        : source === "label" ? <path d="M5 5h14M12 5v15M8 20h8" />
+                            : <><circle cx="12" cy="8" r="1" /><circle cx="12" cy="16" r="1" /></>}
     </svg>;
 }

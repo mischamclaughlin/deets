@@ -91,7 +91,7 @@ test("library search combines category, names and useful activity synonyms", () 
     assert.deepEqual(matchingEntries("activity", "steps").map((entry) => entry.source), ["steps"]);
     assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["steps", "floors", "weeklyWalk", "weeklyRun"]);
     assert.deepEqual(matchingEntries("all", "unknown-item"), []);
-    assert.equal(matchingEntries("all", "   ").length, 13);
+    assert.equal(matchingEntries("all", "   ").length, 16);
 });
 
 test("element names distinguish values, symbols and graphs and number duplicates", () => {
@@ -148,4 +148,11 @@ test("heart-rate value and icon use the existing layout, linked movement and nat
             assert.equal(activityLayout(mapped.scene, value.id)!.gap, 12);
         }
     }
+});
+
+
+test("device and literal text are exposed as independent searchable elements", () => {
+    assert.deepEqual(matchingEntries("device", "").map((entry) => entry.source), ["battery", "alarms", "label"]);
+    for (const [query, source] of [["charge", "battery"], ["alarm", "alarms"], ["custom text", "label"]])
+        assert.deepEqual(matchingEntries("all", query).map((entry) => entry.source), [source]);
 });

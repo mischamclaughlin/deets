@@ -186,9 +186,9 @@ def dispatch(request):
             raise ValueError("Choose an activity element and whether its weekly graph is enabled.")
         return layout({"scene": set_activity_graph(payload["scene"], payload["elementId"], payload["enabled"])})
     if operation == "add":
-        from designer_typography import add_time, add_divider, add_date
+        from designer_typography import add_time, add_divider, add_date, add_data_text
         from designer_activity import ACTIVITY_SOURCES, ACTIVITY_GROUPS, add_activity
-        if set(payload) not in ({"scene", "source"}, {"scene", "source", "options"}) or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate"} | ACTIVITY_SOURCES:
+        if set(payload) not in ({"scene", "source"}, {"scene", "source", "options"}) or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate", "battery", "alarms", "label"} | ACTIVITY_SOURCES:
             raise ValueError("Choose a scene and a supported element to add.")
         source = payload["source"]
         if "options" in payload:
@@ -196,8 +196,14 @@ def dispatch(request):
                 raise ValueError("Icon and graph options belong to an activity data value.")
             return layout({"scene": add_activity(payload["scene"], source, payload["options"])})
         edited = (add_activity(payload["scene"], source) if source in ACTIVITY_SOURCES else
+                  add_data_text(payload["scene"], source) if source in {"battery", "alarms", "label"} else
                   {"divider": add_divider, "time": add_time, "numericDate": add_date}[source](payload["scene"]))
         return layout({"scene": edited})
+    if operation == "label-text":
+        from designer_typography import set_label_text
+        if set(payload) != {"scene", "elementId", "text"}:
+            raise ValueError("Choose a scene, custom text element and text.")
+        return layout({"scene": set_label_text(payload["scene"], payload["elementId"], payload["text"])})
     if operation == "divider":
         from designer_typography import set_divider_symbol
         if set(payload) != {"scene", "elementId", "symbol"}:

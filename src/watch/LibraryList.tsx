@@ -7,7 +7,7 @@ export function LibraryList({ onAdd, adding, remaining }: {
     remaining: number;
 }) {
     return <div className="compact-library">
-        {([['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun']] as const).map(([category, title]) =>
+        {([['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun'], ['device', 'Device & text']] as const).map(([category, title]) =>
             <div className="compact-library-group" key={category}>
                 <h3>{title}</h3>
                 <ul>{libraryItems.filter((entry) => entry.category === category).map((entry) => {

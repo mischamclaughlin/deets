@@ -670,3 +670,45 @@ def refresh_fonts(scene):
         if element["source"] in TEXT_SOURCES and (element["source"] not in DATA_SOURCES or "typography" in element or element.get("inheritFont") is True):
             edited = apply(edited, element["id"], element_settings(element, scene["device"]), cache=cache)
     return edited
+
+
+def add_data_text(scene, source):
+    """Add device data or a literal label using the same native text boundary."""
+    from designer_model import validate_scene, DEVICES
+    if source not in {"battery", "alarms", "label"}:
+        raise ValueError("Choose battery, alarms or custom text.")
+    scene = validate_scene(scene)
+    if len(scene["elements"]) >= 40:
+        raise ValueError("A design can contain at most 40 elements.")
+    value = {"family": scene.get("fontFamily", "garmin"), "size": 24,
+             "thickness": 0, "width": 100, "letterSpacing": 1}
+    key, record = generate(scene["device"], value, data=True, label=source == "label")
+    size = DEVICES[scene["device"]]
+    identities = {element["id"] for element in scene["elements"]}
+    identity, suffix = source, 2
+    while identity in identities:
+        identity = f"{source}-{suffix}"
+        suffix += 1
+    edited = copy.deepcopy(scene)
+    edited["elements"].append({"id": identity, "source": source, "font": key,
+        "typography": value, "inheritFont": False,
+        "x": size // 2, "y": size // 2 - value["size"] // 2,
+        "width": 1, "height": value["size"], "align": "centre",
+        **({"text": "YOUR TEXT"} if source == "label" else {}),
+        "colour": 0xdceccf, "nightColour": 0x8d99ae, "visible": "both"})
+    return _fit_clock(edited, identity, record["font"])
+
+
+def set_label_text(scene, element_id, text):
+    """Fit literal text atomically; fixed clipping boxes retain their geometry."""
+    from designer_model import validate_scene, scene_font_pack
+    scene = validate_scene(scene)
+    target = _clock_target(scene, element_id)
+    if target["source"] != "label":
+        raise ValueError("Select a custom text element.")
+    if not isinstance(text, str) or len(text) > 80:
+        raise ValueError("Custom text supports up to 80 characters.")
+    font = scene_font_pack(scene)["fonts"][target["font"]]
+    if any(str(ord(char)) not in font["glyphs"] for char in text):
+        raise ValueError("This text contains characters unavailable in the selected font.")
+    return _fit_clock(scene, element_id, font, text=text)

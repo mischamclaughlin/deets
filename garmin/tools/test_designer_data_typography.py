@@ -22,6 +22,45 @@ class DataTypographyTests(unittest.TestCase):
                               "y": (size-height)//2, "width": 180, "height": height, "align": "centre",
                               "colour": 0xffffff, "nightColour": 0xaaaaaa, "visible": "both"}]}
 
+    def test_device_data_and_custom_text_can_be_added_on_every_device(self):
+        for device in model.DEVICES:
+            scene = {"version": 2, "name": "Library", "device": device,
+                     "background": 0, "edgeInset": 16, "elements": []}
+            before = copy.deepcopy(scene)
+            for source in ("battery", "alarms", "label"):
+                with self.subTest(device=device, source=source):
+                    mapped = bridge.dispatch({"operation": "add", "payload": {"scene": scene, "source": source}})
+                    element = mapped["scene"]["elements"][-1]
+                    self.assertEqual(element["source"], source)
+                    self.assertEqual(element["boxSizing"], "hug")
+                    self.assertTrue(mapped["ops"])
+                    second = typography.add_data_text(mapped["scene"], source)
+                    self.assertNotEqual(second["elements"][0]["id"], second["elements"][1]["id"])
+            self.assertEqual(scene, before)
+
+    def test_literal_text_edits_fit_native_ink_and_reject_invalid_changes_atomically(self):
+        scene = typography.add_data_text({"version": 2, "name": "Text", "device": "epix2pro47mm",
+                 "background": 0, "edgeInset": 16, "elements": []}, "label")
+        before = copy.deepcopy(scene)
+        changed = typography.set_label_text(scene, "label", "Az 5%°")
+        element = changed["elements"][0]
+        self.assertEqual(element["text"], "Az 5%°")
+        self.assertLessEqual(abs(element["x"] * 2 + element["width"] - scene["elements"][0]["x"] * 2 - scene["elements"][0]["width"]), 1)
+        fixed = copy.deepcopy(changed)
+        fixed["elements"][0].update(boxSizing="fixed", width=70, height=15)
+        edited = typography.set_label_text(fixed, "label", "New text")["elements"][0]
+        self.assertEqual((edited["x"], edited["y"], edited["width"], edited["height"]),
+                         tuple(fixed["elements"][0][key] for key in ("x", "y", "width", "height")))
+        for text in ("X" * 81, "☃", "line\nbreak", None, "W" * 80):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                typography.set_label_text(scene, "label", text)
+        self.assertEqual(scene, before)
+        payload = {"scene": scene, "elementId": "label", "text": "Hello"}
+        mapped = bridge.dispatch({"operation": "label-text", "payload": payload})
+        self.assertEqual(mapped["scene"]["elements"][0]["text"], "Hello")
+        with self.assertRaises(ValueError):
+            bridge.dispatch({"operation": "label-text", "payload": {**payload, "extra": 1}})
+
     def test_all_data_text_sources_accept_typography_and_fit(self):
         for source in sorted(typography.DATA_SOURCES):
             with self.subTest(source=source):

@@ -11,7 +11,7 @@
     "export:garmin": "node scripts/export.ts",
     "test:export": "node scripts/test-export.ts",
     "test:preview": "node --test server/mapping-cache.test.ts server/preview-client.test.ts server/preview-background.test.ts",
-    "test": "node --test server/new-design.test.ts server/prg-design.test.ts server/preset-selection.test.ts server/batch-geometry.test.ts server/saved-designs.test.ts server/design-file.test.ts server/grid-details.test.ts server/editor-history.test.ts server/arithmetic.test.ts server/library.test.ts server/layers.test.ts server/weather.test.ts server/bridge.test.ts server/export-client.test.ts server/preview-background.test.ts server/garmin.test.ts server/grid.test.ts server/grid-area.test.ts server/grid-area-placement.test.ts server/grid-band.test.ts server/snapping.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
+    "test": "node --test server/*.test.ts && python3 -m unittest discover -s garmin/tools -p \"test_designer*.py\""
   },
   "dependencies": {
     "react": "^19.3.1",

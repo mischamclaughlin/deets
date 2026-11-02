@@ -1,7 +1,7 @@
 import type { ActivitySource } from "../../shared/scene.ts";
 
-export type LibrarySource = ActivitySource | "time" | "numericDate" | "divider";
-export type LibraryCategory = "all" | "clock" | "activity" | "weather";
+export type LibrarySource = ActivitySource | "time" | "numericDate" | "divider" | "battery" | "alarms" | "label";
+export type LibraryCategory = "all" | "clock" | "activity" | "weather" | "device";
 export interface LibraryEntry {
     source: LibrarySource;
     label: string;
@@ -14,6 +14,9 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "time", label: "Time", detail: "Hours & minutes", category: "clock", keywords: "clock hours minutes" },
     { source: "numericDate", label: "Date", detail: "Day, month & year", category: "clock", keywords: "calendar weekday" },
     { source: "divider", label: "Divider", detail: "An independent separator", category: "clock", keywords: "colon punctuation separator" },
+    { source: "battery", label: "Battery", detail: "Remaining battery percentage", category: "device", keywords: "power charge percentage device" },
+    { source: "alarms", label: "Alarms", detail: "Enabled alarm count", category: "device", keywords: "device alarm wake count" },
+    { source: "label", label: "Custom text", detail: "Your own text label", category: "device", keywords: "design label custom text words letters" },
     { source: "heartRate", label: "Heart rate", detail: "Current beats per minute", category: "activity", keywords: "value pulse bpm health heart rate" },
     { source: "heartIcon", label: "Heart icon", detail: "Heart-rate symbol", category: "activity", keywords: "symbol pulse bpm health heart" },
     { source: "heartZones", label: "Heart-rate zones", detail: "Current heart rate across five zones", category: "activity", keywords: "heart rate pulse bpm health graph chart zones band" },
@@ -55,7 +58,7 @@ export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource;
 };
 
 /** Present data first; its icon and graph are choices made when adding it. */
-export const libraryItems = libraryEntries.filter((entry) => entry.category === "clock" || activityParts[entry.source]);
+export const libraryItems = libraryEntries.filter((entry) => (entry.category === "clock" || entry.category === "device") || activityParts[entry.source]);
 
 export function matchingEntries(category: LibraryCategory, query: string): readonly LibraryEntry[] {
     const terms = query.trim().toLocaleLowerCase("en-GB").split(/[^\p{L}\p{N}]+/u).filter(Boolean);
