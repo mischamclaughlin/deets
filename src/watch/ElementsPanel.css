@@ -1,3 +1,4 @@
+.elements-panel { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--rp-border); }
 .layers-caption { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 12px; color: var(--rp-subtle); font-size: 10px; }
 .layer-list .layer-row { position: relative; display: flex; align-items: stretch; gap: 2px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); touch-action: pan-x; user-select: none; cursor: grab; transition: border-color 120ms ease, background-color 120ms ease, box-shadow 180ms ease; }
 .layer-list .layer-row + .layer-row { margin-top: 6px; }

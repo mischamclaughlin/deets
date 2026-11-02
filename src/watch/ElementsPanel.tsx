@@ -23,7 +23,7 @@ export function ElementsPanel({ scene, selectedId, selectedIds, onSelect, onScen
         <section className="elements-panel" aria-labelledby="elements-heading">
             <div className="section-heading"><h2 id="elements-heading">Layers</h2><span className="element-count">{scene.elements.length}</span></div>
             {scene.elements.length > 0 && <p className="layers-caption">Front at top <span>Drag to reorder</span></p>}
-            {scene.elements.length === 0 && <p className="panel-intro">Your canvas is ready. Add an element above to get started.</p>}
+            {scene.elements.length === 0 && <p className="panel-intro">Your canvas is ready. Add an element from the library to get started.</p>}
             <ul ref={list} className="element-list layer-list" aria-busy={busy}
                 data-drag-active={Boolean(preview)} onClickCapture={suppressClick}>
                 {frontToBack(scene).map((element, index) => {

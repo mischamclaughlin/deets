@@ -159,7 +159,6 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     </>}
                     <div id="sidebar-elements" hidden={sidebarView !== "elements"}>
                         <LibraryPanel scene={scene} onSelect={setSelectedId} onSceneChange={setScene} />
-                        <ElementsPanel scene={scene} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
                     </div>
                     <div id="sidebar-styles" hidden={sidebarView !== "styles"}>
                         <p className="panel-intro">Set a shared look with fonts and reusable presets.</p>
@@ -261,6 +260,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings">
                 <header className="inspector-header"><span className="inspector-dot" aria-hidden="true" />Inspector<span className="inspector-tag">Element</span></header>
                 <div className="sidebar-scroll" key={revision} inert={!fontsReady}>
+                    <ElementsPanel scene={scene} selectedId={selectedId} selectedIds={selectedIds} onSelect={setSelectedId} onSceneChange={setScene} />
                     {selectedIds.length > 1 && <BatchPresetsPanel key={selectedIds.join("|")} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
                     {selectedIds.length > 1 && <BatchBoxPanel key={`box-${selectedIds.join("|")}`} scene={scene} ids={selectedIds} onSceneChange={setScene} />}
                     {!!selectedGridAreas?.length && <GridAreaPanel scene={scene} area={areaCollection.area} areaCount={selectedGridAreas.length}
@@ -285,7 +285,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         </>
                     )}
                     {selected && <ElementColourPanel key={`colours-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
-                    {selectedIds.length === 0 && selectedGridLines.length === 0 && !selectedGridAreas?.length && <div className="selection-empty"><h2>Make it yours</h2><p>Select an element on the canvas or in the Elements list to adjust its appearance and position.</p></div>}
+                    {selectedIds.length === 0 && selectedGridLines.length === 0 && !selectedGridAreas?.length && <div className="selection-empty"><h2>Make it yours</h2><p>Select an element on the canvas or in the Layers list to adjust its appearance and position.</p></div>}
                 </div>
             </aside>
             {page === "designs" && <SavedDesignsPage themeControl={<ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "light" ? "dark" : "light")} />}
