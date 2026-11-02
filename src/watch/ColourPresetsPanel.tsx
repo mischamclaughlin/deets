@@ -1,19 +1,22 @@
+import { elementPresetIds } from "./preset-selection.ts";
+import { usePresetSelection } from "./usePresetSelection.ts";
 import { useEffect, useState } from "react";
 import type { ColourPreset, Scene } from "../../shared/scene.ts";
 import { setColourPresets } from "./api.ts";
 import { ColourInput } from "./ColourInput.tsx";
 
-export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSceneChange: (scene: Scene) => void }) {
-    const [presets, setPresets] = useState(scene.colourPresets ?? []);
-    const [selectedId, setSelectedId] = useState<string | undefined>(presets[0]?.id);
+export function ColourPresetsPanel({ scene, elementId, onSceneChange }: { scene: Scene; elementId?: string; onSceneChange: (scene: Scene) => void }) {
+    const [pendingPresets, setPresets] = useState(scene.colourPresets ?? []);
     const [dirty, setDirty] = useState(false);
+    const presets = dirty ? pendingPresets : scene.colourPresets ?? [];
+    const [selectedId, setSelectedId] = usePresetSelection(elementId, elementPresetIds(scene, elementId).colour, presets[0]?.id);
     const [error, setError] = useState<string>();
-    const selected = presets.find((preset) => preset.id === selectedId);
+    const selected = presets.find((preset) => preset.id === selectedId) ?? presets[0];
     useEffect(() => {
         if (!dirty) return;
         const controller = new AbortController();
         const timer = setTimeout(() => {
-            void setColourPresets(scene, presets, controller.signal).then((layout) => {
+            void setColourPresets(scene, pendingPresets, controller.signal).then((layout) => {
                 if (controller.signal.aborted) return;
                 onSceneChange(layout.scene);
                 setDirty(false);
@@ -25,9 +28,9 @@ export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onS
             });
         }, 200);
         return () => { clearTimeout(timer); controller.abort(); };
-    }, [dirty, presets, scene, onSceneChange]);
+    }, [dirty, pendingPresets, scene, onSceneChange]);
     function edit(changes: Partial<ColourPreset>) {
-        setPresets(presets.map((preset) => preset.id === selectedId ? { ...preset, ...changes } : preset));
+        setPresets(presets.map((preset) => preset.id === selected?.id ? { ...preset, ...changes } : preset));
         setDirty(true);
         setError(undefined);
     }
@@ -58,7 +61,7 @@ export function ColourPresetsPanel({ scene, onSceneChange }: { scene: Scene; onS
             setError(undefined);
         }}>New preset</button>
         <button type="button" className="add-element preset-delete" disabled={!selected} onClick={() => {
-            const remaining = presets.filter((preset) => preset.id !== selectedId);
+            const remaining = presets.filter((preset) => preset.id !== selected?.id);
             setPresets(remaining);
             setSelectedId(remaining[0]?.id);
             setDirty(true);

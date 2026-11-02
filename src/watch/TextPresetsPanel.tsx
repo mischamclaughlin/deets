@@ -1,3 +1,5 @@
+import { elementPresetIds } from "./preset-selection.ts";
+import { usePresetSelection } from "./usePresetSelection.ts";
 import { SliderValue } from "./SliderValue.tsx";
 import { useEffect, useState } from "react";
 import type { Scene, TextPreset } from "../../shared/scene.ts";
@@ -5,20 +7,21 @@ import { setTextPresets } from "./api.ts";
 import { typographyControls } from "./typography.ts";
 import { defaultTextPresetId, textPresets } from "./text-presets.ts";
 
-export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSceneChange: (scene: Scene) => void }) {
-    const [draft, setDraft] = useState(() => ({ presets: textPresets(scene), defaultPresetId: defaultTextPresetId(scene) }));
-    const [selectedId, setSelectedId] = useState(draft.defaultPresetId);
+export function TextPresetsPanel({ scene, elementId, onSceneChange }: { scene: Scene; elementId?: string; onSceneChange: (scene: Scene) => void }) {
+    const [pendingDraft, setDraft] = useState(() => ({ presets: textPresets(scene), defaultPresetId: defaultTextPresetId(scene) }));
     const [dirty, setDirty] = useState(false);
+    const draft = dirty ? pendingDraft : { presets: textPresets(scene), defaultPresetId: defaultTextPresetId(scene) };
+    const [selectedId, setSelectedId] = usePresetSelection(elementId, elementPresetIds(scene, elementId).text, draft.defaultPresetId ?? undefined);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string>();
-    const selected = draft.presets.find((preset) => preset.id === selectedId);
+    const selected = draft.presets.find((preset) => preset.id === selectedId) ?? draft.presets[0];
 
     useEffect(() => {
         if (!dirty) return;
         const controller = new AbortController();
         const timer = setTimeout(() => {
             setSaving(true);
-            void setTextPresets(scene, draft.presets, draft.defaultPresetId, controller.signal).then((layout) => {
+            void setTextPresets(scene, pendingDraft.presets, pendingDraft.defaultPresetId, controller.signal).then((layout) => {
                 if (controller.signal.aborted) return;
                 onSceneChange(layout.scene);
                 setDirty(false);
@@ -32,10 +35,10 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             });
         }, 200);
         return () => { clearTimeout(timer); controller.abort(); };
-    }, [draft, dirty, scene, onSceneChange]);
+    }, [pendingDraft, dirty, scene, onSceneChange]);
 
     function edit(changes: Partial<TextPreset>) {
-        setDraft({ ...draft, presets: draft.presets.map((preset) => preset.id === selectedId ? { ...preset, ...changes } : preset) });
+        setDraft({ ...draft, presets: draft.presets.map((preset) => preset.id === selected?.id ? { ...preset, ...changes } : preset) });
         setDirty(true);
         setError(undefined);
     }
@@ -78,8 +81,8 @@ export function TextPresetsPanel({ scene, onSceneChange }: { scene: Scene; onSce
             setError(undefined);
         }}>New preset</button>
         <button type="button" className="add-element preset-delete" disabled={!selected} onClick={() => {
-            const presets = draft.presets.filter((preset) => preset.id !== selectedId);
-            setDraft({ presets, defaultPresetId: draft.defaultPresetId === selectedId ? presets[0]?.id ?? null : draft.defaultPresetId });
+            const presets = draft.presets.filter((preset) => preset.id !== selected?.id);
+            setDraft({ presets, defaultPresetId: draft.defaultPresetId === selected?.id ? presets[0]?.id ?? null : draft.defaultPresetId });
             setSelectedId(presets[0]?.id ?? null);
             setDirty(true);
             setError(undefined);

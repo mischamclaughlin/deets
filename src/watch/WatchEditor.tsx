@@ -166,8 +166,8 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <p className="panel-intro">Set a shared look with fonts and reusable presets.</p>
                         <div className="styles-content">
                             <WatchFontPanel scene={scene} onSceneChange={setScene} uploads={uploads} onUpload={rememberFont} />
-                            <TextPresetsPanel scene={scene} onSceneChange={setScene} />
-                            <ColourPresetsPanel scene={scene} onSceneChange={setScene} />
+                            <TextPresetsPanel scene={scene} elementId={selectedId} onSceneChange={setScene} />
+                            <ColourPresetsPanel scene={scene} elementId={selectedId} onSceneChange={setScene} />
                         </div>
                     </div>
                     <div id="sidebar-canvas" className="document-panel" hidden={sidebarView !== "canvas"}>
