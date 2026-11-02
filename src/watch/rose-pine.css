@@ -145,10 +145,9 @@
     color: var(--workspace-text);
     background: var(--workspace-base);
 }
-.workspace-eyebrow, .canvas-badge span, .selection-position, .workspace-snap span,
+.workspace-eyebrow, .selection-position, .workspace-snap span,
 .canvas-info, .canvas-view-note, .canvas-shortcuts { color: var(--workspace-subtle); }
 .workspace-title-dot, .context-dot { background: var(--workspace-rose); }
-.canvas-badge { border-color: var(--workspace-border); color: var(--workspace-text); }
 .workspace-segment { border-color: var(--workspace-border); background: var(--rp-base); }
 .workspace-segment button { color: var(--workspace-subtle); }
 .workspace-segment button[aria-pressed="true"] {

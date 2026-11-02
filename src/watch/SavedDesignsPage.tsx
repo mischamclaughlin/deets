@@ -94,7 +94,7 @@ export function SavedDesignsPage({ themeControl, onBack, onOpen }: {
                 <h3>{query.trim() ? 'No matching designs' : 'Your designs belong here'}</h3>
                 <p>{query.trim() ? 'Try another name.' : 'Return to the editor and choose Save design to start your collection.'}</p>
                 <button type="button" onClick={query.trim() ? () => setQuery('') : onBack}>{query.trim() ? 'Clear search' : 'Back to editor'}</button></div>}
-            <p className="saved-designs-note">Designs stay on this browser and device. Clearing browser data removes them. Download a file from the editor to keep a backup.</p>
+            <p className="saved-designs-note">Designs stay on this browser and device. Clearing browser data removes them.</p>
         </div>
     </main>;
 }

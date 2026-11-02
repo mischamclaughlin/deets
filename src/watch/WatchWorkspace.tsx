@@ -41,9 +41,10 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                     <button type="button" onClick={onUndo} disabled={!canUndo} title="Undo (⌘/Ctrl+Z)" aria-keyshortcuts="Meta+Z Control+Z">Undo</button>
                     <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
                 </div>
-                <span className="canvas-badge">{size} × {size}<span>px</span></span>
-                {fileActions}
-                <GarminExportButton scene={scene} disabled={exportDisabled} />
+                <div className="workspace-file-actions" role="group" aria-label="Import and export">
+                    {fileActions}
+                    <GarminExportButton scene={scene} disabled={exportDisabled} />
+                </div>
             </div>
         </header>
         <div className="workspace-toolbar" role="group" aria-label="Canvas view">
@@ -94,7 +95,7 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                 </div>
             </div>
             <div className="canvas-info" id="canvas-dimensions">
-                <span>{usable} px usable diameter</span>
+                <span>{size} × {size} px · {usable} px usable diameter</span>
                 <span className="canvas-view-note">{preview ? "Guides hidden · Preview only" : "Native-pixel canvas"}</span>
             </div>
             <p className="canvas-shortcuts">{preview ? "Return to Edit to select and move elements" : <><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> Move <span>·</span> <kbd>Shift</kbd> 10 px <span>·</span> <kbd>Alt</kbd> Bypass snapping</>}</p>

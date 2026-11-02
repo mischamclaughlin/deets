@@ -1,5 +1,6 @@
 .workspace-header:has(.garmin-export) { flex-wrap: wrap; }
-.workspace-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.workspace-header-actions { display: flex; flex: 1 1 auto; align-items: center; flex-wrap: wrap; gap: 10px; }
+.workspace-file-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .garmin-export, .design-transfer { position: relative; }
 .workspace-file-button {
     display: inline-flex;
@@ -41,5 +42,3 @@
 @media (hover: hover) {
     .workspace-file-button:not(:disabled):hover { background: var(--workspace-overlay); border-color: var(--workspace-iris); }
 }
-
-.design-transfer-actions { display: flex; flex-wrap: wrap; gap: 8px; }

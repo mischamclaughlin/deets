@@ -15,8 +15,6 @@
 .workspace-eyebrow { color: #9bb6ac; font-size: 9px; font-weight: 600; letter-spacing: 1.8px; }
 .workspace-header h2 { display: flex; align-items: center; gap: 10px; margin: 7px 0 0; font-size: 19px; font-weight: 500; letter-spacing: -0.5px; }
 .workspace-title-dot { width: 5px; height: 5px; border-radius: 50%; background: #a4ddbe; }
-.canvas-badge { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #52675f; border-radius: 7px; color: #c1d4cb; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.canvas-badge span { color: #9bb6ac; font-size: 10px; }
 .workspace-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .workspace-segment { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid #4c6159; border-radius: 9px; background: #15242280; }
 .workspace-segment button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; color: #aec4b9; font-size: 11px; font-weight: 500; }
