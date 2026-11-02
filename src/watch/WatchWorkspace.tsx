@@ -1,3 +1,5 @@
+import { PreviewScenarioPanel } from "./PreviewScenarioPanel.tsx";
+import type { PreviewScenario } from "./preview-scenario.ts";
 import { useState, type ReactNode, type ComponentProps } from "react";
 import { defaultGrid } from "./grid.ts";
 import { devices } from "../../shared/scene.ts";
@@ -27,6 +29,7 @@ type Props = ComponentProps<typeof WatchCanvas> & {
 export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, canvasSettings, fileActions, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
     const [preview, setPreview] = useState(false);
     const [night, setNight] = useState(false);
+    const [scenario, setScenario] = useState<PreviewScenario>();
     const size = devices[scene.device];
     const selected = scene.elements.find((element) => element.id === canvasProps.selectedElementId);
     const usable = size - (scene.edgeInset ?? 0) * 2;
@@ -66,9 +69,10 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                 </button>
             </div>
         </div>
+        {preview && <PreviewScenarioPanel value={scenario} onChange={setScenario} />}
         <div className="watch-stage">
             <WatchDeviceFrame device={scene.device} active={preview}>
-            <WatchCanvas key={editRevision} {...canvasProps} scene={scene} night={night}
+            <WatchCanvas key={editRevision} {...canvasProps} scene={scene} night={night} previewScenario={preview ? scenario : undefined}
                 showAreas={!preview}
                 showCircumference={!preview && canvasProps.showCircumference}
                 showGuideLines={!preview && canvasProps.showGuideLines}

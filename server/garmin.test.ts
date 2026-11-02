@@ -665,3 +665,20 @@ test('editable export rejects malformed layer metadata before compilation', asyn
         assert.match(String(response.body.error), /layer settings/);
     }
 });
+
+test("preview scenarios are bounded, preserve origin checks and cannot enter export requests", async () => {
+    const headers = { "content-type": "application/json" };
+    const preview = { time: "23:59:58", date: "2028-02-29", readings: "large", weather: "cloud-rain" };
+    const valid = await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene, preview }))], headers);
+    assert.equal(valid.status, 200);
+    assert.ok(String(valid.body.mapping).startsWith("preview:"));
+    for (const value of [null, { ...preview, date: "2026-02-29" }, { ...preview, time: "24:00:00" },
+        { ...preview, weather: "../../icon" }, { ...preview, extra: true }]) {
+        const response = await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene, preview: value }))], headers);
+        assert.equal(response.status, 400);
+    }
+    const external = await requestApi("/api/garmin/layout", [Buffer.from(JSON.stringify({ scene, preview }))], { ...headers, origin: "https://attacker.example" });
+    assert.equal(external.status, 403);
+    const exported = await requestApi("/api/garmin/export", [Buffer.from(JSON.stringify({ scene, mapping: "unused", preview }))], headers);
+    assert.equal(exported.status, 400);
+});

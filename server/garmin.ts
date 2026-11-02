@@ -1,3 +1,4 @@
+import { parsePreviewScenario } from "../src/watch/preview-scenario.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, lstat, rename, unlink, writeFile } from "node:fs/promises";
@@ -227,7 +228,7 @@ export function garmin(): Plugin {
                         : clock || date ? ["scene", "elementId", "source"]
                             : activityGraph ? ["scene", "elementId", "enabled"] : adding ? ["scene", "source", "options"]
                                 : watchFont ? ["scene", "family"]
-                                    : inheritFont ? ["scene", "elementId", "inherit"] : ["scene", "night"];
+                                    : inheritFont ? ["scene", "elementId", "inherit"] : ["scene", "night", "preview"];
                 if (
                     Object.keys(payload).some(
                         (key) => !allowed.includes(key),
@@ -255,6 +256,10 @@ export function garmin(): Plugin {
                         400,
                         "The request has unsupported or missing fields.",
                     );
+                if ("preview" in payload) {
+                    try { payload.preview = parsePreviewScenario(payload.preview); }
+                    catch { throw new RequestError(400, "Choose valid preview values."); }
+                }
                 if (exporting && ("grid" in payload || "layout" in payload)) {
                     try {
                         parseDesign(JSON.stringify({ format: "deets", version: 1, scene: payload.scene, grid: "grid" in payload ? payload.grid : defaultGrid, ...(payload.layout === undefined ? {} : { layout: payload.layout }) }));

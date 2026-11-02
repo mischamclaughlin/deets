@@ -1,0 +1,12 @@
+.preview-scenarios { margin: 0 28px; color: var(--rp-text); font-size: 12px; }
+.preview-scenarios summary { cursor: pointer; width: fit-content; padding: 7px 0; color: var(--rp-subtle); }
+.preview-scenarios form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 10px; border: 1px solid var(--rp-border); border-radius: 10px; background: var(--rp-surface); }
+.preview-scenarios label { display: grid; gap: 5px; }
+.preview-scenarios input, .preview-scenarios select, .preview-scenarios button { min-height: 32px; border: 1px solid var(--rp-border); border-radius: 7px; padding: 5px 8px; color: var(--rp-text); background: var(--rp-base); font: inherit; }
+.preview-scenarios button { cursor: pointer; }
+.preview-scenarios button:hover { background: var(--rp-overlay); }
+.preview-scenarios :is(input, select, button):focus-visible { outline: 2px solid var(--rp-iris); outline-offset: 2px; }
+.preview-scenarios p { width: 100%; margin: 0; color: var(--rp-subtle); }
+.preview-scenarios [role="alert"] { color: var(--rp-love); }
+.preview-scenario-actions { display: flex; gap: 6px; }
+@media (max-width: 640px) { .preview-scenarios { margin: 0 12px; } }

@@ -41,6 +41,11 @@ def layout(payload):
     night = payload.get("night", False)
     if type(night) is not bool:
         raise ValueError("Night mode must be a boolean.")
+    scenario = payload.get("preview")
+    values = None
+    if "preview" in payload:
+        from designer_preview import scenario_values
+        values = scenario_values(scenario, model.CATALOG)
     operations, areas = [], []
     fonts = set()
     for element in scene["elements"]:
@@ -50,12 +55,16 @@ def layout(payload):
         areas.append({"id": element["id"], "source": element["source"], "label": info["label"],
                       **{key: element[key] for key in ("x", "y", "width", "height")}})
         if info["kind"] == "text":
-            operations.extend(model.render_text_ops({**scene, "elements": [element]}, night=night))
+            operations.extend(model.render_text_ops({**scene, "elements": [element]}, values=values, night=night))
             fonts.add(element["font"])
         else:
-            operations.extend({**operation, "elementId": element["id"]} for operation in
-                              chart_ops(element, night=night, ring_radius=ring_tick_radius(scene, element),
-                                        ring_inner_radius=ring_tick_inner_radius(scene, element)))
+            geometry = dict(ring_radius=ring_tick_radius(scene, element), ring_inner_radius=ring_tick_inner_radius(scene, element))
+            if values is not None:
+                from designer_preview import scenario_chart_ops
+                chart = scenario_chart_ops(element, values, scenario["weather"], night, **geometry)
+            else:
+                chart = chart_ops(element, night=night, **geometry)
+            operations.extend({**operation, "elementId": element["id"]} for operation in chart)
     pack = model.scene_font_pack(scene)
     images = dict(pack["images"])
     for element in scene["elements"]:
@@ -64,7 +73,11 @@ def layout(payload):
             key = ring_asset_key(*signature)
             _, images[key] = ring_font(*signature)
             fonts.add(key)
-    return {"scene": scene, "size": model.DEVICES[scene["device"]], "mapping": mapping(scene),
+    token = mapping(scene)
+    if scenario is not None:
+        # Preview tokens can never satisfy the live export mapping guard.
+        token = "preview:" + hashlib.sha256((token + json.dumps(scenario, sort_keys=True)).encode()).hexdigest()
+    return {"scene": scene, "size": model.DEVICES[scene["device"]], "mapping": token,
             "background": device_colour(0 if night else scene["background"]), "areas": areas,
             "ops": [{**operation, "colour": device_colour(operation["colour"])} for operation in operations],
             "assets": {font: "data:image/png;base64," + base64.b64encode(images[font]).decode() for font in sorted(fonts)}}

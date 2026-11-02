@@ -1,3 +1,4 @@
+import type { PreviewScenario } from "./preview-scenario.ts";
 import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourChannel, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 import type { EditorLayout } from "./editor-layout.ts";
 import type { GridSettings } from "./grid.ts";
@@ -21,7 +22,7 @@ async function post<T>(
         );
     }
     const result = await response.json();
-    if (result && typeof result === "object" && "mapping" in result && "scene" in result &&
+    if (!(payload && typeof payload === "object" && "preview" in payload) && result && typeof result === "object" && "mapping" in result && "scene" in result &&
         "ops" in result && Array.isArray(result.ops) && "areas" in result && Array.isArray(result.areas) &&
         "assets" in result && result.assets)
         rememberMapping(result as WatchMapping, (payload as { night?: boolean }).night ?? false);
@@ -32,7 +33,8 @@ export const mapWatch = (scene: Scene, night = false, signal?: AbortSignal) =>
     post<WatchMapping>("layout", { scene, night }, signal);
 
 /** Editing can reuse prepared native pixels; export always requests a fresh proof. */
-export const previewWatch = (scene: Scene, night = false, signal?: AbortSignal) => {
+export const previewWatch = (scene: Scene, night = false, signal?: AbortSignal, preview?: PreviewScenario) => {
+    if (preview) return post<WatchMapping>("layout", { scene, night, preview }, signal);
     const prepared = preparedMapping(scene, night);
     return prepared ? Promise.resolve(prepared) : mapWatch(scene, night, signal);
 };

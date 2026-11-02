@@ -1,3 +1,4 @@
+import type { PreviewScenario } from "./preview-scenario.ts";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { devices, type Scene, type SceneElement, type WatchMapping } from "../../shared/scene.ts";
 import { previewWatch } from "./api.ts";
@@ -16,6 +17,7 @@ interface Props {
     scene: Scene;
     layout?: EditorLayout;
     night?: boolean;
+    previewScenario?: PreviewScenario;
     showAreas?: boolean;
     showCircumference?: boolean;
     showGuideLines?: boolean;
@@ -56,12 +58,13 @@ function nativePointer(event: ReactPointerEvent<SVGSVGElement>) {
 interface Result {
     scene: Scene;
     night: boolean;
+    previewScenario?: PreviewScenario;
     layout?: WatchMapping;
     error?: string;
 }
 
 /** Native watch pixels with browser-only area and circumference annotations. */
-export function WatchCanvas({ scene, layout, night = false, showAreas = true, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, selectedGridAreas, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId, selectedElementIds }: Props) {
+export function WatchCanvas({ scene, layout, night = false, previewScenario, showAreas = true, showCircumference = false, showGuideLines = false, grid, mirrorGrid = false, selectedGridLineIds, selectedGridArea, selectedGridAreas, onSelectGridArea, onSelectGridLine, onChangeGrid, snapEnabled = false, snapToGrid = true, snapToGuides = true, snapToElements = false, snapGridToElements = true, outlineMode = "selected", onMoveElement, onSelectElement, selectedElementId, selectedElementIds }: Props) {
     const size = devices[scene.device];
     const canvas = useRef<HTMLCanvasElement>(null);
     const areas = useRef<SVGSVGElement>(null);
@@ -76,8 +79,8 @@ export function WatchCanvas({ scene, layout, night = false, showAreas = true, sh
     const pixelScene = useMemo(() => preview
         ? moveSceneElement(scene, preview.element.id, preview.position, { enabled: false, showGuideLines: false, layout })
         : scene, [scene, preview, layout]);
-    const prepared = preparedMapping(pixelScene, night);
-    const current = result?.scene === pixelScene && result.night === night ? result
+    const prepared = previewScenario ? undefined : preparedMapping(pixelScene, night);
+    const current = result?.scene === pixelScene && result.night === night && result.previewScenario === previewScenario ? result
         : prepared ? { scene: pixelScene, night, layout: prepared } : undefined;
     const pendingMapping = current?.layout;
     const signature = pendingMapping ? `${pendingMapping.mapping}:${night}` : undefined;
@@ -87,17 +90,18 @@ export function WatchCanvas({ scene, layout, night = false, showAreas = true, sh
 
     useEffect(() => {
         const controller = new AbortController();
-        if (preparedMapping(pixelScene, night)) return;
-        void previewWatch(pixelScene, night, controller.signal)
+        if (!previewScenario && preparedMapping(pixelScene, night)) return;
+        void previewWatch(pixelScene, night, controller.signal, previewScenario)
             .then((layout) => {
                 if (!controller.signal.aborted)
-                    setResult({ scene: pixelScene, night, layout });
+                    setResult({ scene: pixelScene, night, previewScenario, layout });
             })
             .catch((error) => {
                 if (!controller.signal.aborted)
                     setResult({
                         scene: pixelScene,
                         night,
+                        previewScenario,
                         error:
                             error instanceof Error
                                 ? error.message
@@ -105,7 +109,7 @@ export function WatchCanvas({ scene, layout, night = false, showAreas = true, sh
                     });
             });
         return () => controller.abort();
-    }, [pixelScene, night]);
+    }, [pixelScene, night, previewScenario]);
 
     useLayoutEffect(() => {
         if (!pendingMapping || !canvas.current || !signature) return;
@@ -119,6 +123,7 @@ export function WatchCanvas({ scene, layout, night = false, showAreas = true, sh
                     setResult({
                         scene: pixelScene,
                         night,
+                        previewScenario,
                         error:
                             error instanceof Error
                                 ? error.message
@@ -126,7 +131,7 @@ export function WatchCanvas({ scene, layout, night = false, showAreas = true, sh
                     });
             });
         return () => controller.abort();
-    }, [pendingMapping, signature, pixelScene, night]);
+    }, [pendingMapping, signature, pixelScene, night, previewScenario]);
 
     useEffect(() => {
         if (onSelectElement && restoreFocus.current !== selectedElementId) {
