@@ -1,91 +1,27 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { designFilename, maxDesignBytes, prepareDesign, serialiseDesign, type DesignDocument } from './design-file.ts';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { DesignDocument } from './design-file.ts';
 import { saveDesign } from './saved-designs.ts';
 import './DesignFilePanel.css';
 
-export function DesignFilePanel({ scene, grid, revision, disabled, savedDesignId, onImport, onSaved, onBrowse }: DesignDocument & {
-    revision: number;
+export function DesignFilePanel({ scene, grid, disabled, savedDesignId, onSaved, onBrowse }: DesignDocument & {
     disabled: boolean;
     savedDesignId?: string;
-    onImport: (document: DesignDocument) => void;
     onSaved: (id: string, name: string) => void;
     onBrowse: () => void;
 }) {
-    const input = useRef<HTMLInputElement>(null);
-    const request = useRef<AbortController | undefined>(undefined);
-    const current = useRef({ scene, grid, revision });
-    useLayoutEffect(() => { current.current = { scene, grid, revision }; }, [scene, grid, revision]);
-    useEffect(() => () => request.current?.abort(), []);
-    const [busy, setBusy] = useState(false);
     const [naming, setNaming] = useState(false);
     const [message, setMessage] = useState('');
-    const [error, setError] = useState(false);
-
-    async function importFile(file: File) {
-        if (request.current) return;
-        const controller = new AbortController();
-        request.current = controller;
-        const snapshot = current.current;
-        setBusy(true);
-        setError(false);
-        setMessage('Checking design…');
-        try {
-            if (file.size > maxDesignBytes) throw new Error('Choose a design file up to 1 MB.');
-            const document = await prepareDesign(await file.text(), controller.signal);
-            if (controller.signal.aborted) return;
-            if (current.current.scene !== snapshot.scene || current.current.grid !== snapshot.grid || current.current.revision !== snapshot.revision)
-                throw new Error('Your design changed during import. Import the file again.');
-            onImport(document);
-            setMessage(`Imported ${document.scene.name}. Choose Save design to add it to your library.`);
-        } catch (failure) {
-            if (controller.signal.aborted) return;
-            setError(true);
-            setMessage(failure instanceof Error ? failure.message : 'The design could not be imported.');
-        } finally {
-            if (request.current === controller) { request.current = undefined; setBusy(false); }
-        }
-    }
-
-    function download() {
-        try {
-            const url = URL.createObjectURL(new Blob([serialiseDesign({ scene, grid })], { type: 'application/json' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = designFilename(scene.name);
-            document.body.append(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            setError(false);
-            setMessage('Design file download started.');
-        } catch {
-            setError(true);
-            setMessage('The design could not be downloaded. Try again.');
-        }
-    }
-
-    return <section className="design-files" aria-label="Design library" aria-busy={busy}>
+    return <section className="design-files" aria-label="Design library">
         <div className="design-file-actions">
-            <button type="button" disabled={disabled || busy} onClick={() => setNaming(true)}>Save design</button>
-            <button data-browse-designs type="button" disabled={disabled || busy} onClick={onBrowse}>Saved designs</button>
+            <button type="button" disabled={disabled} onClick={() => setNaming(true)}>Save design</button>
+            <button data-browse-designs type="button" disabled={disabled} onClick={onBrowse}>Saved designs</button>
         </div>
-        <div className="design-file-actions design-file-secondary">
-            <button type="button" disabled={disabled || busy} onClick={() => input.current?.click()}>{busy ? 'Importing…' : 'Import file'}</button>
-            <button type="button" disabled={disabled || busy} onClick={download}>Download file</button>
-        </div>
-        <input ref={input} type="file" accept=".json,.deets.json,application/json" aria-label="Import design file" hidden
-            onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
-                if (file) void importFile(file);
-            }} />
         <p className="design-file-hint">Saved in this browser.</p>
-        {message && <p className="typography-status" role={error ? 'alert' : 'status'}>{message}</p>}
+        {message && <p className="typography-status" role="status">{message}</p>}
         {naming && <SaveDesignDialog document={{ scene, grid }} savedDesignId={savedDesignId} onDismiss={() => setNaming(false)}
             onSaved={(id, name) => {
                 onSaved(id, name);
                 setNaming(false);
-                setError(false);
                 setMessage(`Saved ${name} to your designs.`);
             }} />}
     </section>;

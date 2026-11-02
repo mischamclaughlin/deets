@@ -39,7 +39,7 @@ export function GarminExportButton({ scene, disabled = false }: { scene: Scene; 
     }
 
     return <div className="garmin-export">
-        <button type="button" className="garmin-export-button" disabled={disabled || exporting}
+        <button type="button" className="workspace-file-button garmin-export-button" disabled={disabled || exporting}
             onClick={() => void download()} aria-busy={exporting}
             title="Download this design as a compiled Garmin .prg file for the selected watch">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"

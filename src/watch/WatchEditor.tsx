@@ -1,4 +1,5 @@
 import { SliderValue } from "./SliderValue.tsx";
+import { DesignFileActions } from "./DesignFileActions.tsx";
 import { DesignFilePanel } from "./DesignFilePanel.tsx";
 import { SavedDesignsPage } from "./SavedDesignsPage.tsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -137,10 +138,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <div><h1>deets</h1><p>Watch face studio</p></div>
                         <ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "light" ? "dark" : "light")} />
                     </div>
-                    <DesignFilePanel scene={scene} grid={grid} revision={revision} disabled={!fontsReady || !!fontError}
+                    <DesignFilePanel scene={scene} grid={grid} disabled={!fontsReady || !!fontError}
                         savedDesignId={savedDesignId} onBrowse={() => setPage("designs")}
-                        onSaved={markSaved}
-                        onImport={(document) => { importDocument(document); clearSelection(); }} />
+                        onSaved={markSaved} />
                     <div className="sidebar-switcher" role="group" aria-label="Sidebar view">
                         {(["elements", "styles", "canvas"] as const).map((view) => (
                             <button key={view} type="button" aria-pressed={sidebarView === view}
@@ -220,6 +220,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             <WatchWorkspace
                 scene={scene}
                 editRevision={revision}
+                fileActions={<DesignFileActions scene={scene} grid={grid} revision={revision}
+                    disabled={!fontsReady || !!fontError}
+                    onImport={(document) => { importDocument(document); clearSelection(); }} />}
                 exportDisabled={!fontsReady || !!fontError}
                 onToggleSnapping={() => setSnapEnabled((enabled) => !enabled)}
                 canvasSettings={{

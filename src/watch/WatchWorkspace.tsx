@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from "react";
+import { useState, type ReactNode, type ComponentProps } from "react";
 import { devices } from "../../shared/scene.ts";
 import { elementLabel } from "./element-label.ts";
 import { WatchCanvas } from "./WatchCanvas.tsx";
@@ -13,6 +13,7 @@ type Props = ComponentProps<typeof WatchCanvas> & {
     gridSelectionEnabled: boolean;
     onToggleGridSelection: () => void;
     canvasSettings: Omit<ComponentProps<typeof CanvasSettingsMenu>, "disabled">;
+    fileActions?: ReactNode;
     exportDisabled?: boolean;
     editRevision?: number;
     canUndo?: boolean;
@@ -22,7 +23,7 @@ type Props = ComponentProps<typeof WatchCanvas> & {
 };
 
 /** Viewing options stay outside the typed scene and Garmin export protocol. */
-export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, canvasSettings, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
+export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, onToggleGridSelection, canvasSettings, fileActions, exportDisabled, editRevision, canUndo, canRedo, onUndo, onRedo, ...canvasProps }: Props) {
     const [preview, setPreview] = useState(false);
     const [night, setNight] = useState(false);
     const size = devices[scene.device];
@@ -41,6 +42,7 @@ export function WatchWorkspace({ scene, onToggleSnapping, gridSelectionEnabled, 
                     <button type="button" onClick={onRedo} disabled={!canRedo} title="Redo (⌘/Ctrl+Shift+Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z Control+Y">Redo</button>
                 </div>
                 <span className="canvas-badge">{size} × {size}<span>px</span></span>
+                {fileActions}
                 <GarminExportButton scene={scene} disabled={exportDisabled} />
             </div>
         </header>
