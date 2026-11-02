@@ -1,5 +1,5 @@
 /* Keep dropdown chevrons inset consistently, independently of native styling. */
-.watch-sidebar select:not([multiple]):not([size]) {
+.watch-editor select:not([multiple]):not([size]) {
     appearance: none;
     padding-inline-end: 36px;
     background-image:
@@ -11,7 +11,7 @@
 }
 
 @media (forced-colors: active) {
-    .watch-sidebar select:not([multiple]):not([size]) {
+    .watch-editor select:not([multiple]):not([size]) {
         appearance: auto;
         background-image: none;
         padding-inline-end: 12px;
