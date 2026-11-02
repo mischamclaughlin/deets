@@ -8,10 +8,6 @@ export function GridSettingsPanel({ grid, onChange, onSelect }: {
     onSelect: (id: string) => void;
 }) {
     return <div className="grid-settings">
-        <label className="guide-toggle">
-            <input type="checkbox" checked={grid.visible} onChange={(event) => onChange({ ...grid, visible: event.target.checked })} />
-            Show grid
-        </label>
         <div className="grid-axis-controls">
             {(['rows', 'columns'] as const).map((axis) => <div className="grid-axis" key={axis}>
                 <button type="button" disabled={Object.keys(grid.edits ?? {}).length >= 256}

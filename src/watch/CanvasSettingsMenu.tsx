@@ -4,6 +4,8 @@ import "./CanvasSettingsMenu.css";
 
 type Props = {
     disabled: boolean;
+    showGrid: boolean;
+    onShowGridChange: (value: boolean) => void;
     showGuideLines: boolean;
     onShowGuideLinesChange: (value: boolean) => void;
     snapToGrid: boolean;
@@ -34,6 +36,8 @@ export function CanvasSettingsMenu(props: Props) {
             </header>
             <fieldset>
                 <legend>Visibility</legend>
+                <label><input type="checkbox" checked={props.showGrid}
+                    onChange={(event) => props.onShowGridChange(event.target.checked)} />Show grid</label>
                 <label><input type="checkbox" checked={props.showGuideLines}
                     onChange={(event) => props.onShowGuideLinesChange(event.target.checked)} />Show guide lines</label>
                 <label className="canvas-outline-choice">Element outlines

@@ -221,6 +221,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 exportDisabled={!fontsReady || !!fontError}
                 onToggleSnapping={() => setSnapEnabled((enabled) => !enabled)}
                 canvasSettings={{
+                    showGrid: grid.visible, onShowGridChange: (visible) => setGrid({ ...grid, visible }),
                     showGuideLines, onShowGuideLinesChange: setShowGuideLines,
                     snapToGrid, onSnapToGridChange: setSnapToGrid,
                     snapToGuides, onSnapToGuidesChange: setSnapToGuides,
