@@ -73,6 +73,41 @@ export function ungroupLayers(layout: EditorLayout | undefined, ids: readonly st
         .filter((group) => !group.elementIds.some((id) => ids.includes(id))) };
 }
 
+export function renameElementGroup(scene: Scene, layout: EditorLayout | undefined, groupId: string, name: string): EditorLayout {
+    if (!layout?.groups.some((group) => group.id === groupId)) throw new Error('Choose an existing group.');
+    if (!name.trim() || name.trim().length > 60) throw new Error('Enter a group name from 1 to 60 characters.');
+    return parseLayout({ ...layout, groups: layout.groups.map((group) =>
+        group.id === groupId ? { ...group, name: name.trim() } : group) }, scene.elements.map((element) => element.id));
+}
+
+/** Membership edits affect the chosen layers and activity partners, not their whole named group. */
+function membershipIds(scene: Scene, ids: readonly string[]): string[] {
+    if (!ids.length || ids.some((id) => !scene.elements.some((element) => element.id === id)))
+        throw new Error('Select the layers again.');
+    return [...new Set(ids.flatMap((id) => linkedElementIds(scene, id)))];
+}
+
+export function assignLayersToGroup(scene: Scene, layout: EditorLayout | undefined, ids: readonly string[], targetGroupId: string): EditorLayout {
+    const target = layout?.groups.find((group) => group.id === targetGroupId);
+    if (!layout || !target) throw new Error('Choose an existing group.');
+    const members = membershipIds(scene, ids);
+    if (scene.elements.some((element) => members.includes(element.id) && element.source === 'secondsRing'))
+        throw new Error('The outer seconds ring cannot join a movable group.');
+    const groups = layout.groups.map((group) => group.id === targetGroupId
+        ? { ...group, elementIds: [...new Set([...group.elementIds, ...members])] }
+        : { ...group, elementIds: group.elementIds.filter((id) => !members.includes(id)) })
+        .filter((group) => group.elementIds.length >= 2);
+    return parseLayout({ lockedIds: layout.lockedIds, groups }, scene.elements.map((element) => element.id));
+}
+
+export function removeLayersFromGroups(scene: Scene, layout: EditorLayout | undefined, ids: readonly string[]): EditorLayout {
+    const members = membershipIds(scene, ids);
+    const groups = (layout?.groups ?? []).map((group) =>
+        ({ ...group, elementIds: group.elementIds.filter((id) => !members.includes(id)) }))
+        .filter((group) => group.elementIds.length >= 2);
+    return parseLayout({ lockedIds: layout?.lockedIds ?? [], groups }, scene.elements.map((element) => element.id));
+}
+
 export const isSelectionLocked = (ids: readonly string[], layout?: EditorLayout): boolean =>
     expandGroups(ids, layout).some((id) => layout?.lockedIds.includes(id));
 
