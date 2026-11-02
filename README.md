@@ -5,23 +5,30 @@ A TypeScript watch canvas, native-pixel area mapping and matching Garmin export.
 ```sh
 npm run dev
 npm run build
+npm run lint
 npm test
 npm run export:garmin
 ```
 
 `npm run dev` serves the local Vite app at `http://127.0.0.1:5173`. Start with
-a centred HH:MM time face and a sidebar containing the circumference control. Edge
-clearance is an integer inset in native watch pixels, initially 16 px. The dashed
-guide can be hidden independently; it never enters the canvas raster or export.
-The optional grid supports 1–24 rows and columns independently, plus 0–24 extra
-concentric circumferences inside the content boundary. Rings can start from the
-centre (inside, growing outwards) or the boundary (outside, growing inwards).
-Choose 1–100 native pixels of spacing; spacing reduces automatically when needed
-to fit the requested count. Each axis can
-stay straight or follow the radius: curved dividers form elliptical arcs that
-meet the content circle, with equal spacing along the central axes. Grid settings
-are browser-only, survive hiding the grid and reset on refresh. They do not alter
-the scene or enter Garmin exports. Enable Snap to use visible guides for placement.
+a centred HH:MM time face. The left sidebar switches between **Elements**,
+**Styles** and **Canvas**; selected-element controls live on the right.
+Edge clearance is an integer inset in native watch pixels, initially 16 px.
+The dashed circumference guide can be hidden independently; it never enters
+watch pixels or export.
+
+In **Canvas → Grid**, add independent centred horizontal or vertical guides.
+Each axis can stay straight or use curved dividers. Adding a guide preserves
+existing guides and selects the new one. Selected guides support position,
+Mirror and Stretch controls; Mirror preserves the stretch width and position.
+With Mirror off, stretched bands have a grey interior; with it on, the two
+boundary edges remain clear. Reflected copies are available for selected guides.
+The grid also supports 0–24 extra concentric circumferences inside the content
+boundary, starting from the centre or outside edge. Ring spacing is 1–100 native
+pixels and reduces automatically when needed to fit the count.
+Grid settings survive hiding the grid and are included in saved design documents
+and undo/redo. Guides, shading and area labels remain browser-only annotations
+and never enter Garmin exports. Enable Snap to use visible guides for placement.
 A separate Show guide lines toggle adds faint horizontal and vertical centre
 lines across the watch, independently of grid visibility and edge clearance.
 These are browser-only annotations and are excluded from Garmin exports.
@@ -41,13 +48,14 @@ remains inside the content boundary even with snapping off. The initial time ele
 uses the native bitmap font, with a fixed 10:08 design preview and live time in
 the Garmin export (following the watch’s 12/24-hour setting).
 
-Layout and guide controls stay in the left sidebar; selected-element controls
+Canvas and guide controls stay in the left sidebar; selected-element controls
 (such as Typography) live in the right sidebar. Each sidebar scrolls independently
 of the canvas. Native-pixel and usable-diameter information sits beneath the watch.
 On narrow screens both sidebar regions sit above the canvas and scroll separately.
 
 `src/watch/scene.ts` is the initial typed scene definition. The editor keeps its
-current scene in memory. The CLI exports the scene definition on disk. Integer
+current document in memory. The toolbar exports the current scene snapshot;
+the CLI exports the scene definition on disk. Integer
 coordinates, fonts, colours, clipping boxes and data bindings supply both the
 canvas and the Garmin program. `edgeInset` constrains entire element rectangles
 to the inner circle in the canonical native validator. Legacy scenes without it
@@ -56,8 +64,8 @@ markers can gain an explicit exception later; no exception is enabled yet.
 
 ## Elements
 
-The left sidebar lists existing elements at the top. The Library section below
-has + Time and + Divider buttons that create and select independent, centred elements.
+The **Elements** sidebar contains the library and layer list. Open the library
+to add independent, centred time, date, divider and supported data elements.
 Existing clocks remain listed as Time 1, Time 2 and so on, with
 independent display modes and typography. Select a clock in the list or on the canvas
 to reveal its controls on the right, including HH:MM, HH:MM:SS, hours only (HH), minutes
@@ -88,6 +96,37 @@ The selected element’s right-hand **Copy** button creates an identical duplica
 immediately above it in the layer order and selects it. **Delete** removes the
 selected element; deleting the final element leaves a blank canvas.
 
+Shift-click elements to toggle multiple selections and use the batch inspector
+for supported shared edits. Layers can be reordered by dragging or with the
+layer controls. Batch scene changes are validated together, preserving the
+accepted scene if the operation fails.
+
+Click a grid area to use its rectangle as an element box. Shift-click neighbouring
+areas to combine them, or Shift-click again to remove one. The area inspector
+can place an existing element or add one from the library. Text size stays
+unchanged; invalid combinations and placements are reported without applying
+partial scene changes.
+
+## Documents and viewing
+
+**Save design** stores the scene and grid in this browser. **Saved designs** lets
+you reopen and manage them; existing saves can be updated or saved as copies.
+**Download file** creates a `.deets.json` document; **Import file** validates a
+document up to 1 MB and prepares its fonts before applying it. Importing does
+not save it automatically. Custom font binaries are not embedded in documents;
+their local font cache must remain available, or the original files must be
+uploaded again.
+
+Undo/redo keeps up to 100 prior document states, including scene and grid edits.
+Use the toolbar or Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z or Ctrl+Y to redo.
+Theme, selection and workspace viewing preferences stay outside document history.
+
+The circular sun/moon button switches the studio between Rosé Pine Light and
+Dark themes independently of the watch design. **Edit/Preview** switches between
+the annotated canvas and a casing preview for the selected watch. **Day/Night**
+changes the watch preview only. Casing artwork comes from the local Garmin SDK;
+its screen placement never supplies native layout or exported coordinates.
+
 ## Colours
 
 Each selected element has independent **Day colour** and **Night colour**
@@ -97,6 +136,11 @@ Choose a preset separately for either channel to link it. Preset edits update
 all linked elements and copies. **Custom** detaches just that channel and keeps
 its current colour. Deleting a preset detaches its users without changing their
 colours. The seconds ring uses the chosen colour for its existing tick shades.
+
+Canvas settings provide a separate watch background picker and hex input for
+the Day appearance. Night/low-power background stays black. Supported text
+layers also offer optional opaque Day and Night backgrounds; these fill their
+native boxes behind the text and are included in Garmin output.
 
 ## Typography
 
@@ -111,7 +155,7 @@ custom family, clock mode, seconds sizing, divider symbol and position remain
 independent of the numeric preset. New elements start custom. A preset change
 that cannot fit every linked element is rejected as a whole.
 
-Set the default family in **Watch font** on the left. Each clock offers
+Set the default family in **Styles → Watch font** on the left. Each clock offers
 **Inherit watch font** or **Custom font** on the right. New clocks inherit;
 custom clocks keep their family when the watch font changes. Size, thickness,
 width and spacing remain independent for every element. A watch-wide change
@@ -136,7 +180,8 @@ renderer version, character set, device and typography settings. The editor
 prepares its editable text on startup; CLI export uses the same preparation. Edits
 preserve the element's centre to the nearest native pixel. Text boxes fit their
 visible content by default, including when fonts or display formats change;
-entering a width or height creates a fixed box instead. A change that cannot fit inside the current boundary
+entering a width or height creates a fixed box instead. Text also supports
+top, middle and bottom alignment within its box. A change that cannot fit inside the current boundary
 shows an error and leaves the last accepted scene intact. No browser text
 measurement supplies layout or export coordinates.
 
@@ -144,13 +189,17 @@ Uploads and generated atlases are stored in the local temporary directory,
 `deets-fonts-v1`, under content hashes. Scene records reference those hashes and
 settings; they do not contain arbitrary font paths. Clearing that temporary
 cache requires uploading or generating those fonts again. UI edits remain in
-memory; the CLI still exports the scene definition on disk. Preview and Garmin
+the current document until saved; the CLI still exports the scene definition
+on disk. Preview and Garmin
 export consume the same generated pixels. No new runtime dependencies are added.
 
 ## Core
 
 - `shared/scene.ts`: typed scenes, draw operations and mapped areas.
-- `src/watch/WatchEditor.tsx`: sidebar, scene state and guide visibility.
+- `src/watch/WatchEditor.tsx`: editor composition, sidebars and selection.
+- `src/watch/useEditorHistory.ts`: current scene/grid document and undo/redo.
+- `src/watch/design-file.ts` and `saved-designs.ts`: document validation and browser-local saves.
+- `src/watch/WatchWorkspace.tsx`: canvas viewing controls, casing preview and toolbar export.
 - `src/watch/WatchCanvas.tsx`: watch canvas and translated area information.
 - `src/watch/raster.ts`: paints canonical glyph masks and integer draw operations.
 - `src/watch/api.ts`: `mapWatch(scene)` and `exportGarmin(scene)`.
@@ -160,7 +209,9 @@ export consume the same generated pixels. No new runtime dependencies are added.
   inputs required by export. No signing keys are copied into this project.
 
 The TypeScript server invokes the Python Garmin boundary with JSON. It has no
-account, persistence or simulator-control layer. The Python boundary
+account or simulator-control layer. Saved designs are stored in browser-local
+storage; the server does not persist them. Chart and activity elements use the
+same canonical scene and native validation boundary. The Python boundary
 retains shared bitmap masks, exact clipping, RGB565 conversion and live firmware
 fallbacks rather than replacing verified rendering rules during migration.
 

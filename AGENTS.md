@@ -29,9 +29,10 @@
 
 Keep this project focused on the watch-face editor, translated native-pixel area
 information and exact Garmin export. The existing settings sidebar, canvas
-workspace, element inspector and library are part of the agreed scope. Do not
-add unrelated navigation, account/storage features or simulator controls without
-user direction.
+workspace, element inspector, library and Saved designs page are part of the
+agreed scope, including browser-local saves and design-file import/download.
+Do not add unrelated navigation, accounts, cloud storage or simulator controls
+without user direction.
 
 ## Design ethos
 
@@ -79,9 +80,32 @@ user direction.
   Night/low-power background remains black. Keep this independent of app themes
   and preserve device colour quantisation and stale-mapping rejection.
 
+## Documents and editor state
+
+- `useEditorHistory` owns the current scene and grid as a document, with bounded
+  undo/redo. Keep theme, preview appearance, selection and other workspace
+  viewing preferences outside document history. Preserve generation/revision
+  guards so imports and history navigation reject stale asynchronous edits.
+- Saved designs use browser-local storage; `.deets.json` files contain the scene
+  and grid, not uploaded font binaries. Validate document structure and grid
+  bounds, then prepare fonts and validate the scene through the native boundary
+  before applying an import. Preserve the accepted document on failure.
+- Preserve multi-selection, layer ordering and batch operations. Validate scene
+  batches atomically; a rejected member must not leave partial changes behind.
+- Grid-area selection can combine neighbouring areas into a valid rectangle.
+  Placement uses that rectangle as the element box without resizing its text;
+  validate the result canonically and reject results if the scene or area changed.
+- Text layers can have independent optional Day/Night opaque backgrounds and
+  vertical alignment. These are scene properties that affect native pixels and
+  export, unlike browser-only grid shading and selection.
+- SDK-backed watch casing artwork and screen rectangles are presentation only.
+  Keep them outside scene geometry, native mapping and Garmin export coordinates.
+
 ## Rendering and verification
 
-- The typed scene in `src/watch/scene.ts` supplies canvas and export.
+- `src/watch/scene.ts` supplies the initial scene and CLI export. The editor
+  canvas and toolbar export use the current in-memory scene; toolbar export must
+  retain the clicked scene snapshot and its validated mapping token.
 - `shared/scene.ts` owns the TypeScript protocol. `garmin/tools/designer_model.py`
   owns validation, glyph metrics and native layout. Never measure browser text
   or derive exported coordinates from CSS.
