@@ -199,6 +199,11 @@ def dispatch(request):
         if set(payload) != {"scene", "elementId", "enabled"}:
             raise ValueError("Choose an activity element and whether its weekly graph is enabled.")
         return layout({"scene": set_activity_graph(payload["scene"], payload["elementId"], payload["enabled"])})
+    if operation == "device":
+        from designer_device import convert_device
+        if set(payload) != {"scene", "device"}:
+            raise ValueError("Choose a scene and target watch.")
+        return layout({"scene": convert_device(payload["scene"], payload["device"])})
     if operation == "add":
         from designer_typography import add_time, add_divider, add_date, add_data_text
         from designer_activity import ACTIVITY_SOURCES, ACTIVITY_GROUPS, add_activity

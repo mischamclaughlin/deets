@@ -1,5 +1,5 @@
 import type { PreviewScenario } from "./preview-scenario.ts";
-import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourChannel, ColourPreset, DividerSymbol, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
+import type { ActivityAddOptions, ActivitySource, ClockSource, DateSource, ColourChannel, ColourPreset, DividerSymbol, Device, Scene, TextDefaults, TextPreset, Typography, WatchMapping } from "../../shared/scene.ts";
 import type { EditorLayout } from "./editor-layout.ts";
 import type { GridSettings } from "./grid.ts";
 import { preparedMapping, rememberMapping } from "./mapping-cache.ts";
@@ -141,6 +141,9 @@ export const setDateSource = (scene: Scene, elementId: string, source: DateSourc
 /** Rebuild editable text from source fonts before editing or exporting it. */
 export const refreshFonts = (scene: Scene, signal?: AbortSignal) =>
     post<WatchMapping>("refresh-fonts", { scene }, signal);
+
+export const convertWatchDevice = (scene: Scene, device: Device, signal?: AbortSignal) =>
+    post<WatchMapping>("device", { scene, device }, signal);
 
 export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSignal) =>
     post<WatchMapping>("fit-box", { scene, elementId }, signal);

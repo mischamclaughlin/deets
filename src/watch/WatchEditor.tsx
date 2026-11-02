@@ -34,6 +34,7 @@ import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 import { useEditorHistory } from "./useEditorHistory.ts";
 import { selectionWithGroups } from "./editor-layout.ts";
 import { LayoutPanel } from "./LayoutPanel.tsx";
+import { TargetWatchPanel } from "./TargetWatchPanel.tsx";
 import { TextLabelPanel } from "./TextLabelPanel.tsx";
 import { BatchPresetsPanel } from "./BatchPresetsPanel.tsx";
 import { BatchBoxPanel } from "./BatchBoxPanel.tsx";
@@ -44,6 +45,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [page, setPage] = useState<"editor" | "designs">("editor");
     const editor = useRef<HTMLDivElement>(null);
     const { scene, setScene, grid, setGrid, layout, setLayout, setDocument, savedDesignId, markSaved, replaceInitialScene, importDocument, revision, canUndo, canRedo, navigate, newDocument, hasUnsavedChanges } = useEditorHistory(initialScene);
+    const document = useMemo(() => ({ scene, grid, layout }), [scene, grid, layout]);
     const [fontsReady, setFontsReady] = useState(false);
     const [fontError, setFontError] = useState<string>();
     useEffect(() => {
@@ -176,6 +178,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                     <div id="sidebar-canvas" className="document-panel" hidden={sidebarView !== "canvas"}>
                         <h2>Canvas settings</h2>
                         <p className="panel-intro">Fine-tune your working area and alignment guides.</p>
+                        <TargetWatchPanel document={document} onChange={(next) => { setDocument(next); clearSelection(); }} />
                         <WatchBackgroundPanel scene={scene} onSceneChange={setScene} />
                         <div className="canvas-settings-content">
                             <details className="document-group" open>
