@@ -131,7 +131,13 @@ between element boxes or **Equal centres** between their midpoints. Each command
 uses the bounds captured before arranging; moving members updates those bounds.
 **Keep linked parts together** is enabled by default; turn it off to arrange
 activity icons and values individually without changing their movement link.
-Spacing requires at least three independent members; alignment requires two.
+Group spacing and alignment require at least two independent members. Spacing
+keeps at least 8 native pixels between items and rejects overlapping results in
+both modes. If the current bounds are too small, choose **Expand to fit** under
+**Spacing bounds**. This grows the arrangement along the chosen axis and shifts
+it inside the watch's content boundary without resizing elements. If the items
+cannot fit, reduce their sizes or change their arrangement. Overlapping linked
+parts must be arranged separately with **Keep linked parts together** off.
 Unavailable commands explain why, and an unchanged arrangement reports that the
 members already match. Native validation rejects the entire arrangement on
 failure. Group membership is preserved and arrangement supports undo/redo.

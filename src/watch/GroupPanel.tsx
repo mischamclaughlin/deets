@@ -5,7 +5,7 @@ import type { DesignDocument } from './design-file.ts';
 import { assignLayersToGroup, groupLayers, linkedElementIds, removeLayersFromGroups, renameElementGroup,
     ungroupLayers, type EditorLayout } from './editor-layout.ts';
 import { elementName } from './element-name.ts';
-import { arrangeGroupMembers, groupBounds, type LayoutAction } from './layout-geometry.ts';
+import { arrangeGroupMembers, groupBounds, GROUP_SPACING_GAP, type LayoutAction } from './layout-geometry.ts';
 import { layoutActions } from './layout-actions.ts';
 import './GroupPanel.css';
 
@@ -43,6 +43,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
     const bounds = group && groupBounds(scene, group.elementIds);
     const [spacing, setSpacing] = useState<'gaps' | 'centres'>('gaps');
     const [keepLinkedParts, setKeepLinkedParts] = useState(true);
+    const [expandToFit, setExpandToFit] = useState(false);
     const [newName, setNewName] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -61,7 +62,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
     }
     const arrangements = layoutActions.map(([action, label]) => {
         try {
-            if (group) arrangeGroupMembers(scene, layout, group.id, action, { spacing, keepLinkedParts });
+            if (group) arrangeGroupMembers(scene, layout, group.id, action, { spacing, keepLinkedParts, expandToFit });
             return { action, label, reason: '' };
         } catch (failure) {
             return { action, label, reason: failure instanceof Error ? failure.message : 'The members cannot be arranged.' };
@@ -76,7 +77,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
         request.current = controller;
         setBusy(true); setError(''); setStatus('');
         try {
-            const next = arrangeGroupMembers(scene, layout, group.id, action, { spacing, keepLinkedParts });
+            const next = arrangeGroupMembers(scene, layout, group.id, action, { spacing, keepLinkedParts, expandToFit });
             if (next.elements.every((element, index) => element.x === scene.elements[index].x && element.y === scene.elements[index].y)) {
                 setStatus('Members already match this arrangement.');
                 return;
@@ -160,6 +161,13 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                         <option value="gaps">Equal gaps</option><option value="centres">Equal centres</option>
                     </select>
                 </label>
+                <label className="group-field">Spacing bounds
+                    <select aria-label="Group spacing bounds" value={expandToFit ? 'expand' : 'current'} disabled={busy}
+                        onChange={(event) => { setExpandToFit(event.target.value === 'expand'); setStatus(''); setError(''); }}>
+                        <option value="current">Within current bounds</option><option value="expand">Expand to fit</option>
+                    </select>
+                </label>
+                <p className="group-hint">Spacing keeps at least {GROUP_SPACING_GAP} px between items. Expand to fit makes room without resizing them.</p>
                 <div className="group-spacing" role="group" aria-label="Space members within group bounds">
                     {arrangements.filter((item) => item.action.startsWith('distribute')).map(({ action, label, reason }) =>
                         <button key={action} type="button" title={reason || label} disabled={busy || !!reason}

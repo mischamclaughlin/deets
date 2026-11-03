@@ -117,7 +117,7 @@ test('group spacing rounds fractional gaps to native pixels and rejects locks, o
     assert.throws(() => spaceGroupMembers(uneven, { ...grouped, lockedIds: ['two'] }, id, 'distributeX'), /Unlock/);
     assert.throws(() => spaceGroupMembers(uneven, grouped, 'missing', 'distributeX'), /existing group/);
     assert.throws(() => spaceGroupMembers(uneven, undefined, id, 'distributeX'), /existing group/);
-    assert.throws(() => spaceGroupMembers(uneven, layout, layout.groups[0].id, 'distributeX'), /three/);
+    assert.doesNotThrow(() => spaceGroupMembers(uneven, layout, layout.groups[0].id, 'distributeX'));
     const overlap = { ...uneven, elements: uneven.elements.map((element) => ({ ...element, x: 100 })) };
     const before = structuredClone(overlap);
     assert.throws(() => spaceGroupMembers(overlap, grouped, id, 'distributeX'), /overlap/);
@@ -140,7 +140,7 @@ test('group spacing keeps activity partners together and never moves a linked el
     const partial = { ...grouped, groups: [{ ...grouped.groups[0], elementIds: ['one', 'three', 'four'] }] };
     assert.throws(() => spaceGroupMembers(activity, partial, id, 'distributeX'), /linked activity parts/);
     const twoUnits = groupLayers(activity, undefined, ['one', 'three'], 'Pair');
-    assert.throws(() => spaceGroupMembers(activity, twoUnits, twoUnits.groups[0].id, 'distributeX'), /three/);
+    assert.doesNotThrow(() => spaceGroupMembers(activity, twoUnits, twoUnits.groups[0].id, 'distributeX'));
 });
 test('metadata is undoable, stale references are removed, recovery remains dirty', () => {
     let state = createEditorState(scene);
