@@ -2,6 +2,17 @@ import type { Scene } from '../../shared/scene.ts';
 import { linkedElementIds, type EditorLayout } from './editor-layout.ts';
 
 export type LayoutAction = 'left' | 'centreX' | 'right' | 'top' | 'centreY' | 'bottom' | 'distributeX' | 'distributeY';
+export type SpacingAction = Extract<LayoutAction, 'distributeX' | 'distributeY'>;
+
+/** Space inside a named group, retaining activity links, locks and the outer bounds. */
+export function spaceGroupMembers(scene: Scene, layout: EditorLayout | undefined, groupId: string, action: SpacingAction): Scene {
+    const group = layout?.groups.find((item) => item.id === groupId);
+    if (!layout || !group) throw new Error('Choose an existing group.');
+    if (action !== 'distributeX' && action !== 'distributeY') throw new Error('Choose a spacing action.');
+    if (group.elementIds.some((id) => linkedElementIds(scene, id).some((member) => !group.elementIds.includes(member))))
+        throw new Error('Add the linked activity parts to this group before spacing its members.');
+    return arrangeLayers(scene, group.elementIds, action, { lockedIds: layout.lockedIds, groups: [] });
+}
 
 /** Groups are rigid units; alignment never resizes text or silently clamps geometry. */
 export function arrangeLayers(scene: Scene, ids: readonly string[], action: LayoutAction, layout?: EditorLayout): Scene {

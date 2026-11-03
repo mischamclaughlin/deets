@@ -5,6 +5,7 @@ import type { DesignDocument } from './design-file.ts';
 import { assignLayersToGroup, groupLayers, linkedElementIds, removeLayersFromGroups, renameElementGroup,
     ungroupLayers, type EditorLayout } from './editor-layout.ts';
 import { elementName } from './element-name.ts';
+import { spaceGroupMembers, type SpacingAction } from './layout-geometry.ts';
 import './GroupPanel.css';
 
 function GroupName({ name, disabled, onCommit }: { name: string; disabled: boolean; onCommit: (name: string) => void }) {
@@ -24,7 +25,7 @@ function GroupName({ name, disabled, onCommit }: { name: string; disabled: boole
     </form>;
 }
 
-/** Group membership belongs beside element properties, independently of layout actions. */
+/** Group membership and internal spacing belong beside element properties. */
 export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
     scene: Scene; layout?: EditorLayout; ids: string[];
     onDocumentChange: Dispatch<SetStateAction<DesignDocument>>;
@@ -37,6 +38,8 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
     const members = [...new Set(ids.flatMap((id) => linkedElementIds(scene, id, layout)))];
     const includesRing = scene.elements.some((element) => members.includes(element.id) && element.source === 'secondsRing');
     const canCreate = members.length >= 2 && !includesRing;
+    const groupUnits = new Set(group?.elementIds.map((id) => linkedElementIds(scene, id).toSorted().join('|'))).size;
+    const groupLocked = group?.elementIds.some((id) => layout?.lockedIds.includes(id));
     const [newName, setNewName] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -51,6 +54,22 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
             onDocumentChange((document) => document.scene === scene && document.layout === layout ? { ...document, layout: next } : document);
             setError('');
         } catch (failure) { setError(failure instanceof Error ? failure.message : 'The group could not be updated.'); }
+    }
+    async function space(action: SpacingAction) {
+        if (!group || request.current) return;
+        const controller = new AbortController();
+        request.current = controller;
+        setBusy(true); setError('');
+        try {
+            const next = spaceGroupMembers(scene, layout, group.id, action);
+            const mapped = await mapWatch(next, false, controller.signal);
+            if (controller.signal.aborted) return;
+            if (latest.current.scene !== scene || latest.current.layout !== layout) throw new Error('The design changed. Try spacing the group again.');
+            onDocumentChange((document) => document.scene === scene && document.layout === layout
+                ? { ...document, scene: mapped.scene } : document);
+        } catch (failure) {
+            if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'The group could not be spaced.');
+        } finally { if (request.current === controller) { request.current = undefined; setBusy(false); } }
     }
     async function duplicate() {
         if (!group || request.current) return;
@@ -101,6 +120,12 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                     </button>
                 </li>)}
             </ul>
+            <div className="group-spacing" role="group" aria-label="Space members within group bounds">
+                <button type="button" disabled={busy || groupLocked || groupUnits < 3} onClick={() => void space('distributeX')}>Space horizontally</button>
+                <button type="button" disabled={busy || groupLocked || groupUnits < 3} onClick={() => void space('distributeY')}>Space vertically</button>
+            </div>
+            {(groupLocked || groupUnits < 3) && <p className="group-hint">{groupLocked
+                ? 'Unlock the group to space its members.' : 'Spacing needs at least three independent elements. Linked activity parts move together.'}</p>}
             <div className="group-actions">
                 <button type="button" disabled={busy} onClick={() => onSelect(group.elementIds)}>Select group</button>
                 <button type="button" disabled={busy || scene.elements.length + group.elementIds.length > 40 || groups.length >= 20}

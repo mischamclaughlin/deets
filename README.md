@@ -121,6 +121,10 @@ when dragged or aligned. Linked activity icons and values move as one unit too.
 The outer seconds ring cannot join a movable group. Alignment offers left,
 centre, right, top, middle and bottom edges; spacing requires at least three
 independent layers or groups. Invalid arrangements are rejected as a whole.
+Within the **Group** panel, **Space horizontally** and **Space vertically** space
+the members evenly inside the group's current bounds, keeping linked activity
+parts together. These commands require at least three independent members and
+an unlocked group, preserve membership and support undo/redo.
 Locks and groups are undoable editing metadata, included in saved designs and
 editable exports without changing the watch renderer.
 

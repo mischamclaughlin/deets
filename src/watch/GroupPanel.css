@@ -11,7 +11,8 @@
 .group-member[aria-pressed="true"] .group-member-dot { border-color: var(--rp-iris); background: var(--rp-iris); }
 .group-remove { display: grid; place-items: center; flex: 0 0 26px; height: 26px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--rp-subtle); cursor: pointer; }
 .group-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
-.group-actions button, .group-create-button { min-height: 30px; padding: 6px; border: 1px solid var(--rp-border); border-radius: 6px; background: var(--rp-base); color: var(--rp-text); font: inherit; font-size: 10px; cursor: pointer; }
+.group-spacing { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.group-actions button, .group-spacing button, .group-create-button { min-height: 30px; padding: 6px; border: 1px solid var(--rp-border); border-radius: 6px; background: var(--rp-base); color: var(--rp-text); font: inherit; font-size: 10px; cursor: pointer; }
 .group-actions .group-ungroup { color: var(--rp-love); }
 .group-create { display: grid; gap: 8px; }
 .group-create-button { color: var(--rp-pine); }

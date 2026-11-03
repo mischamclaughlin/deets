@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { Scene } from '../shared/scene.ts';
 import { parseLayout, groupLayers, setLayerLocks, selectionWithGroups, tidyLayout, renameElementGroup,
     assignLayersToGroup, removeLayersFromGroups } from '../src/watch/editor-layout.ts';
-import { arrangeLayers } from '../src/watch/layout-geometry.ts';
+import { arrangeLayers, spaceGroupMembers } from '../src/watch/layout-geometry.ts';
 import { moveSceneElement } from '../src/watch/snapping.ts';
 import { parseDesign, serialiseDesign } from '../src/watch/design-file.ts';
 import { defaultGrid } from '../src/watch/grid.ts';
@@ -45,6 +45,66 @@ test('aligning uses rigid groups and distribution preserves outer edges with int
     assert.deepEqual(arrangeLayers(uneven, ['one', 'two', 'three'], 'distributeX').elements.map((element) => element.x), [100, 160, 220]);
     assert.throws(() => arrangeLayers(scene, ['one', 'two'], 'distributeX'));
     assert.throws(() => arrangeLayers(scene, ['one', 'three'], 'left', setLayerLocks(layout, ['one'], true)), /Unlock/);
+});
+
+for (const [action, axis, extent] of [['distributeX', 'x', 'width'], ['distributeY', 'y', 'height']] as const) {
+    test(`group ${action} uses equal gaps within existing bounds without changing other geometry or membership`, () => {
+        const uneven: Scene = { ...scene, elements: [
+            ...scene.elements.map((element, index) => ({ ...element, [axis]: [80, 111, 201][index], [extent]: [20, 31, 25][index] })),
+            { ...scene.elements[0], id: 'outside' },
+        ] };
+        const grouped = groupLayers(uneven, undefined, ['one', 'two', 'three'], 'Stats');
+        const beforeScene = structuredClone(uneven), beforeLayout = structuredClone(grouped);
+        const spaced = spaceGroupMembers(uneven, grouped, grouped.groups[0].id, action);
+        // 146 pixels minus 76 pixels of elements leaves two 35-pixel gaps.
+        assert.deepEqual(spaced.elements.slice(0, 3).map((element) => element[axis]), [80, 135, 201]);
+        spaced.elements.slice(0, 3).forEach((element, index) =>
+            assert.deepEqual(element, { ...uneven.elements[index], [axis]: [80, 135, 201][index] }));
+        assert.equal(spaced.elements[3], uneven.elements[3]);
+        assert.deepEqual(uneven, beforeScene);
+        assert.deepEqual(grouped, beforeLayout);
+        let state = createEditorState(uneven);
+        state = reduceEditor(state, { type: 'edit', change: (document) => ({ ...document, layout: grouped }) });
+        state = reduceEditor(state, { type: 'edit', change: (document) => ({ ...document, scene: spaced }) });
+        state = reduceEditor(state, { type: 'undo' });
+        assert.deepEqual(state.history.present.scene, uneven);
+        assert.deepEqual(state.history.present.layout, grouped);
+        assert.deepEqual(reduceEditor(state, { type: 'redo' }).history.present.scene, spaced);
+    });
+}
+
+test('group spacing rounds fractional gaps to native pixels and rejects locks, overlap and stale groups atomically', () => {
+    const uneven = { ...scene, elements: scene.elements.map((element, index) => ({ ...element, x: [80, 110, 201][index] })) };
+    const grouped = groupLayers(uneven, undefined, ['one', 'two', 'three'], 'Stats');
+    const id = grouped.groups[0].id;
+    assert.deepEqual(spaceGroupMembers(uneven, grouped, id, 'distributeX').elements.map((element) => element.x), [80, 141, 201]);
+    assert.throws(() => spaceGroupMembers(uneven, { ...grouped, lockedIds: ['two'] }, id, 'distributeX'), /Unlock/);
+    assert.throws(() => spaceGroupMembers(uneven, grouped, 'missing', 'distributeX'), /existing group/);
+    assert.throws(() => spaceGroupMembers(uneven, undefined, id, 'distributeX'), /existing group/);
+    assert.throws(() => spaceGroupMembers(uneven, layout, layout.groups[0].id, 'distributeX'), /three/);
+    const overlap = { ...uneven, elements: uneven.elements.map((element) => ({ ...element, x: 100 })) };
+    const before = structuredClone(overlap);
+    assert.throws(() => spaceGroupMembers(overlap, grouped, id, 'distributeX'), /overlap/);
+    assert.deepEqual(overlap, before);
+    const stale = { ...grouped, groups: [{ ...grouped.groups[0], elementIds: ['one', 'two', 'missing'] }] };
+    assert.throws(() => spaceGroupMembers(uneven, stale, id, 'distributeX'), /Select/);
+});
+
+test('group spacing keeps activity partners together and never moves a linked element outside the group', () => {
+    const activity: Scene = { ...scene, elements: [
+        { ...scene.elements[0], source: 'steps', x: 80 },
+        { ...scene.elements[1], source: 'stepsIcon', activityId: 'one', x: 105 },
+        { ...scene.elements[2], x: 140 },
+        { ...scene.elements[2], id: 'four', x: 240 },
+    ] };
+    const grouped = groupLayers(activity, undefined, ['one', 'three', 'four'], 'Stats');
+    const id = grouped.groups[0].id;
+    const spaced = spaceGroupMembers(activity, grouped, id, 'distributeX');
+    assert.deepEqual(spaced.elements.map((element) => element.x), [80, 105, 173, 240]);
+    const partial = { ...grouped, groups: [{ ...grouped.groups[0], elementIds: ['one', 'three', 'four'] }] };
+    assert.throws(() => spaceGroupMembers(activity, partial, id, 'distributeX'), /linked activity parts/);
+    const twoUnits = groupLayers(activity, undefined, ['one', 'three'], 'Pair');
+    assert.throws(() => spaceGroupMembers(activity, twoUnits, twoUnits.groups[0].id, 'distributeX'), /three/);
 });
 test('metadata is undoable, stale references are removed, recovery remains dirty', () => {
     let state = createEditorState(scene);
