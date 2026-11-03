@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { Scene } from '../shared/scene.ts';
 import { parseLayout, groupLayers, setLayerLocks, selectionWithGroups, tidyLayout, renameElementGroup,
-    assignLayersToGroup, removeLayersFromGroups } from '../src/watch/editor-layout.ts';
+    assignLayersToGroup, removeLayersFromGroups, movementLayout } from '../src/watch/editor-layout.ts';
 import { arrangeLayers, spaceGroupMembers } from '../src/watch/layout-geometry.ts';
 import { moveSceneElement } from '../src/watch/snapping.ts';
 import { parseDesign, serialiseDesign } from '../src/watch/design-file.ts';
@@ -15,10 +15,46 @@ const scene: Scene = { version: 2, name: 'Layout test', device: 'epix2pro47mm', 
         nightColour: 0xffffff, visible: 'both' })) };
 const layout = groupLayers(scene, undefined, ['one', 'two'], 'Time');
 
-test('groups select as one unit and toggle atomically', () => {
-    assert.deepEqual(selectionWithGroups([], 'one', false, layout), ['one', 'two']);
-    assert.deepEqual(selectionWithGroups(['one', 'two', 'three'], 'two', true, layout), ['three']);
+test('members select independently while an explicitly selected group stays selected for dragging', () => {
+    assert.deepEqual(selectionWithGroups([], 'one', false, layout), ['one']);
+    assert.deepEqual(selectionWithGroups(['one', 'two'], 'two', false, layout), ['one', 'two']);
+    assert.deepEqual(selectionWithGroups(['one', 'two', 'three'], 'two', true, layout), ['one', 'three']);
+    assert.deepEqual(selectionWithGroups(['one'], 'two', true, layout), ['one', 'two']);
+    assert.deepEqual(selectionWithGroups(['one', 'two'], 'three', false, layout), ['three']);
+    assert.deepEqual(selectionWithGroups(['one', 'two'], undefined, false, layout), []);
     assert.deepEqual(selectionWithGroups([], 'three', true, layout), ['three']);
+});
+
+test('movement follows individual or whole-group selection without changing saved membership', () => {
+    const before = structuredClone(layout);
+    const options = { enabled: false, showGuideLines: false };
+    const individual = moveSceneElement(scene, 'one', { x: 110, y: 190 }, { ...options, layout: movementLayout(layout, ['one']) });
+    assert.equal(individual.elements[0].x, 110);
+    assert.equal(individual.elements[0].y, 190);
+    assert.equal(individual.elements[1], scene.elements[1]);
+    const group = moveSceneElement(scene, 'one', { x: 110, y: 190 }, { ...options, layout: movementLayout(layout, ['one', 'two']) });
+    assert.equal(group.elements[1].x, 170);
+    assert.equal(group.elements[1].y, 200);
+    assert.equal(group.elements[2], scene.elements[2]);
+    const locked = setLayerLocks(layout, ['one'], true);
+    assert.equal(moveSceneElement(scene, 'one', { x: 110, y: 190 }, { ...options, layout: movementLayout(locked, ['one']) }), scene);
+    assert.deepEqual(layout, before);
+    assert.equal(movementLayout(undefined, ['one']), undefined);
+});
+
+test('individual group movement preserves linked activity parts and leaves other members fixed', () => {
+    const activity: Scene = { ...scene, elements: [
+        { ...scene.elements[0], source: 'steps' },
+        { ...scene.elements[1], source: 'stepsIcon', activityId: 'one' },
+        scene.elements[2],
+    ] };
+    const grouped = groupLayers(activity, undefined, ['one', 'three'], 'Stats');
+    const moved = moveSceneElement(activity, 'one', { x: 110, y: 190 }, {
+        enabled: false, showGuideLines: false, layout: movementLayout(grouped, ['one']),
+    });
+    assert.equal(moved.elements[1].x, 170);
+    assert.equal(moved.elements[1].y, 200);
+    assert.equal(moved.elements[2], activity.elements[2]);
 });
 test('locks and groups persist through document serialisation without changing scene', () => {
     const document = { scene, grid: defaultGrid, layout: setLayerLocks(layout, ['one'], true) };

@@ -45,10 +45,15 @@ export function expandGroups(ids: readonly string[], layout?: EditorLayout): str
 }
 export function selectionWithGroups(current: string[], id: string | undefined, additive: boolean, layout?: EditorLayout): string[] {
     if (!id) return [];
-    const members = expandGroups([id], layout);
-    if (!additive) return members;
-    return members.every((member) => current.includes(member)) ? current.filter((member) => !members.includes(member))
-        : [...new Set([...current, ...members])];
+    if (additive) return current.includes(id) ? current.filter((member) => member !== id) : [...current, id];
+    // Clicking a member of an explicitly selected group keeps the group ready to drag.
+    const group = layout?.groups.find((item) => item.elementIds.includes(id));
+    return group && group.elementIds.every((member) => current.includes(member)) ? current : [id];
+}
+
+/** Only fully selected groups move rigidly; membership itself remains unchanged. */
+export function movementLayout(layout: EditorLayout | undefined, ids: readonly string[]): EditorLayout | undefined {
+    return layout && { ...layout, groups: layout.groups.filter((group) => group.elementIds.every((id) => ids.includes(id))) };
 }
 
 export function setLayerLocks(layout: EditorLayout | undefined, ids: readonly string[], locked: boolean): EditorLayout {

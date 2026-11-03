@@ -114,8 +114,10 @@ open the right sidebar's **Group** panel, enter a name and choose **Create group
 Use **Membership** to add the selected element to an existing group or choose
 **No group** to remove it. The member list lets you inspect individual elements
 without ungrouping them; **Select group** selects them together again. Selecting a
-layer also inspects individual members, while canvas selection selects the
-group. Edit a group's name on Enter or blur; Escape cancels the draft name.
+layer or clicking it on the canvas selects an individual member, which can be
+dragged, nudged or positioned independently. Choose **Select group** to move the
+whole group; clicking a member then keeps the group selected. Shift-click toggles
+individual members. Edit a group's name on Enter or blur; Escape cancels the draft name.
 Groups can be duplicated or ungrouped from this panel, and keep their relative positions
 when dragged or aligned. Linked activity icons and values move as one unit too.
 The outer seconds ring cannot join a movable group. Alignment offers left,

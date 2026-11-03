@@ -32,7 +32,7 @@ import { ThemeToggle } from "./ThemeToggle.tsx";
 import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 
 import { useEditorHistory } from "./useEditorHistory.ts";
-import { selectionWithGroups } from "./editor-layout.ts";
+import { movementLayout, selectionWithGroups } from "./editor-layout.ts";
 import { GroupPanel } from "./GroupPanel.tsx";
 import { selectElement } from "./history.ts";
 import { LayoutPanel } from "./LayoutPanel.tsx";
@@ -75,6 +75,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [selection, setSelection] = useState<string[]>(initialScene.elements[0] ? [initialScene.elements[0].id] : []);
     const selectedIds = useMemo(() => selection.filter((id) => scene.elements.some((element) => element.id === id)), [selection, scene.elements]);
     const selectedId = selectedIds.length === 1 ? selectedIds[0] : undefined;
+    const selectedMovementLayout = useMemo(() => movementLayout(layout, selectedIds), [layout, selectedIds]);
     const selectedGroup = layout?.groups.find((group) => selectedIds.length > 0 && selectedIds.every((id) => group.elementIds.includes(id)));
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(true);
@@ -238,7 +239,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
             </aside>
             <WatchWorkspace
                 scene={scene}
-                layout={layout}
+                layout={selectedMovementLayout}
                 editRevision={revision}
                 fileActions={<DesignFileActions scene={scene} grid={grid} layout={layout} revision={revision}
                     disabled={!fontsReady || !!fontError}
@@ -281,7 +282,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                 onUndo={() => navigate("undo")}
                 onRedo={() => navigate("redo")}
                 onSelectElement={setSelectedId}
-                onMoveElement={fontsReady ? (id, desired) => setScene((current) => moveSceneElement(current, id, desired, { enabled: false, showGuideLines, grid, layout })) : undefined}
+                onMoveElement={fontsReady ? (id, desired) => setScene((current) => moveSceneElement(current, id, desired, { enabled: false, showGuideLines, grid, layout: selectedMovementLayout })) : undefined}
             />
             <aside className="watch-sidebar element-sidebar" aria-label="Element settings">
                 <header className="inspector-header"><span className="inspector-dot" aria-hidden="true" />Inspector<span className="inspector-tag">Element</span></header>
@@ -312,7 +313,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                             {selected && <ElementActionsPanel layout={layout} key={`actions-${selected.id}`} scene={scene} elementId={selected.id}
                                 onSceneChange={setScene} onSelect={setSelectedId} label={elementLabel(scene, selected.id)} />}
                             {selected && <ActivitySettingsPanel layout={layout} scene={scene} elementId={selected.id} onSceneChange={setScene} onSelect={setSelectedId} />}
-                            {selected && <ElementBoxPanel layout={layout} key={selected.id}
+                            {selected && <ElementBoxPanel layout={selectedMovementLayout} key={selected.id}
                                 scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                             {selected?.source === "label" && <TextLabelPanel key={`text-${selected.id}`} scene={scene} elementId={selected.id} onSceneChange={setScene} />}
                             {selected && isEditableTextSource(selected.source) && (
