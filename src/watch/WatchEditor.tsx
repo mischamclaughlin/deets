@@ -34,6 +34,7 @@ import { WatchBackgroundPanel } from "./WatchBackgroundPanel.tsx";
 import { useEditorHistory } from "./useEditorHistory.ts";
 import { movementLayout, selectionWithGroups } from "./editor-layout.ts";
 import { GroupPanel } from "./GroupPanel.tsx";
+import type { GroupArrangementOptions } from "./layout-geometry.ts";
 import { selectElement } from "./history.ts";
 import { LayoutPanel } from "./LayoutPanel.tsx";
 import { DraftRecovery } from "./DraftRecovery.tsx";
@@ -68,6 +69,9 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
     const [sidebarView, setSidebarView] = useState<"elements" | "styles" | "canvas">("elements");
     const [layersOpen, setLayersOpen] = useState(true);
     const [groupOpen, setGroupOpen] = useState(true);
+    const [groupArrangementOptions, setGroupArrangementOptions] = useState<Required<GroupArrangementOptions>>({
+        spacing: 'gaps', keepLinkedParts: true, expandToFit: false,
+    });
     const [selectionOpen, setSelectionOpen] = useState(true);
     const [showCircumference, setShowCircumference] = useState(true);
     const [showGuideLines, setShowGuideLines] = useState(false);
@@ -297,6 +301,7 @@ export function WatchEditor({ initialScene }: { initialScene: Scene }) {
                         <summary>Group{selectedGroup && <span className="element-count">{selectedGroup.elementIds.length}</span>}</summary>
                         <div className="inspector-group-content">
                             <GroupPanel key={selectedGroup?.id ?? `selection:${selectedIds.join("|")}`} scene={scene} layout={layout} ids={selectedIds} onDocumentChange={setDocument}
+                                options={groupArrangementOptions} onOptionsChange={setGroupArrangementOptions}
                                 onSelect={(ids) => { setSelection(ids); setSelectedGridLines([]); setGridAreaSelection(undefined); }} />
                         </div>
                     </details>}

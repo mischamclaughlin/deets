@@ -5,7 +5,7 @@ import type { DesignDocument } from './design-file.ts';
 import { assignLayersToGroup, groupLayers, linkedElementIds, removeLayersFromGroups, renameElementGroup,
     ungroupLayers, type EditorLayout } from './editor-layout.ts';
 import { elementName } from './element-name.ts';
-import { arrangeGroupMembers, groupBounds, GROUP_SPACING_GAP, type LayoutAction } from './layout-geometry.ts';
+import { arrangeGroupMembers, groupBounds, GROUP_SPACING_GAP, type GroupArrangementOptions, type LayoutAction } from './layout-geometry.ts';
 import { layoutActions } from './layout-actions.ts';
 import './GroupPanel.css';
 
@@ -27,8 +27,10 @@ function GroupName({ name, disabled, onCommit }: { name: string; disabled: boole
 }
 
 /** Group membership and internal spacing belong beside element properties. */
-export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
+export function GroupPanel({ scene, layout, ids, options, onOptionsChange, onDocumentChange, onSelect }: {
     scene: Scene; layout?: EditorLayout; ids: string[];
+    options: Required<GroupArrangementOptions>;
+    onOptionsChange: Dispatch<SetStateAction<Required<GroupArrangementOptions>>>;
     onDocumentChange: Dispatch<SetStateAction<DesignDocument>>;
     onSelect: (ids: string[]) => void;
 }) {
@@ -41,24 +43,30 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
     const canCreate = members.length >= 2 && !includesRing;
     const wholeGroupSelected = !!group && group.elementIds.every((id) => ids.includes(id));
     const bounds = group && groupBounds(scene, group.elementIds);
-    const [spacing, setSpacing] = useState<'gaps' | 'centres'>('gaps');
-    const [keepLinkedParts, setKeepLinkedParts] = useState(true);
-    const [expandToFit, setExpandToFit] = useState(false);
+    const { spacing, keepLinkedParts, expandToFit } = options;
     const [newName, setNewName] = useState('');
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState('');
-    const [status, setStatus] = useState('');
+    const [error, setError] = useState<{ scene: Scene; message: string }>();
+    const [status, setStatus] = useState<{ scene: Scene; message: string }>();
     const latest = useRef({ scene, layout });
     const request = useRef<AbortController | undefined>(undefined);
     useLayoutEffect(() => { latest.current = { scene, layout }; }, [scene, layout]);
     useEffect(() => () => request.current?.abort(), []);
 
+    function updateOptions(change: Partial<GroupArrangementOptions>) {
+        onOptionsChange((current) => ({ ...current, ...change }));
+        setStatus(undefined); setError(undefined);
+    }
+    function reportError(failure: unknown, fallback: string) {
+        setError({ scene, message: failure instanceof Error ? failure.message : fallback });
+    }
+
     function change(make: () => EditorLayout) {
         try {
             const next = make();
             onDocumentChange((document) => document.scene === scene && document.layout === layout ? { ...document, layout: next } : document);
-            setError('');
-        } catch (failure) { setError(failure instanceof Error ? failure.message : 'The group could not be updated.'); }
+            setError(undefined); setStatus(undefined);
+        } catch (failure) { reportError(failure, 'The group could not be updated.'); }
     }
     const arrangements = layoutActions.map(([action, label]) => {
         try {
@@ -75,11 +83,11 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
         if (!group || request.current) return;
         const controller = new AbortController();
         request.current = controller;
-        setBusy(true); setError(''); setStatus('');
+        setBusy(true); setError(undefined); setStatus(undefined);
         try {
             const next = arrangeGroupMembers(scene, layout, group.id, action, { spacing, keepLinkedParts, expandToFit });
             if (next.elements.every((element, index) => element.x === scene.elements[index].x && element.y === scene.elements[index].y)) {
-                setStatus('Members already match this arrangement.');
+                setStatus({ scene, message: 'Members already match this arrangement.' });
                 return;
             }
             const mapped = await mapWatch(next, false, controller.signal);
@@ -87,16 +95,16 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
             if (latest.current.scene !== scene || latest.current.layout !== layout) throw new Error('The design changed. Try arranging the group again.');
             onDocumentChange((document) => document.scene === scene && document.layout === layout
                 ? { ...document, scene: mapped.scene } : document);
-            setStatus('Members arranged.');
+            setStatus({ scene: mapped.scene, message: 'Members arranged.' });
         } catch (failure) {
-            if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'The group could not be arranged.');
+            if (!controller.signal.aborted) reportError(failure, 'The group could not be arranged.');
         } finally { if (request.current === controller) { request.current = undefined; setBusy(false); } }
     }
     async function duplicate() {
         if (!group || request.current) return;
         const controller = new AbortController();
         request.current = controller;
-        setBusy(true); setError('');
+        setBusy(true); setError(undefined); setStatus(undefined);
         try {
             const originals = scene.elements.filter((element) => group.elementIds.includes(element.id));
             const copies = originals.map((element) => ({ ...element, id: `copy_${crypto.randomUUID().replaceAll('-', '')}` }));
@@ -115,7 +123,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                 ? { ...document, scene: mapped.scene, layout: nextLayout } : document);
             onSelect(copied);
         } catch (failure) {
-            if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'The group could not be duplicated.');
+            if (!controller.signal.aborted) reportError(failure, 'The group could not be duplicated.');
         } finally { if (request.current === controller) { request.current = undefined; setBusy(false); } }
     }
     const membershipControl = <label className="group-field">Membership
@@ -149,7 +157,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                 <h3>Arrange members</h3>
                 {bounds && <p className="group-bounds">Bounds · {bounds.x}, {bounds.y} · {bounds.width} × {bounds.height} px</p>}
                 <label className="group-linked"><input type="checkbox" checked={keepLinkedParts} disabled={busy}
-                    onChange={(event) => { setKeepLinkedParts(event.target.checked); setStatus(''); setError(''); }} />Keep linked parts together</label>
+                    onChange={(event) => updateOptions({ keepLinkedParts: event.target.checked })} />Keep linked parts together</label>
                 <div className="group-alignment" role="group" aria-label="Align members within group bounds">
                     {arrangements.filter((item) => !item.action.startsWith('distribute')).map(({ action, label, reason }) =>
                         <button key={action} type="button" title={reason || label} disabled={busy || !!reason}
@@ -157,13 +165,13 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                 </div>
                 <label className="group-field">Spacing
                     <select aria-label="Group spacing mode" value={spacing} disabled={busy}
-                        onChange={(event) => { setSpacing(event.target.value as 'gaps' | 'centres'); setStatus(''); setError(''); }}>
+                        onChange={(event) => updateOptions({ spacing: event.target.value as 'gaps' | 'centres' })}>
                         <option value="gaps">Equal gaps</option><option value="centres">Equal centres</option>
                     </select>
                 </label>
                 <label className="group-field">Spacing bounds
                     <select aria-label="Group spacing bounds" value={expandToFit ? 'expand' : 'current'} disabled={busy}
-                        onChange={(event) => { setExpandToFit(event.target.value === 'expand'); setStatus(''); setError(''); }}>
+                        onChange={(event) => updateOptions({ expandToFit: event.target.value === 'expand' })}>
                         <option value="current">Within current bounds</option><option value="expand">Expand to fit</option>
                     </select>
                 </label>
@@ -174,7 +182,7 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                             onClick={() => void arrange(action)}>{label}</button>)}
                 </div>
                 {reasons.map((reason) => <p key={reason} className="group-hint">{reason}</p>)}
-                {status && <p className="group-hint" role="status">{status}</p>}
+                {status?.scene === scene && <p className="group-hint" role="status">{status.message}</p>}
             </section>
             {membershipControl}
             <div className="group-actions">
@@ -190,6 +198,6 @@ export function GroupPanel({ scene, layout, ids, onDocumentChange, onSelect }: {
                 value={newName} disabled={busy} onChange={(event) => setNewName(event.target.value)} /></label>
             <button className="group-create-button" type="submit" disabled={busy}>{grouped ? 'Merge into new group' : 'Create group'}</button>
         </form> : <p className="group-hint">{includesRing ? 'The outer seconds ring stays outside movable groups.' : 'Choose a group above, or Shift-click another element to create one.'}</p>}</>}
-        {error && <p className="typography-status" role="alert">{error}</p>}
+        {error?.scene === scene && <p className="typography-status" role="alert">{error.message}</p>}
     </section>;
 }

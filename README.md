@@ -138,6 +138,9 @@ both modes. If the current bounds are too small, choose **Expand to fit** under
 it inside the watch's content boundary without resizing elements. If the items
 cannot fit, reduce their sizes or change their arrangement. Overlapping linked
 parts must be arranged separately with **Keep linked parts together** off.
+Spacing mode, bounds and linked-part preferences stay selected when leaving a
+group or navigating undo/redo. They are workspace preferences, outside document
+history. Arrangement feedback clears when later edits change the scene.
 Unavailable commands explain why, and an unchanged arrangement reports that the
 members already match. Native validation rejects the entire arrangement on
 failure. Group membership is preserved and arrangement supports undo/redo.
