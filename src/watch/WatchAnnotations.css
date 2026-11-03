@@ -25,3 +25,26 @@
     stroke-width: 0.75;
     stroke-dasharray: none;
 }
+.watch-areas[data-outline-mode] .area.selected[data-group-member] .area-outline { stroke-opacity: 0; }
+.group-outline, .group-outline * { pointer-events: none; }
+.group-outline > rect {
+    fill: none;
+    stroke: var(--rp-iris);
+    stroke-width: 0.9;
+    vector-effect: non-scaling-stroke;
+}
+.group-outline-label {
+    box-sizing: border-box;
+    width: max-content;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--rp-iris);
+    border-radius: 3px;
+    background: var(--rp-overlay);
+    color: var(--rp-text);
+    font: 400 9px/14px ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+}

@@ -4,10 +4,8 @@ import type { DesignDocument } from './design-file.ts';
 import { mapWatch } from './api.ts';
 import { expandGroups, linkedElementIds, setLayerLocks, type EditorLayout } from './editor-layout.ts';
 import { arrangeLayers, type LayoutAction } from './layout-geometry.ts';
+import { layoutActions } from './layout-actions.ts';
 import './LayoutPanel.css';
-
-const actions: [LayoutAction, string][] = [['left', 'Left'], ['centreX', 'Centre horizontally'], ['right', 'Right'],
-    ['top', 'Top'], ['centreY', 'Centre vertically'], ['bottom', 'Bottom'], ['distributeX', 'Space horizontally'], ['distributeY', 'Space vertically']];
 
 /** Editing metadata and native geometry publish together as one undoable document. */
 export function LayoutPanel({ scene, layout, ids, onDocumentChange }: {
@@ -55,7 +53,7 @@ export function LayoutPanel({ scene, layout, ids, onDocumentChange }: {
         </div>
         {units > 1 && (
             <div className="layout-alignment" role="group" aria-label="Align and distribute layers">
-                {actions.map(([action, label]) => <button key={action} type="button" title={label} disabled={busy || anyLocked || units < (action.startsWith('distribute') ? 3 : 2)} onClick={() => void geometry(action)}>{label}</button>)}
+                {layoutActions.map(([action, label]) => <button key={action} type="button" title={label} disabled={busy || anyLocked || units < (action.startsWith('distribute') ? 3 : 2)} onClick={() => void geometry(action)}>{label}</button>)}
             </div>
         )}
         {anyLocked && <p className="control-hint">Locked layers stay fixed when dragging, nudging or arranging.</p>}

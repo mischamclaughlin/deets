@@ -113,8 +113,9 @@ those changes; typography and colours remain editable. Select multiple layers,
 open the right sidebar's **Group** panel, enter a name and choose **Create group**.
 Use **Membership** to add the selected element to an existing group or choose
 **No group** to remove it. The member list lets you inspect individual elements
-without ungrouping them; **Select group** selects them together again. Selecting a
-layer or clicking it on the canvas selects an individual member, which can be
+without ungrouping them; **Select group** selects them together again and shows a
+single group outline with its name and native dimensions. Selecting a layer or
+clicking it on the canvas selects an individual member, which can be
 dragged, nudged or positioned independently. Choose **Select group** to move the
 whole group; clicking a member then keeps the group selected. Shift-click toggles
 individual members. Edit a group's name on Enter or blur; Escape cancels the draft name.
@@ -123,10 +124,17 @@ when dragged or aligned. Linked activity icons and values move as one unit too.
 The outer seconds ring cannot join a movable group. Alignment offers left,
 centre, right, top, middle and bottom edges; spacing requires at least three
 independent layers or groups. Invalid arrangements are rejected as a whole.
-Within the **Group** panel, **Space horizontally** and **Space vertically** space
-the members evenly inside the group's current bounds, keeping linked activity
-parts together. These commands require at least three independent members and
-an unlocked group, preserve membership and support undo/redo.
+The **Group** panel separates member selection from **Arrange members**. Align
+members to the left, centre, right, top, middle or bottom of the bounds shown in
+the panel. **Space horizontally** and **Space vertically** offer **Equal gaps**
+between element boxes or **Equal centres** between their midpoints. Each command
+uses the bounds captured before arranging; moving members updates those bounds.
+**Keep linked parts together** is enabled by default; turn it off to arrange
+activity icons and values individually without changing their movement link.
+Spacing requires at least three independent members; alignment requires two.
+Unavailable commands explain why, and an unchanged arrangement reports that the
+members already match. Native validation rejects the entire arrangement on
+failure. Group membership is preserved and arrangement supports undo/redo.
 Locks and groups are undoable editing metadata, included in saved designs and
 editable exports without changing the watch renderer.
 

@@ -9,6 +9,7 @@ import { GridOverlay } from "./GridOverlay.tsx";
 import { moveElement, moveSceneElement } from "./snapping.ts";
 import type { EditorLayout } from "./editor-layout.ts";
 import { linkedElementIds } from "./snapping.ts";
+import { groupBounds } from "./layout-geometry.ts";
 import { paintWatch } from "./raster.ts";
 import "./watch.css";
 import "./WatchAnnotations.css";
@@ -79,6 +80,9 @@ export function WatchCanvas({ scene, layout, night = false, previewScenario, sho
     const pixelScene = useMemo(() => preview
         ? moveSceneElement(scene, preview.element.id, preview.position, { enabled: false, showGuideLines: false, layout })
         : scene, [scene, preview, layout]);
+    const selectedGroups = (layout?.groups ?? []).filter((group) => group.elementIds.length >= 2 &&
+        group.elementIds.every((id) => selectedElementIds?.includes(id)));
+    const groupedSelection = new Set(selectedGroups.flatMap((group) => group.elementIds));
     const prepared = previewScenario ? undefined : preparedMapping(pixelScene, night);
     const current = result?.scene === pixelScene && result.night === night && result.previewScenario === previewScenario ? result
         : prepared ? { scene: pixelScene, night, layout: prepared } : undefined;
@@ -279,6 +283,7 @@ export function WatchCanvas({ scene, layout, night = false, previewScenario, sho
                                 aria-label={label}
                                 aria-keyshortcuts={onMoveElement ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
                                 className={selected ? "area selected" : "area"}
+                                data-group-member={groupedSelection.has(area.id) || undefined}
                                 onFocus={() => { if (!pointerSelecting.current) { setActive(area.id); onSelectElement?.(area.id); } }}
                                 onClick={(event) => { if (event.detail === 0) { setActive(area.id); onSelectElement?.(area.id, event.shiftKey); } }}
                                 onKeyDown={(event) => {
@@ -324,7 +329,7 @@ export function WatchCanvas({ scene, layout, night = false, previewScenario, sho
                                     width={area.width}
                                     height={area.height}
                                 />}
-                                {selected && (
+                                {selected && !groupedSelection.has(area.id) && (
                                     <foreignObject className="area-label content-label" aria-hidden="true"
                                         x={position.x} y={Math.max(0, position.y - 19)} width={mapping.size} height={16}>
                                         <div className="area-label-content" style={{ minWidth: area.width }}>
@@ -334,6 +339,16 @@ export function WatchCanvas({ scene, layout, night = false, previewScenario, sho
                                 )}
                             </g>
                         );
+                    })}
+                    {outlineMode !== "off" && selectedGroups.map((group) => {
+                        const bounds = groupBounds(pixelScene, group.elementIds);
+                        if (!bounds) return null;
+                        return <g key={group.id} className="group-outline" aria-hidden="true">
+                            <rect x={bounds.x} y={bounds.y} width={bounds.width} height={bounds.height} />
+                            <foreignObject className="content-label" x={bounds.x} y={Math.max(0, bounds.y - 19)} width={mapping.size} height={16}>
+                                <div className="group-outline-label">{group.name} · {bounds.width}×{bounds.height} px</div>
+                            </foreignObject>
+                        </g>;
                     })}
                 </svg>
             )}
