@@ -34,6 +34,11 @@ export function arrangeGroupMembers(scene: Scene, layout: EditorLayout | undefin
         linkedElementIds(scene, id).some((member) => !group.elementIds.includes(member))))
         throw new Error('Add the linked activity parts to this group before arranging its members.');
     const next = arrange(scene, group.elementIds, action, { lockedIds: layout.lockedIds, groups: [] }, { ...options, groupSpacing: true });
+    const members = next.elements.filter((element) => group.elementIds.includes(element.id));
+    if (members.some((element, index) => members.slice(index + 1).some((other) =>
+        element.x < other.x + other.width && element.x + element.width > other.x &&
+        element.y < other.y + other.height && element.y + element.height > other.y)))
+        throw new Error('This arrangement would overlap group members. Space them apart first.');
     if (!options.expandToFit && next.elements.some((element) => group.elementIds.includes(element.id) &&
         (element.x < bounds.x || element.y < bounds.y || element.x + element.width > bounds.x + bounds.width ||
             element.y + element.height > bounds.y + bounds.height)))

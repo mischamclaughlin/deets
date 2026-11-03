@@ -141,6 +141,9 @@ parts must be arranged separately with **Keep linked parts together** off.
 Spacing mode, bounds and linked-part preferences stay selected when leaving a
 group or navigating undo/redo. They are workspace preferences, outside document
 history. Arrangement feedback clears when later edits change the scene.
+All group arrangement commands, including alignment, reject results where
+member boxes overlap. Unavailable alignment commands explain the conflict;
+the accepted design remains unchanged.
 Unavailable commands explain why, and an unchanged arrangement reports that the
 members already match. Native validation rejects the entire arrangement on
 failure. Group membership is preserved and arrangement supports undo/redo.

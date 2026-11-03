@@ -79,6 +79,8 @@ export function GroupPanel({ scene, layout, ids, options, onOptionsChange, onDoc
     const unavailableSpacing = arrangements.filter((item) => item.action.startsWith('distribute') && item.reason);
     const reasons = unavailableSpacing.length === 2 && unavailableSpacing[0].reason === unavailableSpacing[1].reason
         ? [unavailableSpacing[0].reason] : unavailableSpacing.map((item) => `${item.label}: ${item.reason}`);
+    const alignmentReasons = [...new Set(arrangements.filter((item) => !item.action.startsWith('distribute') && item.reason)
+        .map((item) => item.reason))];
     async function arrange(action: LayoutAction) {
         if (!group || request.current) return;
         const controller = new AbortController();
@@ -163,6 +165,7 @@ export function GroupPanel({ scene, layout, ids, options, onOptionsChange, onDoc
                         <button key={action} type="button" title={reason || label} disabled={busy || !!reason}
                             onClick={() => void arrange(action)}>{label}</button>)}
                 </div>
+                {alignmentReasons.map((reason) => <p key={reason} className="group-hint">{reason}</p>)}
                 <label className="group-field">Spacing
                     <select aria-label="Group spacing mode" value={spacing} disabled={busy}
                         onChange={(event) => updateOptions({ spacing: event.target.value as 'gaps' | 'centres' })}>

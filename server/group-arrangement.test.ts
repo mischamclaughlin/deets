@@ -42,19 +42,42 @@ test('vertical equal centres use heights and preserve the horizontal positions',
 });
 
 test('all six group alignment commands use the bounds captured before arranging', () => {
+    const separated: Scene = { ...scene, elements: scene.elements.map((element, index) => ({ ...element, y: [120, 180, 240][index] })) };
     const expected: [LayoutAction, 'x' | 'y', number[]][] = [
         ['left', 'x', [100, 100, 100]], ['centreX', 'x', [175, 165, 170]], ['right', 'x', [250, 230, 240]],
-        ['top', 'y', [180, 180, 180]], ['centreY', 'y', [190, 190, 190]], ['bottom', 'y', [200, 200, 200]],
+        ['top', 'y', [120, 120, 120]], ['centreY', 'y', [180, 180, 180]], ['bottom', 'y', [240, 240, 240]],
     ];
     const outside = { ...scene.elements[0], id: 'outside' };
-    const original: Scene = { ...scene, elements: [...scene.elements, outside] };
+    const original: Scene = { ...separated, elements: [...separated.elements, outside] };
     for (const [action, axis, positions] of expected) {
         const next = arrangeGroupMembers(original, layout, groupId, action);
         assert.deepEqual(next.elements.slice(0, 3).map((element) => element[axis]), positions);
         assert.equal(next.elements[3], outside);
         next.elements.slice(0, 3).forEach((element, index) =>
-            assert.deepEqual(element, { ...scene.elements[index], [axis]: positions[index] }));
+            assert.deepEqual(element, { ...separated.elements[index], [axis]: positions[index] }));
     }
+});
+
+test('every group alignment rejects overlapping results atomically, including linked members', () => {
+    for (const action of ['left', 'centreX', 'right', 'top', 'centreY', 'bottom'] as const) {
+        const horizontal = ['left', 'centreX', 'right'].includes(action);
+        const original: Scene = { ...scene, elements: scene.elements.map((element, index) =>
+            ({ ...element, x: horizontal ? [100, 160, 240][index] : 150,
+                y: horizontal ? 180 : [120, 180, 240][index] })) };
+        const before = structuredClone(original);
+        for (const keepLinkedParts of [true, false]) for (const expandToFit of [true, false])
+            assert.throws(() => arrangeGroupMembers(original, layout, groupId, action, { keepLinkedParts, expandToFit }), /overlap group members/);
+        assert.deepEqual(original, before);
+    }
+    const linked: Scene = { ...scene, elements: scene.elements.map((element, index) => index === 0
+        ? { ...element, source: 'steps' } : index === 1
+            ? { ...element, source: 'stepsIcon', activityId: ids[0], x: 105, y: 185 } : element) };
+    assert.throws(() => arrangeGroupMembers(linked, layout, groupId, 'top'), /overlap group members/);
+});
+
+test('group alignment permits touching edges without overlapping native boxes', () => {
+    const touching: Scene = { ...scene, elements: scene.elements.map((element, index) => ({ ...element, y: 160 + index * 20 })) };
+    assert.doesNotThrow(() => arrangeGroupMembers(touching, layout, groupId, 'left'));
 });
 
 test('linked parts can be arranged independently without changing their persistent movement setting', () => {
