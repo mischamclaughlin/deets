@@ -5,6 +5,7 @@ export function elementLabel(scene: Scene, id: string): string {
     const index = scene.elements.findIndex((element) => element.id === id);
     const element = scene.elements[index];
     if (!element) return id;
+    if (element.source === "customIcon") return element.icon?.name || "Custom icon";
     const preceding = scene.elements.slice(0, index + 1);
     if (isClockSource(element.source)) {
         return `Time ${preceding.filter((item) => isClockSource(item.source)).length}`;

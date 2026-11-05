@@ -350,3 +350,13 @@ Text exports use Garmin `.fnt` resources generated from the same glyph masks and
 metrics as the preview. Each font style is loaded once and shared across day/night
 colours. See [native font export](docs/garmin-native-font-export.md) for the asset
 contract, resource guards, verification and remaining visual-review limits.
+
+### Import your own icon
+
+In **Elements → Library**, choose **Import icon** and select a PNG or SVG up to
+2 MB. Use a transparent background: visible pixels become a single-colour shape.
+SVGs must contain self-contained paths/shapes; convert text to outlines first.
+Artwork is fitted within 64 × 64 pixels and transparent margins are removed.
+Use **Position and size** and the existing Day/Night colours to customise it.
+Imported icons are embedded in saved designs, recovery drafts, `.deets.json`
+files and Garmin exports, so the original file is not needed to reopen a design.

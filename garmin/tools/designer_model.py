@@ -72,6 +72,7 @@ CATALOG = [
     _source("battery", "Battery percentage", "Device", "78%"),
     _source("alarms", "Alarms", "Device", "2 ALARMS"),
     _source("label", "Text label", "Design", "EPIX CANVAS"),
+    _source("customIcon", "Imported icon", "Design", 0, "icon"),
     _source("stepsWeek", "Weekly steps", "Charts", [4200, 8642, 6300, 9500, 7100, 11100, 5200], "bars", 2),
     _source("walkWeek", "Weekly walking", "Charts", [2, 4, 3, 0, 5, 1, 3.6], "bars"),
     _source("floorsIcon", "Stairs icon", "Activity icons", 0, "icon"),
@@ -244,7 +245,7 @@ def validate_scene(payload):
     elements, identifiers = [], set()
     required = {"id", "source", "font", "x", "y", "width", "align", "colour", "nightColour", "visible"}
     for original in payload["elements"]:
-        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "verticalAlign", "backgroundColour", "nightBackgroundColour", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether"}:
+        if not isinstance(original, dict) or not required <= set(original) or set(original) - required - {"height", "boxSizing", "text", "verticalAlign", "backgroundColour", "nightBackgroundColour", "colourPresetId", "nightColourPresetId", "zoneColours", "nightZoneColours", "zoneColourPresetIds", "nightZoneColourPresetIds", "textPresetId", "typography", "inheritFont", "dividerPosition", "dividerSymbol", "secondsSize", "ringTicksToCircumference", "ringTicksStretchToCircumference", "activityId", "moveTogether", "icon"}:
             raise ValueError("An element has unsupported or missing fields.")
         identity = original["id"]
         if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", identity) or identity in identifiers:
@@ -254,6 +255,11 @@ def validate_scene(payload):
         if not isinstance(source, str) or source not in SOURCES:
             raise ValueError("Choose a supported data source.")
         info = SOURCES[source]
+        if source == "customIcon":
+            from designer_activity import validate_custom_icon
+            icon = validate_custom_icon(original.get("icon"))
+        elif "icon" in original:
+            raise ValueError("Only imported icons can contain custom coverage.")
         if "verticalAlign" in original and (info["kind"] != "text"
                 or not isinstance(original["verticalAlign"], str)
                 or original["verticalAlign"] not in {"top", "middle", "bottom"}):
@@ -364,6 +370,8 @@ def validate_scene(payload):
         result = {"id": identity, "source": source, "font": font, "x": x, "y": y,
                   "width": width, "height": height, "align": original["align"], "colour": colour,
                   "nightColour": night_colour, "visible": original["visible"]}
+        if source == "customIcon":
+            result["icon"] = icon
         for background_key in ("backgroundColour", "nightBackgroundColour"):
             if background_key in original:
                 result[background_key] = original[background_key]

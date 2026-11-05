@@ -44,7 +44,10 @@ export interface ColourPreset {
     name: string;
     colour: number;
 }
+/** Portable, row-major, MSB-first monochrome coverage; at most 64 × 64 pixels. */
+export interface CustomIcon { name: string; width: number; height: number; bits: string; }
 export interface SceneElement {
+    icon?: CustomIcon;
     id: string;
     source: string;
     /** The activity value this icon or graph accompanies. */

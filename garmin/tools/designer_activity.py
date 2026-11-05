@@ -1,6 +1,7 @@
 """Activity elements and canonical icon coverage shared by canvas and export."""
 import copy
 import functools
+import re
 from pathlib import Path
 import struct
 import subprocess
@@ -31,6 +32,36 @@ GRAPH_SOURCES = {graph for _, graph in ACTIVITY_GROUPS.values() if graph is not 
 ACTIVITY_SOURCES = {*ACTIVITY_GROUPS, *GRAPH_SOURCES, *ICON_MASKS}
 
 
+def validate_custom_icon(value):
+    """Accept portable, bounded, row-major one-bit coverage; never file paths."""
+    invalid = "Choose a non-empty imported icon up to 64 by 64 pixels."
+    if not isinstance(value, dict) or set(value) != {"name", "width", "height", "bits"}:
+        raise ValueError(invalid)
+    name, width, height, bits = (value[key] for key in ("name", "width", "height", "bits"))
+    if (not isinstance(name, str) or not name.strip() or len(name) > 60 or
+            any(ord(character) < 32 or ord(character) == 127 for character in name) or
+            type(width) is not int or type(height) is not int or
+            not 1 <= width <= 64 or not 1 <= height <= 64):
+        raise ValueError(invalid)
+    count = width * height
+    if (not isinstance(bits, str) or len(bits) != ((count + 7) // 8) * 2 or
+            not re.fullmatch(r"[0-9a-f]+", bits)):
+        raise ValueError(invalid)
+    packed = bytes.fromhex(bits)
+    padding = -count % 8
+    if not any(packed) or (padding and packed[-1] & ((1 << padding) - 1)):
+        raise ValueError(invalid)
+    return dict(name=name.strip(), width=width, height=height, bits=bits)
+
+
+def custom_icon_mask(value):
+    icon = validate_custom_icon(value)
+    packed = bytes.fromhex(icon["bits"])
+    pixels = bytes((packed[index // 8] >> (7 - index % 8)) & 1
+                   for index in range(icon["width"] * icon["height"]))
+    return icon["width"], icon["height"], pixels
+
+
 def icon_asset_paths():
     """Return rendering inputs for mapping and exported application fingerprints."""
     names = set(ICON_MASKS.values()) | {name for variants in ICON_VARIANTS.values() for name in variants}
@@ -52,7 +83,11 @@ def _icon_mask(data):
 
 @functools.lru_cache(maxsize=32)
 def _icon_rectangles(data, width, height):
-    source_width, source_height, pixels = _icon_mask(data)
+    return _mask_rectangles(*_icon_mask(data), width, height)
+
+
+@functools.lru_cache(maxsize=64)
+def _mask_rectangles(source_width, source_height, pixels, width, height):
     if width * source_height <= height * source_width:
         draw_width, draw_height = width, max(1, width * source_height // source_width)
     else:
@@ -86,6 +121,12 @@ def _icon_rectangles(data, width, height):
 
 def icon_ops(element, variant=None):
     source = element["source"]
+    if source == "customIcon":
+        if variant is not None:
+            raise ValueError("Imported icons do not have live variants.")
+        rectangles = _mask_rectangles(*custom_icon_mask(element.get("icon")), element["width"], element["height"])
+        return [dict(kind="rect", x=element["x"]+x, y=element["y"]+y, width=width, height=height)
+                for x, y, width, height in rectangles]
     name = ICON_MASKS[source] if variant is None else variant
     if name not in ICON_VARIANTS.get(source, (ICON_MASKS[source],)):
         raise ValueError("Choose a supported variant for this icon.")

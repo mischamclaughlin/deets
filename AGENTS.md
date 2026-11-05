@@ -98,6 +98,11 @@ without user direction.
 - Text layers can have independent optional Day/Night opaque backgrounds and
   vertical alignment. These are scene properties that affect native pixels and
   export, unlike browser-only grid shading and selection.
+- Custom icons use `SceneElement.icon`: a portable name, width/height (1–64) and
+  row-major MSB-first binary coverage encoded as lowercase hex. `import-icon.ts`
+  decodes local PNG/SVG artwork; `icon-mask.ts` trims and packs it. Original SVG
+  markup never enters scenes. Canonical Python validation/rendering and the icon
+  font exporter own final pixels, including resizing and Day/Night colours.
 - SDK-backed watch casing artwork and screen rectangles are presentation only.
   Keep them outside scene geometry, native mapping and Garmin export coordinates.
 

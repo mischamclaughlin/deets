@@ -1,4 +1,6 @@
 .element-library-launcher { margin: 0; }
+.library-header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.icon-import-hint { margin: -4px 0 12px; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .library-announcement { min-height: 15px; margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .element-picker { width: min(760px, calc(100vw - 32px)); max-width: none; max-height: min(850px, calc(100dvh - 48px)); padding: 0; overflow: hidden; border: 1px solid #d8e2dc; border-radius: 18px; background: #f9fbf9; color: #253332; box-shadow: 0 30px 110px #05181266; }
 .element-picker[open] { display: flex; flex-direction: column; }

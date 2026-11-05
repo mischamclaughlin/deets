@@ -209,7 +209,7 @@ def ring_font(width, outer_radius=None, inner_radius=-1):
 def chart_ops(element, value=None, night=False, *, ring_radius=None, ring_inner_radius=-1):
     source = element['source']
     from designer_activity import ICON_MASKS, icon_ops
-    if source in ICON_MASKS:
+    if source in ICON_MASKS or source == "customIcon":
         return [{**op, 'colour': element['nightColour' if night else 'colour']} for op in icon_ops(element)]
     value = SAMPLES[source] if value is None else value
     x, y, width, height = (element[k] for k in ('x', 'y', 'width', 'height'))

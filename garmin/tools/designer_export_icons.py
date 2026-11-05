@@ -5,6 +5,9 @@ from designer_activity import ICON_MASKS, ICON_VARIANTS, icon_ops
 
 def icon_signature(element):
     """Positions and colours do not change an icon's binary native coverage."""
+    if element["source"] == "customIcon":
+        icon = element["icon"]
+        return ("custom", icon["width"], icon["height"], icon["bits"]), element["width"], element["height"]
     return ICON_VARIANTS.get(element["source"], (ICON_MASKS[element["source"]],)), element["width"], element["height"]
 
 
@@ -16,6 +19,8 @@ def icon_font(element):
     """
     from designer_model import _png_rgba
     variants, width, height = icon_signature(element)
+    if element["source"] == "customIcon":
+        variants = (None,)
     atlas_width = width * len(variants)
     pixels = bytearray(atlas_width * height * 4)
     glyphs = {}
