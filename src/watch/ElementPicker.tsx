@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import type { ActivityAddOptions, Scene } from "../../shared/scene.ts";
 import { ActivityOptions } from "./ActivityOptions.tsx";
 import { ElementPreview } from "./ElementPreview.tsx";
-import { activityParts, matchingEntries, type LibraryEntry, type LibraryCategory, type LibrarySource } from "./library-catalogue.ts";
+import { LibrarySection } from "./LibrarySection.tsx";
+import { libraryCategories, activityParts, matchingEntries, type LibraryEntry, type LibraryCategory, type LibrarySource } from "./library-catalogue.ts";
 
 export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
     scene: Scene;
@@ -12,6 +13,8 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
     onAdd: (source: LibrarySource, options?: ActivityAddOptions) => void;
     onDismiss: () => void;
 }) {
+    // Keep top-layer dialogues inside the single editor root so both themes inherit.
+    const [portalTarget] = useState(() => document.querySelector(".watch-editor") ?? document.body);
     const dialog = useRef<HTMLDialogElement>(null);
     const search = useRef<HTMLInputElement>(null);
     const [category, setCategory] = useState<LibraryCategory>("all");
@@ -50,20 +53,26 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
                 <input ref={search} type="search" aria-label="Search elements" placeholder="Search elements…" value={query} onChange={(event) => setQuery(event.target.value)} />
             </label>
             <div className="picker-filters" role="group" aria-label="Filter elements">
-                {([['all', 'All'], ['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun'], ['device', 'Device & text']] as const).map(([value, label]) =>
+                {([{ id: "all", label: "All" }, ...libraryCategories] as const).map(({ id: value, label }) =>
                     <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)}>{label}</button>)}
             </div>
         </div>
         <div className="picker-results">
-            {entries.length > 0 ? <div className="picker-grid">
-                {entries.map((entry) => activityParts[entry.source] ? <ActivityCard key={entry.source} scene={scene} entry={entry} adding={adding} remaining={remaining} onAdd={onAdd} /> : <button key={entry.source} type="button" className="picker-card"
+            {entries.length > 0 ? libraryCategories.map((group) => {
+                const choices = entries.filter((entry) => entry.category === group.id);
+                if (!choices.length) return null;
+                return <LibrarySection key={`${group.id}-${category}-${query}`} category={group.id} title={group.label} count={choices.length}
+                    context="picker" initiallyOpen forceOpen={query.trim().length > 0 || category !== "all"}>
+                    <div className="picker-grid">{choices.map((entry) => activityParts[entry.source] ? <ActivityCard key={entry.source} scene={scene} entry={entry} adding={adding} remaining={remaining} onAdd={onAdd} /> : <button key={entry.source} type="button" className="picker-card"
                     disabled={adding !== undefined || remaining === 0} onClick={() => onAdd(entry.source)}
                     aria-label={`Add ${entry.label.toLowerCase()}`} aria-describedby={`library-detail-${entry.source}`}>
                     <ElementPreview scene={scene} source={entry.source} />
                     <span className="picker-card-caption"><span><span className="picker-card-title">{adding === entry.source ? "Adding…" : entry.label}</span>
                         <span id={`library-detail-${entry.source}`} className="picker-card-detail">{entry.detail}</span></span><span className="picker-card-plus" aria-hidden="true">+</span></span>
                 </button>)}
-            </div> : <div className="picker-empty"><h3>No matching elements</h3><p>Try a name such as “steps” or “graph”.</p>
+                    </div>
+                </LibrarySection>;
+            }) : <div className="picker-empty"><h3>No matching elements</h3><p>Try a name such as “steps” or “graph”.</p>
                 <button type="button" onClick={() => { setQuery(""); setCategory("all"); }}>Show all elements</button></div>}
         </div>
         <footer className="picker-footer">
@@ -73,7 +82,7 @@ export function ElementPicker({ scene, adding, error, onAdd, onDismiss }: {
         <div className="picker-feedback" role={error ? "alert" : "status"} aria-live="polite">
             {error ?? (adding ? "Adding your element…" : remaining === 0 ? "Close the library and delete an element to make room." : "")}
         </div>
-    </dialog>, document.body);
+    </dialog>, portalTarget);
 }
 
 function ActivityCard({ scene, entry, adding, remaining, onAdd }: {

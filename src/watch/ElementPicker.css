@@ -1,4 +1,15 @@
 .element-library-launcher { margin: 0; }
+.library-section { border-top: 1px solid var(--rp-border); }
+.library-section > summary { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 7px; border-radius: 6px; color: var(--rp-text); font-size: 11px; font-weight: 600; list-style: none; cursor: pointer; }
+.library-section > summary::-webkit-details-marker { display: none; }
+.library-section > summary::after { content: ""; width: 6px; height: 6px; margin-left: 3px; border-right: 1.5px solid var(--rp-subtle); border-bottom: 1.5px solid var(--rp-subtle); transform: rotate(-45deg); }
+.library-section[open] > summary::after { transform: rotate(45deg); }
+.library-section > summary:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
+.library-section-count { margin-left: auto; color: var(--rp-subtle); font-size: 10px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.library-section-sidebar[open] { padding-bottom: 8px; }
+.library-section-picker { margin-bottom: 12px; }
+.library-section-picker > summary { margin-bottom: 8px; font-size: 12px; }
+@media (hover: hover) { .library-section > summary:hover { background: var(--rp-overlay); } }
 .library-header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .icon-import-hint { margin: -4px 0 12px; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .library-announcement { min-height: 15px; margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }

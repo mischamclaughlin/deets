@@ -1,5 +1,6 @@
-import { activityParts, libraryItems, type LibrarySource } from "./library-catalogue.ts";
+import { activityParts, libraryItems, libraryCategories, type LibrarySource } from "./library-catalogue.ts";
 import { LibrarySymbol } from "./LibrarySymbol.tsx";
+import { LibrarySection } from "./LibrarySection.tsx";
 
 export function LibraryList({ onAdd, adding, remaining }: {
     onAdd: (source: LibrarySource) => void;
@@ -7,10 +8,10 @@ export function LibraryList({ onAdd, adding, remaining }: {
     remaining: number;
 }) {
     return <div className="compact-library">
-        {([['clock', 'Clock & date'], ['activity', 'Activity'], ['weather', 'Weather & sun'], ['device', 'Device & text']] as const).map(([category, title]) =>
-            <div className="compact-library-group" key={category}>
-                <h3>{title}</h3>
-                <ul>{libraryItems.filter((entry) => entry.category === category).map((entry) => {
+        {libraryCategories.map(({ id, label, initiallyOpen }) => {
+            const entries = libraryItems.filter((entry) => entry.category === id);
+            return <LibrarySection key={id} category={id} title={label} count={entries.length} context="sidebar" initiallyOpen={initiallyOpen}>
+                <ul>{entries.map((entry) => {
                     const slots = activityParts[entry.source] ? 2 : 1;
                     return <li key={entry.source} className="compact-library-item">
                         <button type="button" className="compact-library-row" disabled={adding !== undefined || remaining < slots}
@@ -21,6 +22,7 @@ export function LibraryList({ onAdd, adding, remaining }: {
                         </button>
                     </li>;
                 })}</ul>
-            </div>)}
+            </LibrarySection>;
+        })}
     </div>;
 }

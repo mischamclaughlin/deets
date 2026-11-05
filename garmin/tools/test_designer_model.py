@@ -188,7 +188,7 @@ class RealAtlasTests(unittest.TestCase):
 
     def test_catalogue_exposes_every_existing_data_type_and_shared_assets(self):
         catalogue = model.catalogue("epix2pro47mm")
-        self.assertEqual({2, 4, 13, 18, 19, 38, 39}, {s["type"] for s in catalogue["sources"] if "type" in s})
+        self.assertEqual({2, 4, 13, 18, 19, 21, 22, 23, 38, 39}, {s["type"] for s in catalogue["sources"] if "type" in s})
         self.assertEqual(set(catalogue["fonts"]), set(model.FONT_FILES))
         for font in catalogue["fonts"].values():
             self.assertEqual(font["assetUrl"], font["url"])

@@ -360,3 +360,15 @@ Artwork is fitted within 64 × 64 pixels and transparent margins are removed.
 Use **Position and size** and the existing Day/Night colours to customise it.
 Imported icons are embedded in saved designs, recovery drafts, `.deets.json`
 files and Garmin exports, so the original file is not needed to reopen a design.
+
+### Health, recovery and weather data
+
+The Library groups its choices into collapsible Clock & date, Health & recovery,
+Activity, Weather & sun, and Device & text sections. Expansion preferences stay
+in this browser and do not affect saved designs or undo history. Browse uses the
+same groups and automatically reveals matching search results.
+
+Body Battery, stress and recovery time can be added with their own icons. Rain
+chance and wind speed/direction are under Weather & sun. Wind uses km/h or mph
+according to the watch's distance units. Missing readings display `--`.
+The canvas uses sample values; Garmin exports use available live watch data.

@@ -18,6 +18,7 @@ from designer_colours import zone_colours
 
 
 TYPE_SOURCES = {
+    "bodyBattery": 23, "stress": 22, "recoveryTime": 21,
     "heartRate": 18, "temperature": 38, "highLow": 39,
     "floors": 4, "steps": 2, "weeklyRun": 19, "sunriseSunset": 13,
     "temperatureHigh": 39, "temperatureLow": 39,
@@ -33,7 +34,7 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_export_icons.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py"):
+    for filename in ("designer_export.py", "designer_export_icons.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py", "designer_health_weather.py"):
         digest.update((Path(__file__).parent / filename).read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():
@@ -107,8 +108,12 @@ def _element_codes(element, catalogue, proof):
         text = "0123456789/"
     elif source in {"date", "weekday", "month", "alarms"}:
         text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
-    elif source == "battery":
+    elif source in {"battery", "bodyBattery", "rainChance"}:
         text = "0123456789%--"
+    elif source == "recoveryTime":
+        text = "0123456789HM --"
+    elif source == "wind":
+        text = "0123456789KM/HP NSEW--"
     else:
         text = "0123456789-./:"
     codes = {ord(character) for character in text} | {63}
@@ -207,7 +212,14 @@ def _provider_patch(project, types, widget_types):
     function designerAlarm() {{ return formatAlarmCount(); }}
 
 """
-    path.write_text(code.replace(marker, extension + marker, 1))
+    from designer_health_weather import PROVIDER_EXTENSION, HEALTH_FORMAT_CASES
+    format_marker = "        switch (type) {\n            case Complications.COMPLICATION_TYPE_CURRENT_TEMPERATURE:"
+    if HEALTH_FORMAT_CASES not in code:
+        if format_marker not in code:
+            raise ValueError("The complication provider's health-format hook needs updating.")
+        code = code.replace(format_marker, "        switch (type) {\n" + HEALTH_FORMAT_CASES +
+                            "            case Complications.COMPLICATION_TYPE_CURRENT_TEMPERATURE:", 1)
+    path.write_text(code.replace(marker, extension + PROVIDER_EXTENSION + marker, 1))
 
 
 def prepare_scene_project(project, scene, proof=False, preview_night=None):
@@ -625,6 +637,11 @@ class DesignerView extends WatchUi.WatchFace {
                 return _snapshot.temperatureHigh == null ? "--" : _snapshot.temperatureHigh.format("%.0f");
             case "temperatureLow":
                 return _snapshot.temperatureLow == null ? "--" : _snapshot.temperatureLow.format("%.0f");
+            case "bodyBattery": return _provider.designerValue(23);
+            case "stress": return _provider.designerValue(22);
+            case "recoveryTime": return _provider.designerValue(21);
+            case "rainChance":
+            case "wind": return _provider.designerWeatherValue(source);
             case "heartRate": return _provider.designerValue(18);
             case "temperature": return _provider.designerValue(38);
             case "highLow": return _provider.designerValue(39);

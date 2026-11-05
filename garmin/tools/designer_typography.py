@@ -23,7 +23,7 @@ DIVIDER_SYMBOLS = {":", ".", "-", "/", "|"}
 DATE_SOURCES = {"date", "numericDate", "weekday", "day", "month", "year"}
 CLOCK_SOURCES = {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
 DATA_SOURCES = {"heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature",
-                "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label"}
+                "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label", "bodyBattery", "stress", "recoveryTime", "rainChance", "wind"}
 TEXT_SOURCES = CLOCK_SOURCES | DATE_SOURCES | DATA_SOURCES
 DATA_CODES = "0123456789-./:%?°ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 LABEL_CODES = "".join(chr(code) for code in range(33, 127)) + "°"
@@ -675,7 +675,7 @@ def refresh_fonts(scene):
 def add_data_text(scene, source):
     """Add device data or a literal label using the same native text boundary."""
     from designer_model import validate_scene, DEVICES
-    if source not in {"battery", "alarms", "label"}:
+    if source not in {"battery", "alarms", "label", "bodyBattery", "stress", "recoveryTime", "rainChance", "wind"}:
         raise ValueError("Choose battery, alarms or custom text.")
     scene = validate_scene(scene)
     if len(scene["elements"]) >= 40:

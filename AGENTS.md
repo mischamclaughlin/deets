@@ -64,6 +64,13 @@ without user direction.
   calculations must show an accessible error without changing the saved value.
   Keep units visible and use the shared `SliderValue` control consistently.
 
+- The element Library shares category order/labels in `library-catalogue.ts`:
+  Clock & date, Health & recovery, Activity, Weather & sun, Device & text.
+  `LibrarySection.tsx` provides keyboard-accessible collapsible groups and stores
+  expansion as browser viewing preferences, outside design history/export.
+  Health includes heart rate, Body Battery, stress and recovery time; weather
+  additionally includes rain chance and wind speed/direction. Keep native
+  provider values, fallbacks, subscriptions and glyph coverage synchronised.
 - Keep Grid settings compact: paired horizontal/vertical additions with their
   curved toggles, followed by ring count, starting edge and spacing. Adding a
   guide must preserve existing guides and select the new line.

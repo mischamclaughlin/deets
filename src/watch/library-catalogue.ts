@@ -1,7 +1,15 @@
 import type { ActivitySource } from "../../shared/scene.ts";
 
 export type LibrarySource = ActivitySource | "time" | "numericDate" | "divider" | "battery" | "alarms" | "label";
-export type LibraryCategory = "all" | "clock" | "activity" | "weather" | "device";
+export type LibraryCategory = "all" | "clock" | "health" | "activity" | "weather" | "device";
+/** Shared order and labels for the sidebar and Browse dialogue. */
+export const libraryCategories = [
+    { id: "clock", label: "Clock & date", initiallyOpen: true },
+    { id: "health", label: "Health & recovery", initiallyOpen: true },
+    { id: "activity", label: "Activity", initiallyOpen: false },
+    { id: "weather", label: "Weather & sun", initiallyOpen: false },
+    { id: "device", label: "Device & text", initiallyOpen: false },
+] as const;
 export interface LibraryEntry {
     source: LibrarySource;
     label: string;
@@ -17,9 +25,19 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "battery", label: "Battery", detail: "Remaining battery percentage", category: "device", keywords: "power charge percentage device" },
     { source: "alarms", label: "Alarms", detail: "Enabled alarm count", category: "device", keywords: "device alarm wake count" },
     { source: "label", label: "Custom text", detail: "Your own text label", category: "device", keywords: "design label custom text words letters" },
-    { source: "heartRate", label: "Heart rate", detail: "Current beats per minute", category: "activity", keywords: "value pulse bpm health heart rate" },
-    { source: "heartIcon", label: "Heart icon", detail: "Heart-rate symbol", category: "activity", keywords: "symbol pulse bpm health heart" },
-    { source: "heartZones", label: "Heart-rate zones", detail: "Current heart rate across five zones", category: "activity", keywords: "heart rate pulse bpm health graph chart zones band" },
+    { source: "bodyBattery", label: "Body Battery", detail: "Remaining energy · 0–100", category: "health", keywords: "energy charge wellbeing health" },
+    { source: "bodyBatteryIcon", label: "Body Battery icon", detail: "Energy symbol", category: "health", keywords: "energy charge symbol" },
+    { source: "stress", label: "Stress", detail: "Current stress level · 0–100", category: "health", keywords: "wellbeing health stress level" },
+    { source: "stressIcon", label: "Stress icon", detail: "Stress symbol", category: "health", keywords: "stress health symbol" },
+    { source: "recoveryTime", label: "Recovery time", detail: "Time remaining until recovered", category: "health", keywords: "rest training recovery hours minutes" },
+    { source: "recoveryTimeIcon", label: "Recovery icon", detail: "Recovery symbol", category: "health", keywords: "rest recovery timer symbol" },
+    { source: "rainChance", label: "Rain chance", detail: "Chance of precipitation · %", category: "weather", keywords: "rain precipitation chance probability wet weather" },
+    { source: "rainChanceIcon", label: "Rain icon", detail: "Precipitation symbol", category: "weather", keywords: "rain precipitation symbol" },
+    { source: "wind", label: "Wind", detail: "Wind speed and direction", category: "weather", keywords: "wind speed direction bearing breeze mph kmh" },
+    { source: "windIcon", label: "Wind icon", detail: "Wind symbol", category: "weather", keywords: "wind breeze symbol" },
+    { source: "heartRate", label: "Heart rate", detail: "Current beats per minute", category: "health", keywords: "value pulse bpm health heart rate" },
+    { source: "heartIcon", label: "Heart icon", detail: "Heart-rate symbol", category: "health", keywords: "symbol pulse bpm health heart" },
+    { source: "heartZones", label: "Heart-rate zones", detail: "Current heart rate across five zones", category: "health", keywords: "heart rate pulse bpm health graph chart zones band" },
     { source: "steps", label: "Steps", detail: "Today's step count", category: "activity", keywords: "value daily count" },
     { source: "stepsIcon", label: "Steps icon", detail: "Footsteps", category: "activity", keywords: "symbol footprints" },
     { source: "stepsWeek", label: "Steps graph", detail: "Daily steps · Monday–Sunday", category: "activity", keywords: "weekly chart bars" },
@@ -45,6 +63,11 @@ export const libraryEntries: readonly LibraryEntry[] = [
 ];
 
 export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph?: LibrarySource; graphLabel?: string }>> = {
+    bodyBattery: { icon: "bodyBatteryIcon" },
+    stress: { icon: "stressIcon" },
+    recoveryTime: { icon: "recoveryTimeIcon" },
+    rainChance: { icon: "rainChanceIcon" },
+    wind: { icon: "windIcon" },
     heartRate: { icon: "heartIcon", graph: "heartZones", graphLabel: "Heart-rate zones" },
     steps: { icon: "stepsIcon", graph: "stepsWeek" },
     floors: { icon: "floorsIcon", graph: "floorsWeek" },

@@ -69,8 +69,8 @@ test("activity gap and order round-trip native validation for every activity and
 });
 
 test("activity values share text controls while icons and graphs retain geometry controls", () => {
-    for (const entry of libraryEntries.filter((item) => item.category === "activity")) {
-        const value = ["heartRate", "steps", "floors", "weeklyWalk", "weeklyRun"].includes(entry.source);
+    for (const entry of libraryEntries.filter((item) => item.category === "activity" || item.category === "health")) {
+        const value = ["heartRate", "steps", "floors", "weeklyWalk", "weeklyRun", "bodyBattery", "stress", "recoveryTime"].includes(entry.source);
         assert.equal(isEditableTextSource(entry.source), value, entry.source);
         if (value) {
             const element = { source: entry.source };
@@ -91,7 +91,7 @@ test("library search combines category, names and useful activity synonyms", () 
     assert.deepEqual(matchingEntries("activity", "steps").map((entry) => entry.source), ["steps"]);
     assert.deepEqual(matchingEntries("all", "weekly chart").map((entry) => entry.source), ["steps", "floors", "weeklyWalk", "weeklyRun"]);
     assert.deepEqual(matchingEntries("all", "unknown-item"), []);
-    assert.equal(matchingEntries("all", "   ").length, 16);
+    assert.equal(matchingEntries("all", "   ").length, 21);
 });
 
 test("element names distinguish values, symbols and graphs and number duplicates", () => {
@@ -110,7 +110,7 @@ test("stairs searches resolve to the data entry with its associated extras", () 
 
 test("heart-rate searches include the value, icon and zones graph", () => {
     for (const query of ["heart", "heart icon", "heart rate", "pulse", "bpm", "heart graph", "heart zones"])
-        assert.deepEqual(matchingEntries("activity", query).map((entry) => entry.source), ["heartRate"]);
+        assert.deepEqual(matchingEntries("health", query).map((entry) => entry.source), ["heartRate"]);
 });
 
 test("heart-rate zones can be added and toggled while moving independently", async () => {
@@ -154,5 +154,5 @@ test("heart-rate value and icon use the existing layout, linked movement and nat
 test("device and literal text are exposed as independent searchable elements", () => {
     assert.deepEqual(matchingEntries("device", "").map((entry) => entry.source), ["battery", "alarms", "label"]);
     for (const [query, source] of [["charge", "battery"], ["alarm", "alarms"], ["custom text", "label"]])
-        assert.deepEqual(matchingEntries("all", query).map((entry) => entry.source), [source]);
+        assert.deepEqual(matchingEntries("device", query).map((entry) => entry.source), [source]);
 });

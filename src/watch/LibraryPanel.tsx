@@ -90,7 +90,7 @@ export function LibraryPanel({ scene, onSelect, onSceneChange }: Props) {
             </div>
         </div>
         <p id="icon-import-hint" className="icon-import-hint">PNG or SVG · transparent background · single colour</p>
-        <LibraryList key={scene.elements.length} onAdd={(source) => void add(source)} adding={adding} remaining={importing ? 0 : Math.max(0, 40-scene.elements.length)} />
+        <LibraryList onAdd={(source) => void add(source)} adding={adding} remaining={importing ? 0 : Math.max(0, 40-scene.elements.length)} />
         <p className="library-announcement" role="status">{announcement}</p>
         {!open && error && <p className="typography-status" role="alert">{error}</p>}
         {scene.elements.length >= 40 && <p className="library-announcement">All 40 slots are in use. Delete an element to add another.</p>}

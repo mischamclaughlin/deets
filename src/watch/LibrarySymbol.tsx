@@ -5,10 +5,15 @@ import heart from "../../garmin/resources/drawables/icons/heart.svg";
 import temperature from "../../garmin/resources/drawables/icons/temperature.svg";
 import forecast from "../../garmin/resources/drawables/icons/temperature-sun.svg";
 import sunrise from "../../garmin/resources/drawables/icons/sunrise.svg";
+import bodyBattery from "../../garmin/resources/drawables/icons/body-battery.svg";
+import stress from "../../garmin/resources/drawables/icons/stress.svg";
+import recoveryTime from "../../garmin/resources/drawables/icons/recovery-time.svg";
+import rainChance from "../../garmin/resources/drawables/icons/cloud-rain.svg";
+import wind from "../../garmin/resources/drawables/icons/wind.svg";
 import type { LibrarySource } from "./library-catalogue.ts";
 
 export function LibrarySymbol({ source }: { source: LibrarySource }) {
-    const assets: Partial<Record<LibrarySource, string>> = { steps: footsteps, weeklyWalk: footsteps, floors: stairs,
+    const assets: Partial<Record<LibrarySource, string>> = { bodyBattery, stress, recoveryTime, rainChance, wind, steps: footsteps, weeklyWalk: footsteps, floors: stairs,
         weeklyRun: run, heartRate: heart, temperature, highLow: forecast, temperatureHigh: forecast, temperatureLow: forecast, sunriseSunset: sunrise };
     const asset = assets[source];
     if (asset) return <img className="compact-library-symbol compact-library-image" src={asset} alt="" aria-hidden="true" />;

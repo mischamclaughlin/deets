@@ -9,13 +9,20 @@ import subprocess
 # Original colour-ready Tabler assets from the parent Garmin watch face.
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
 ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs", "heartIcon": "heart",
-              "temperatureIcon": "temperature", "highLowIcon": "temperature-sun", "sunriseSunsetIcon": "sunrise"}
+              "temperatureIcon": "temperature", "highLowIcon": "temperature-sun", "sunriseSunsetIcon": "sunrise",
+              "bodyBatteryIcon": "body-battery", "stressIcon": "stress", "recoveryTimeIcon": "recovery-time",
+              "rainChanceIcon": "cloud-rain", "windIcon": "wind"}
 ICON_VARIANTS = {
     "temperatureIcon": ("temperature", "sun", "cloud", "cloud-rain", "cloud-storm", "snowflake", "wind", "mist"),
     "sunriseSunsetIcon": ("sunrise", "sunset"),
 }
 ICON_DIRECTORY = Path(__file__).resolve().parent.parent / "resources/drawables/icons"
 ACTIVITY_GROUPS = {
+    "bodyBattery": ("bodyBatteryIcon", None),
+    "stress": ("stressIcon", None),
+    "recoveryTime": ("recoveryTimeIcon", None),
+    "rainChance": ("rainChanceIcon", None),
+    "wind": ("windIcon", None),
     "heartRate": ("heartIcon", "heartZones"),
     "temperature": ("temperatureIcon", "temperatureZones"),
     "highLow": ("highLowIcon", "temperatureZones"),
@@ -140,6 +147,11 @@ def _new_activity_element(scene, source, identities):
     size = DEVICES[scene["device"]]
     width, height = ((112, 24) if source in GRAPH_SOURCES else
                      (112, font_pack(scene["device"])["fonts"]["widget"]["height"]))
+    if source in {"wind", "recoveryTime"}:
+        from designer_model import text_ink_bounds
+        font = font_pack(scene["device"])["fonts"]["widget"]
+        reference = "720 KM/H WSW" if source == "wind" else "96H 59M"
+        width = max(width, text_ink_bounds(reference, {"source": source}, font)[2])
     if source in ICON_MASKS:
         data = (ICON_DIRECTORY / f"{ICON_MASKS[source]}.png").read_bytes()
         width, height, _ = _icon_mask(data)
