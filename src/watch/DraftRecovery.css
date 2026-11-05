@@ -1,5 +1,5 @@
 .draft-recovery:empty { display: none; }
-.draft-recovery { max-height: 190px; overflow: auto; font-size: 11px; color: var(--rp-text); }
+.draft-recovery { margin-bottom: 12px; max-height: 190px; overflow: auto; font-size: 11px; color: var(--rp-text); }
 .draft-recovery-item { margin-top: 10px; padding: 10px; border: 1px solid var(--rp-border); border-radius: 8px; background: var(--rp-surface); }
 .draft-recovery-item p { margin: 0; line-height: 1.5; }
 .draft-recovery-item time { display: block; color: var(--rp-subtle); font-size: 10px; }
