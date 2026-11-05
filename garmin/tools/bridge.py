@@ -205,18 +205,30 @@ def dispatch(request):
             raise ValueError("Choose a scene and target watch.")
         return layout({"scene": convert_device(payload["scene"], payload["device"])})
     if operation == "add":
-        from designer_typography import add_time, add_divider, add_date, add_data_text
+        from designer_typography import (add_time, add_divider, add_date, add_data_text,
+                                         set_clock_source, set_date_source, CLOCK_SOURCES, DATE_SOURCES)
         from designer_activity import ACTIVITY_SOURCES, ACTIVITY_GROUPS, add_activity
-        if set(payload) not in ({"scene", "source"}, {"scene", "source", "options"}) or not isinstance(payload["source"], str) or payload["source"] not in {"time", "divider", "numericDate", "battery", "alarms", "label"} | ACTIVITY_SOURCES:
+        if set(payload) not in ({"scene", "source"}, {"scene", "source", "options"}) or not isinstance(payload["source"], str) or payload["source"] not in CLOCK_SOURCES | DATE_SOURCES | {"battery", "alarms", "label"} | ACTIVITY_SOURCES:
             raise ValueError("Choose a scene and a supported element to add.")
         source = payload["source"]
         if "options" in payload:
             if source not in ACTIVITY_GROUPS:
                 raise ValueError("Icon and graph options belong to an activity data value.")
             return layout({"scene": add_activity(payload["scene"], source, payload["options"])})
-        edited = (add_activity(payload["scene"], source) if source in ACTIVITY_SOURCES else
-                  add_data_text(payload["scene"], source) if source in {"battery", "alarms", "label"} else
-                  {"divider": add_divider, "time": add_time, "numericDate": add_date}[source](payload["scene"]))
+        if source in ACTIVITY_SOURCES:
+            edited = add_activity(payload["scene"], source)
+        elif source in {"battery", "alarms", "label"}:
+            edited = add_data_text(payload["scene"], source)
+        elif source == "divider":
+            edited = add_divider(payload["scene"])
+        elif source in DATE_SOURCES:
+            edited = add_date(payload["scene"])
+            if source != "numericDate":
+                edited = set_date_source(edited, edited["elements"][-1]["id"], source)
+        else:
+            edited = add_time(payload["scene"])
+            if source != "time":
+                edited = set_clock_source(edited, edited["elements"][-1]["id"], source)
         return layout({"scene": edited})
     if operation == "label-text":
         from designer_typography import set_label_text

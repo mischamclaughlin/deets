@@ -128,7 +128,7 @@ class ClockModeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot fit"):
             typography.add_time(scene)
         with self.assertRaisesRegex(ValueError, "supported element"):
-            bridge.dispatch({"operation": "add", "payload": {"scene": self.scene(), "source": "date"}})
+            bridge.dispatch({"operation": "add", "payload": {"scene": self.scene(), "source": "unsupported"}})
 
     def test_divider_inherits_watch_font_and_exports_a_literal_colon(self):
         scene = legacy_divider(self.scene(), "clock")

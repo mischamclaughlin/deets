@@ -1,3 +1,4 @@
+import { elementName } from "./element-name.ts";
 import type { PreviewScenario } from "./preview-scenario.ts";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { devices, type Scene, type SceneElement, type WatchMapping } from "../../shared/scene.ts";
@@ -272,7 +273,7 @@ export function WatchCanvas({ scene, layout, night = false, previewScenario, sho
                         const tickHitInset = ring?.ringTicksStretchToCircumference ? (4 + clearance) / 2
                             : (ring?.ringTicksToCircumference ? clearance : 4) + 7.5;
                         const tickHitWidth = ring?.ringTicksStretchToCircumference ? Math.max(24, clearance) : 24;
-                        const label = `${area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
+                        const label = `${ring?.source === "customIcon" ? elementName(scene, area.id) : area.label} · ${position.x},${position.y} · ${area.width}×${area.height} px`;
                         return (
                             <g
                                 key={area.id}

@@ -66,6 +66,10 @@ without user direction.
 
 - The element Library shares category order/labels in `library-catalogue.ts`:
   Clock & date, Health & recovery, Activity, Weather & sun, Device & text.
+  The sidebar exposes every supported value/time/date variant, icon and graph,
+  grouped under Values, Icons and Graphs. Browse keeps related parts together.
+  `element-name.ts` owns visible names everywhere, including imported icon names
+  and numbered duplicates; internal IDs must not appear as artwork names.
   `LibrarySection.tsx` provides keyboard-accessible collapsible groups and stores
   expansion as browser viewing preferences, outside design history/export.
   Health includes heart rate, Body Battery, stress and recovery time; weather

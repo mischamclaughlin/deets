@@ -7,6 +7,8 @@
 .library-section > summary:focus-visible { outline: 2px solid var(--rp-pine); outline-offset: -2px; }
 .library-section-count { margin-left: auto; color: var(--rp-subtle); font-size: 10px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .library-section-sidebar[open] { padding-bottom: 8px; }
+.library-part-group h3 { margin: 10px 7px 4px; color: var(--rp-subtle); font-size: 9px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+.library-part-group + .library-part-group { margin-top: 9px; }
 .library-section-picker { margin-bottom: 12px; }
 .library-section-picker > summary { margin-bottom: 8px; font-size: 12px; }
 @media (hover: hover) { .library-section > summary:hover { background: var(--rp-overlay); } }

@@ -148,7 +148,7 @@ export const convertWatchDevice = (scene: Scene, device: Device, signal?: AbortS
 export const fitElementBox = (scene: Scene, elementId: string, signal?: AbortSignal) =>
     post<WatchMapping>("fit-box", { scene, elementId }, signal);
 
-export const addElement = (scene: Scene, source: ActivitySource | "time" | "numericDate" | "divider" | "battery" | "alarms" | "label", signal?: AbortSignal, options?: ActivityAddOptions) =>
+export const addElement = (scene: Scene, source: ActivitySource | ClockSource | DateSource | "divider" | "battery" | "alarms" | "label", signal?: AbortSignal, options?: ActivityAddOptions) =>
     post<WatchMapping>("add", { scene, source, ...(options ? { options } : {}) }, signal);
 
 export const setActivityGraph = (scene: Scene, elementId: string, enabled: boolean, signal?: AbortSignal) =>

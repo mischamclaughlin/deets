@@ -126,7 +126,7 @@ class DateTests(unittest.TestCase):
                         {"scene": scene, "elementId": "date", "source": "date", "extra": 1}):
             with self.assertRaisesRegex(ValueError, "date display"):
                 bridge.dispatch({"operation": "date", "payload": payload})
-        for source in ("date", "weekday", None):
+        for source in ("unsupported", "", None):
             with self.assertRaisesRegex(ValueError, "supported element"):
                 bridge.dispatch({"operation": "add", "payload": {"scene": scene, "source": source}})
         full = self.scene()

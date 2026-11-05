@@ -1,6 +1,6 @@
-import type { ActivitySource } from "../../shared/scene.ts";
+import type { ActivitySource, ClockSource, DateSource } from "../../shared/scene.ts";
 
-export type LibrarySource = ActivitySource | "time" | "numericDate" | "divider" | "battery" | "alarms" | "label";
+export type LibrarySource = ActivitySource | ClockSource | DateSource | "divider" | "battery" | "alarms" | "label";
 export type LibraryCategory = "all" | "clock" | "health" | "activity" | "weather" | "device";
 /** Shared order and labels for the sidebar and Browse dialogue. */
 export const libraryCategories = [
@@ -20,6 +20,16 @@ export interface LibraryEntry {
 
 export const libraryEntries: readonly LibraryEntry[] = [
     { source: "time", label: "Time", detail: "Hours & minutes", category: "clock", keywords: "clock hours minutes" },
+    { source: "timeSeconds", label: "Time with seconds", detail: "Hours, minutes & seconds", category: "clock", keywords: "clock hh mm ss" },
+    { source: "hours", label: "Hours", detail: "Hours only", category: "clock", keywords: "clock hh" },
+    { source: "minutes", label: "Minutes", detail: "Minutes only", category: "clock", keywords: "clock mm" },
+    { source: "seconds", label: "Seconds", detail: "Seconds only", category: "clock", keywords: "clock ss" },
+    { source: "secondsRing", label: "Seconds ring", detail: "Outer seconds ticks", category: "clock", keywords: "clock seconds circle ring ticks" },
+    { source: "date", label: "Full date", detail: "Weekday, day, month & year", category: "clock", keywords: "calendar full date" },
+    { source: "weekday", label: "Weekday", detail: "Day of the week", category: "clock", keywords: "calendar day monday" },
+    { source: "day", label: "Day of month", detail: "Day number", category: "clock", keywords: "calendar date dd" },
+    { source: "month", label: "Month", detail: "Month name", category: "clock", keywords: "calendar date month" },
+    { source: "year", label: "Year", detail: "Four-digit year", category: "clock", keywords: "calendar date year yyyy" },
     { source: "numericDate", label: "Date", detail: "Day, month & year", category: "clock", keywords: "calendar weekday" },
     { source: "divider", label: "Divider", detail: "An independent separator", category: "clock", keywords: "colon punctuation separator" },
     { source: "battery", label: "Battery", detail: "Remaining battery percentage", category: "device", keywords: "power charge percentage device" },
@@ -80,8 +90,15 @@ export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource;
     sunriseSunset: { icon: "sunriseSunsetIcon", graph: "solarTimeline", graphLabel: "Daylight graph" },
 };
 
-/** Present data first; its icon and graph are choices made when adding it. */
-export const libraryItems = libraryEntries.filter((entry) => (entry.category === "clock" || entry.category === "device") || activityParts[entry.source]);
+/** Browse groups related choices; the sidebar exposes every supported part directly. */
+export const libraryItems = libraryEntries.filter((entry) => ["time", "numericDate", "divider", "battery", "alarms", "label"].includes(entry.source) || activityParts[entry.source]);
+export const sidebarEntries = libraryEntries;
+export const sidebarKinds = ["Values", "Icons", "Graphs"] as const;
+export function sidebarKind(source: LibrarySource): typeof sidebarKinds[number] {
+    if (Object.values(activityParts).some((parts) => parts.icon === source)) return "Icons";
+    if (source === "secondsRing" || Object.values(activityParts).some((parts) => parts.graph === source)) return "Graphs";
+    return "Values";
+}
 
 export function matchingEntries(category: LibraryCategory, query: string): readonly LibraryEntry[] {
     const terms = query.trim().toLocaleLowerCase("en-GB").split(/[^\p{L}\p{N}]+/u).filter(Boolean);

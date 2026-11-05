@@ -364,7 +364,10 @@ files and Garmin exports, so the original file is not needed to reopen a design.
 ### Health, recovery and weather data
 
 The Library groups its choices into collapsible Clock & date, Health & recovery,
-Activity, Weather & sun, and Device & text sections. Expansion preferences stay
+Activity, Weather & sun, and Device & text sections. Each sidebar section exposes
+all supported Values, Icons and Graphs, including individual time/date variants.
+Imported icons use their file name without its extension in layers and the
+inspector; duplicate names receive numbers. Expansion preferences stay
 in this browser and do not affect saved designs or undo history. Browse uses the
 same groups and automatically reveals matching search results.
 
