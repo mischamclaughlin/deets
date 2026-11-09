@@ -10,7 +10,7 @@ FONT_GRAPHICS_BUDGET = 2 * 1024 * 1024
 
 
 def graphics_cost(pack, needed_codes):
-    """Conservative coverage-storage allowance within the targets' 3 MiB pool.
+    """Estimate coverage storage for the shared graphics budget.
 
     Reserve one byte per visible glyph pixel and fixed glyph overhead for the
     exported greyscale font coverage. This is a separate rejection guard from the

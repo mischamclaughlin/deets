@@ -15,7 +15,7 @@ from pathlib import Path
 from designer_charts import SAMPLES as CHART_SAMPLES
 
 ROOT = Path(__file__).resolve().parent.parent
-DEVICES = {"epix2pro42mm": 390, "epix2pro47mm": 416, "epix2pro51mm": 454}
+DEVICES = {"epix2pro42mm": 390, "epix2pro47mm": 416, "epix2pro51mm": 454, "fr165m": 390}
 FONT_FILES = {
     "widget": "jetbrains_mono_widget",
     "date": "jetbrains_mono_date",
@@ -111,13 +111,15 @@ def _png_rgba(width, height, pixels):
 
 
 def _font_paths(device):
-    directory = ROOT / f"resources-{device}" / "fonts"
+    # These are Deets' bundled bitmap fonts. The two 390 px watches share them.
+    font_device = "epix2pro42mm" if device == "fr165m" else device
+    directory = ROOT / f"resources-{font_device}" / "fonts"
     return [(directory / f"{stem}.fnt", directory / f"{stem}_0.png") for stem in FONT_FILES.values()]
 
 
 def font_pack(device):
     if device not in DEVICES:
-        raise ValueError("Choose a supported epix Pro device.")
+        raise ValueError("Choose a supported watch model.")
     paths = _font_paths(device)
     signature = tuple((path.stat().st_mtime_ns, path.stat().st_size) for pair in paths for path in pair)
     return _font_pack_cached(device, signature)
@@ -232,7 +234,7 @@ def validate_scene(payload):
         raise ValueError("Give the design a name from 1 to 60 characters.")
     device = payload["device"]
     if not isinstance(device, str) or device not in DEVICES:
-        raise ValueError("Choose a supported epix Pro device.")
+        raise ValueError("Choose a supported watch model.")
     size = DEVICES[device]
     edge_inset = (_integer(payload["edgeInset"], "Edge inset", 0, size // 2 - 1)
                   if "edgeInset" in payload else None)

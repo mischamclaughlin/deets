@@ -190,9 +190,10 @@ readings, and a weather condition, then **Apply preview**. **Reset** returns to 
 standard samples. These viewing values stay outside the saved document and undo
 history; normal Garmin exports always use live watch data.
 
-In **Canvas → Target watch**, choose the 42, 47 or 51 mm Epix Pro. Conversion
-rebuilds fonts for that watch and repositions element centres proportionally
-within the usable circle. Typography size and fixed clipping boxes retain their
+In **Canvas → Target watch**, choose the 42, 47 or 51 mm Epix Pro or the
+Forerunner 165 Music (390 × 390 px). Conversion rebuilds fonts for that watch
+and repositions element centres proportionally within the usable circle.
+Typography size and fixed clipping boxes retain their
 native-pixel dimensions; seconds rings follow the physical screen size. Grid
 positions retain their normalised coordinates and spacing retains its native
 pixel value. Conversion is one undoable document change. If any element does not

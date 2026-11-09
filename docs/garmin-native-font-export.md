@@ -38,7 +38,8 @@ cached glyph positions, proof rectangles, ring tables and scene elements. It doe
 not charge duplicate font data for different colours.
 
 A separate 2 MiB font-coverage allowance reserves one byte per visible glyph pixel
-plus per-glyph overhead within the targets' declared 3 MiB graphics pool. Font
+plus per-glyph overhead. The declared graphics pool is 2 MiB on the Forerunner
+165 Music and 3 MiB on the Epix Pro models. Font
 styles are preloaded, so all used styles count towards that allowance. These are
 conservative rejection estimates, not measured allocation peaks or hardware limits.
 

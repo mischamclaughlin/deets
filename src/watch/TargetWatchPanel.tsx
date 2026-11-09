@@ -8,6 +8,7 @@ const watchNames: Record<Device, string> = {
     epix2pro42mm: 'Epix Pro · 42 mm',
     epix2pro47mm: 'Epix Pro · 47 mm',
     epix2pro51mm: 'Epix Pro · 51 mm',
+    fr165m: 'Forerunner 165 Music',
 };
 
 export function TargetWatchPanel({ document, onChange }: {

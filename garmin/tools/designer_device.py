@@ -9,7 +9,7 @@ def convert_device(payload, device):
                                      element_settings, generate, _fit_clock)
     scene = validate_scene(payload)
     if not isinstance(device, str) or device not in DEVICES:
-        raise ValueError("Choose a supported epix Pro watch.")
+        raise ValueError("Choose a supported watch model.")
     if device == scene["device"]:
         return scene
     edited = copy.deepcopy(scene)

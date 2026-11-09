@@ -686,11 +686,14 @@ test("preview scenarios are bounded, preserve origin checks and cannot enter exp
 test('target watch conversion validates complete scenes and preserves API boundaries', async () => {
     const headers = { 'content-type': 'application/json' };
     const payload = { scene, device: 'epix2pro42mm' };
-    const response = await requestApi('/api/garmin/device', [Buffer.from(JSON.stringify(payload))], headers);
-    assert.equal(response.status, 200);
-    const converted = response.body.scene as typeof scene;
-    assert.equal(converted.device, 'epix2pro42mm');
-    assert.equal(converted.elements[0].id, scene.elements[0].id);
+    for (const device of ['epix2pro42mm', 'fr165m']) {
+        const response = await requestApi('/api/garmin/device', [Buffer.from(JSON.stringify({ ...payload, device }))], headers);
+        assert.equal(response.status, 200);
+        assert.equal(response.body.size, 390);
+        const converted = response.body.scene as typeof scene;
+        assert.equal(converted.device, device);
+        assert.equal(converted.elements[0].id, scene.elements[0].id);
+    }
     for (const invalid of [{ scene }, { ...payload, device: '__proto__' }, { ...payload, preview: {} }]) {
         assert.equal((await requestApi('/api/garmin/device', [Buffer.from(JSON.stringify(invalid))], headers)).status, 400);
     }

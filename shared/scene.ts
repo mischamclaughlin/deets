@@ -2,6 +2,7 @@ export const devices = {
     epix2pro42mm: 390,
     epix2pro47mm: 416,
     epix2pro51mm: 454,
+    fr165m: 390,
 } as const;
 export type Device = keyof typeof devices;
 export type FontKey = "widget" | "date" | "time" | "numeric" | "tall" | `generated:${string}`;

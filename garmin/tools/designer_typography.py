@@ -211,7 +211,7 @@ def _native_cells(path, codes, height):
 def generate(device, value, *, divider=False, date=False, data=False, label=False):
     from designer_model import DEVICES, _png_rgba
     if device not in DEVICES:
-        raise ValueError("Choose a supported epix Pro device.")
+        raise ValueError("Choose a supported watch model.")
     value = settings(value)
     codes = LABEL_CODES if label else DATA_CODES if data else DATE_CODES if date else DIVIDER_CODES if divider else CODES
     path, source_hash = _source_font(value["family"])

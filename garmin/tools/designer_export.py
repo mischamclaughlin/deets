@@ -329,7 +329,10 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     legacy_drawables = project / "resources/drawables/drawables.xml"
     if legacy_drawables.exists():
         launcher = ET.Element("drawables")
-        ET.SubElement(launcher, "bitmap", {"id": "LauncherIcon", "filename": "launcher_icon.png"})
+        bitmap = ET.SubElement(launcher, "bitmap", {"id": "LauncherIcon", "filename": "launcher_icon.png"})
+        if scene["device"] == "fr165m":
+            bitmap.set("scaleX", "54")
+            bitmap.set("scaleY", "54")
         ET.ElementTree(launcher).write(legacy_drawables, encoding="utf-8", xml_declaration=True)
     legacy_strings = project / "resources/strings/strings.xml"
     if legacy_strings.exists():
