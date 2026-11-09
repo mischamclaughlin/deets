@@ -31,6 +31,8 @@
 .watch-device-artwork { position: absolute; left: 50%; top: 50%; display: block; width: var(--artwork-width); height: auto; opacity: 0; transform: translate(-50%, -50%) scale(0.96); pointer-events: none; transition: opacity 320ms ease, transform 320ms ease; }
 .watch-stage .watch-device-frame .watch { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); transition: width 320ms ease, left 320ms ease, top 320ms ease, box-shadow 320ms ease; }
 .watch-device-frame[data-active="true"] .watch-device-artwork { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* Approximate Whitestone from the SDK's mint artwork while keeping the bezel dark. */
+.watch-device-frame[data-device="fr165m"] .watch-device-artwork { filter: grayscale(1) brightness(1.25); }
 .watch-stage .watch-device-frame[data-active="true"] .watch { left: calc(50% + var(--artwork-width) * var(--screen-offset-x)); top: calc(50% + var(--artwork-width) * var(--screen-offset-y)); width: calc(var(--artwork-width) * var(--screen-ratio)); box-shadow: none; }
 .watch-stage::before { transition: opacity 320ms ease; }
 .watch-device-message { position: absolute; bottom: 0; inset-inline: 0; text-align: center; color: #bdd3c6; font-size: 11px; }
