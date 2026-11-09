@@ -13,6 +13,7 @@
 }
 * { box-sizing: border-box; }
 html, body, #root { min-width: 280px; min-height: 100%; margin: 0; }
+html { overscroll-behavior-y: none; }
 #root { min-height: 100dvh; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
