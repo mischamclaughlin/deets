@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
+import type { Device } from "../../shared/scene.ts";
+import { applyForerunnerWhitestone } from "./forerunner-whitestone.ts";
 import { removePreviewBackground } from "./preview-background.ts";
 
-export function DeviceArtwork({ image, onReady }: { image: string; onReady: (image: string) => void }) {
+export function DeviceArtwork({ device, image, onReady }: { device: Device; image: string; onReady: (image: string) => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         let cancelled = false;
@@ -16,11 +18,12 @@ export function DeviceArtwork({ image, onReady }: { image: string; onReady: (ima
             context.drawImage(source, 0, 0);
             const artwork = context.getImageData(0, 0, canvas.width, canvas.height);
             removePreviewBackground(artwork.data, canvas.width, canvas.height);
+            if (device === "fr165m") applyForerunnerWhitestone(artwork.data, canvas.width, canvas.height);
             context.putImageData(artwork, 0, 0);
             onReady(image);
         };
         source.src = image;
         return () => { cancelled = true; };
-    }, [image, onReady]);
+    }, [device, image, onReady]);
     return <canvas ref={canvasRef} className="watch-device-artwork" aria-hidden="true" />;
 }

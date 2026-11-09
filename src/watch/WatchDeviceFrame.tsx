@@ -32,8 +32,8 @@ export function WatchDeviceFrame({ device, active, children }: { device: Device;
         "--screen-ratio": frame.screen.width / frame.width,
     } as CSSProperties : undefined;
 
-    return <div className="watch-device-frame" data-device={device} data-active={active && ready} style={style}>
-        {frame && <DeviceArtwork key={frame.image} image={frame.image} onReady={onReady} />}
+    return <div className="watch-device-frame" data-active={active && ready} style={style}>
+        {frame && <DeviceArtwork key={frame.image} device={device} image={frame.image} onReady={onReady} />}
         {children}
         {active && !ready && <span className="watch-device-message" role="status">
             {current?.error ?? "Loading watch casing…"}
