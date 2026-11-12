@@ -13,6 +13,7 @@ import zlib
 from pathlib import Path
 
 from designer_charts import SAMPLES as CHART_SAMPLES
+from designer_metrics import CATEGORY_LABELS, METRICS
 
 ROOT = Path(__file__).resolve().parent.parent
 DEVICES = {"epix2pro42mm": 390, "epix2pro47mm": 416, "epix2pro51mm": 454, "fr165m": 390}
@@ -96,6 +97,15 @@ CATALOG = [
     _source("solarTimeline", "Solar timeline", "Charts", [0.30, 0.73, 0.5], "solar", 13),
     _source("secondsRing", "Seconds ring", "Charts", 23, "ring"),
 ]
+for _metric in METRICS:
+    _category = CATEGORY_LABELS[_metric["category"]]
+    CATALOG.append(_source(
+        _metric["source"], _metric["label"], _category, _metric["sample"],
+        complication=_metric.get("complication"),
+    ))
+    CATALOG.append(_source(
+        _metric["source"] + "Icon", _metric["label"] + " icon", _category, 0, "icon",
+    ))
 for _entry in CATALOG:
     if _entry["id"] in CHART_SAMPLES:
         _entry["sample"] = copy.deepcopy(CHART_SAMPLES[_entry["id"]])

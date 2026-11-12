@@ -8,7 +8,7 @@ import { activityLayout, arrangeActivity } from "../src/watch/activity-layout.ts
 import { activityName, elementName } from "../src/watch/element-name.ts";
 import { linkedElementIds, moveSceneElement } from "../src/watch/snapping.ts";
 
-const weather: LibrarySource[] = ["rainChance", "wind", "temperature", "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset"];
+const weather: LibrarySource[] = ["rainChance", "wind", "temperature", "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset", "humidity", "feelsLike", "uvIndex", "cloudCover"];
 
 test("weather library exposes the parent's data/icon/band choices with useful search", () => {
     assert.deepEqual(libraryItems.filter((entry) => entry.category === "weather").map((entry) => entry.source), weather);

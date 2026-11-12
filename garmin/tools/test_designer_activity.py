@@ -57,7 +57,8 @@ class ActivityTests(unittest.TestCase):
         self.assertEqual({path.name for path in icon_asset_paths()}, {
             'footsteps.png', 'run.png', 'stairs.png', 'heart.png', 'temperature.png', 'temperature-sun.png',
             'sunrise.png', 'sunset.png', 'sun.png', 'cloud.png', 'cloud-rain.png', 'cloud-storm.png',
-            'snowflake.png', 'wind.png', 'mist.png', 'body-battery.png', 'stress.png', 'recovery-time.png'})
+            'snowflake.png', 'wind.png', 'mist.png', 'body-battery.png', 'stress.png', 'recovery-time.png',
+            'calories.png', 'cycling.png', 'notifications.png', 'altitude.png', 'humidity.png'})
         for source, name in ICON_MASKS.items():
             data = (ICON_DIRECTORY / f'{name}.png').read_bytes()
             width, height = struct.unpack('>II', data[16:24])

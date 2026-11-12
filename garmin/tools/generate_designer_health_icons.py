@@ -6,8 +6,8 @@ import xml.etree.ElementTree as ET
 DIRECTORY = Path(__file__).resolve().parent.parent / 'resources/drawables/icons'
 
 
-def generate():
-    for name in ('body-battery', 'stress', 'recovery-time'):
+def generate(names=('body-battery', 'stress', 'recovery-time')):
+    for name in names:
         root = ET.parse(DIRECTORY / f'{name}.svg').getroot()
         arguments = ['magick', '-size', '192x192', 'xc:none']
         for path in root:

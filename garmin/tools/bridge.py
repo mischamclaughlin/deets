@@ -15,6 +15,7 @@ import designer_model as model
 from designer_charts import chart_ops, device_colour, ring_tick_radius, ring_tick_inner_radius, ring_font, ring_asset_key
 from designer_export import prepare_scene_project
 from designer_document import write_editable_document
+import designer_metrics
 
 ROOT = Path(__file__).resolve().parent.parent
 ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
@@ -23,8 +24,15 @@ ET.register_namespace("iq", "http://www.garmin.com/xml/connectiq")
 def mapping(scene):
     digest = hashlib.sha256(b"deets-native-pixels-v1")
     digest.update(json.dumps(scene, sort_keys=True).encode())
-    for filename in ("designer_model.py", "designer_export.py", "designer_export_icons.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py", "designer_health_weather.py"):
+    for filename in (
+        "designer_model.py", "designer_export.py", "designer_export_icons.py",
+        "designer_charts.py", "designer_typography.py", "designer_seconds.py",
+        "designer_actions.py", "designer_colours.py", "designer_fonts.py",
+        "designer_activity.py", "designer_weather.py", "designer_health_weather.py",
+        "designer_metrics.py",
+    ):
         digest.update((ROOT / "tools" / filename).read_bytes())
+    digest.update(designer_metrics.METRICS_PATH.read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():
         digest.update(path.name.encode())

@@ -65,7 +65,8 @@ without user direction.
   Keep units visible and use the shared `SliderValue` control consistently.
 
 - The element Library shares category order/labels in `library-catalogue.ts`:
-  Clock & date, Health & recovery, Activity, Weather & sun, Device & text.
+  Clock & date, Health & recovery, Activity, Training, Outdoors,
+  Weather & sun, Device & text.
   The sidebar exposes every supported value/time/date variant, icon and graph,
   grouped under Values, Icons and Graphs. Browse keeps related parts together.
   `element-name.ts` owns visible names everywhere, including imported icon names
@@ -73,8 +74,13 @@ without user direction.
   `LibrarySection.tsx` provides keyboard-accessible collapsible groups and stores
   expansion as browser viewing preferences, outside design history/export.
   Health includes heart rate, Body Battery, stress and recovery time; weather
-  additionally includes rain chance and wind speed/direction. Keep native
-  provider values, fallbacks, subscriptions and glyph coverage synchronised.
+  additionally includes rain chance and wind speed/direction. Expanded health,
+  activity, training, outdoor, device and weather readings share metadata in
+  `shared/data-metrics.json`, consumed by `shared/data-metrics.ts` and native
+  Python validation/export. Keep samples, labels, icon sources and live-format
+  handling synchronised; preserve unavailable readings and unit conversions.
+  Keep native provider values, fallbacks, subscriptions and glyph coverage
+  synchronised.
 - Keep Grid settings compact: paired horizontal/vertical additions with their
   curved toggles, followed by ring count, starting edge and spacing. Adding a
   guide must preserve existing guides and select the new line.

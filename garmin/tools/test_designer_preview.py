@@ -60,16 +60,17 @@ class PreviewTests(unittest.TestCase):
 
     def test_all_activity_graphs_render_large_and_missing_without_mutating_the_document(self):
         from designer_activity import ACTIVITY_GROUPS
-        scene = self.scene()
+        # Exercise each complete group without exceeding the document's 40-layer limit.
         for source in ACTIVITY_GROUPS:
-            scene = add_activity(scene, source, dict(icon=True, graph=ACTIVITY_GROUPS[source][1] is not None))
-        before = copy.deepcopy(scene)
-        for readings in ('large', 'missing'):
-            for night in (False, True):
-                rendered = bridge.layout(dict(scene=scene, night=night, preview=dict(DEFAULT, readings=readings)))
-                self.assertEqual(rendered['scene'], before)
-                self.assertTrue(rendered['ops'])
-        self.assertEqual(scene, before)
+            with self.subTest(source=source):
+                scene = add_activity(self.scene(), source, dict(icon=True, graph=ACTIVITY_GROUPS[source][1] is not None))
+                before = copy.deepcopy(scene)
+                for readings in ('large', 'missing'):
+                    for night in (False, True):
+                        rendered = bridge.layout(dict(scene=scene, night=night, preview=dict(DEFAULT, readings=readings)))
+                        self.assertEqual(rendered['scene'], before)
+                        self.assertTrue(rendered['ops'])
+                self.assertEqual(scene, before)
 
     def test_preview_token_is_rejected_before_compilation(self):
         scene = self.scene()

@@ -1,3 +1,4 @@
+import { dataMetrics } from "../../shared/data-metrics.ts";
 import footsteps from "../../garmin/resources/drawables/icons/footsteps.svg";
 import stairs from "../../garmin/resources/drawables/icons/stairs.svg";
 import run from "../../garmin/resources/drawables/icons/run.svg";
@@ -13,11 +14,14 @@ import wind from "../../garmin/resources/drawables/icons/wind.svg";
 import { activityParts, sidebarKind, type LibrarySource } from "./library-catalogue.ts";
 import { isClockSource, isDateSource } from "../../shared/scene.ts";
 
+const localSymbols = import.meta.glob("../../garmin/resources/drawables/icons/*.svg", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+
 export function LibrarySymbol({ source }: { source: LibrarySource }) {
     const assets: Partial<Record<LibrarySource, string>> = { bodyBattery, stress, recoveryTime, rainChance, wind, steps: footsteps, weeklyWalk: footsteps, floors: stairs,
         weeklyRun: run, heartRate: heart, temperature, highLow: forecast, temperatureHigh: forecast, temperatureLow: forecast, sunriseSunset: sunrise };
     const parent = Object.entries(activityParts).find(([, parts]) => parts.icon === source)?.[0] as LibrarySource | undefined;
-    const asset = assets[parent ?? source];
+    const metric = dataMetrics.find((item) => item.source === (parent ?? source));
+    const asset = metric ? localSymbols[`../../garmin/resources/drawables/icons/${metric.icon}.svg`] : assets[parent ?? source];
     if (asset) return <img className="compact-library-symbol compact-library-image" src={asset} alt="" aria-hidden="true" />;
     return <svg className="compact-library-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {sidebarKind(source) === "Graphs" ? <><path d="M4 20h16M6 16v-4m6 4V5m6 11V9" /></>

@@ -6,6 +6,8 @@ from pathlib import Path
 import struct
 import subprocess
 
+from designer_metrics import METRICS, METRICS_BY_SOURCE
+
 # Original colour-ready Tabler assets from the parent Garmin watch face.
 # Walking deliberately uses the parent's footsteps symbol; it has no walk icon.
 ICON_MASKS = {"stepsIcon": "footsteps", "walkIcon": "footsteps", "runIcon": "run", "floorsIcon": "stairs", "heartIcon": "heart",
@@ -34,6 +36,8 @@ ACTIVITY_GROUPS = {
     "weeklyWalk": ("walkIcon", "walkWeek"),
     "weeklyRun": ("runIcon", "runWeek"),
 }
+ICON_MASKS.update({entry['source'] + 'Icon': entry['icon'] for entry in METRICS})
+ACTIVITY_GROUPS.update({entry['source']: (entry['source'] + 'Icon', None) for entry in METRICS})
 _NO_OPTIONS = object()
 GRAPH_SOURCES = {graph for _, graph in ACTIVITY_GROUPS.values() if graph is not None}
 ACTIVITY_SOURCES = {*ACTIVITY_GROUPS, *GRAPH_SOURCES, *ICON_MASKS}
@@ -152,6 +156,12 @@ def _new_activity_element(scene, source, identities):
         font = font_pack(scene["device"])["fonts"]["widget"]
         reference = "720 KM/H WSW" if source == "wind" else "96H 59M"
         width = max(width, text_ink_bounds(reference, {"source": source}, font)[2])
+    if source in METRICS_BY_SOURCE:
+        from designer_model import text_ink_bounds
+        font = font_pack(scene["device"])["fonts"]["widget"]
+        entry = METRICS_BY_SOURCE[source]
+        for sample in (entry["sample"], entry["largeSample"]):
+            width = max(width, text_ink_bounds(sample, {"source": source}, font)[2])
     if source in ICON_MASKS:
         data = (ICON_DIRECTORY / f"{ICON_MASKS[source]}.png").read_bytes()
         width, height, _ = _icon_mask(data)

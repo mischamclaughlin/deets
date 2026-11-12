@@ -1,12 +1,15 @@
+import { dataMetrics } from "../../shared/data-metrics.ts";
 import type { ActivitySource, ClockSource, DateSource } from "../../shared/scene.ts";
 
 export type LibrarySource = ActivitySource | ClockSource | DateSource | "divider" | "battery" | "alarms" | "label";
-export type LibraryCategory = "all" | "clock" | "health" | "activity" | "weather" | "device";
+export type LibraryCategory = "all" | "clock" | "health" | "activity" | "training" | "outdoors" | "weather" | "device";
 /** Shared order and labels for the sidebar and Browse dialogue. */
 export const libraryCategories = [
     { id: "clock", label: "Clock & date", initiallyOpen: true },
     { id: "health", label: "Health & recovery", initiallyOpen: true },
     { id: "activity", label: "Activity", initiallyOpen: false },
+    { id: "training", label: "Training", initiallyOpen: false },
+    { id: "outdoors", label: "Outdoors", initiallyOpen: false },
     { id: "weather", label: "Weather & sun", initiallyOpen: false },
     { id: "device", label: "Device & text", initiallyOpen: false },
 ] as const;
@@ -70,9 +73,14 @@ export const libraryEntries: readonly LibraryEntry[] = [
     { source: "sunriseSunset", label: "Sunrise / sunset", detail: "The next sunrise or sunset", category: "weather", keywords: "value sun sunrise sunset solar next event dawn dusk" },
     { source: "sunriseSunsetIcon", label: "Sunrise / sunset icon", detail: "Matches the next solar event", category: "weather", keywords: "symbol sun sunrise sunset solar dawn dusk" },
     { source: "solarTimeline", label: "Daylight graph", detail: "Daylight and the current time", category: "weather", keywords: "graph chart sun sunrise sunset solar daylight timeline noon" },
+    ...dataMetrics.flatMap((metric): LibraryEntry[] => [
+        { source: metric.source, label: metric.label, detail: metric.detail, category: metric.category, keywords: metric.keywords },
+        { source: `${metric.source}Icon`, label: `${metric.label} icon`, detail: `${metric.label} symbol`, category: metric.category, keywords: `${metric.keywords} icon symbol` },
+    ]),
 ];
 
 export const activityParts: Partial<Record<LibrarySource, { icon: LibrarySource; graph?: LibrarySource; graphLabel?: string }>> = {
+    ...Object.fromEntries(dataMetrics.map((metric) => [metric.source, { icon: `${metric.source}Icon` as LibrarySource }])),
     bodyBattery: { icon: "bodyBatteryIcon" },
     stress: { icon: "stressIcon" },
     recoveryTime: { icon: "recoveryTimeIcon" },

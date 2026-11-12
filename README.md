@@ -365,8 +365,9 @@ files and Garmin exports, so the original file is not needed to reopen a design.
 ### Health, recovery and weather data
 
 The Library groups its choices into collapsible Clock & date, Health & recovery,
-Activity, Weather & sun, and Device & text sections. Each sidebar section exposes
-all supported Values, Icons and Graphs, including individual time/date variants.
+Activity, Training, Outdoors, Weather & sun, and Device & text sections. Each sidebar
+section exposes all supported Values, Icons and Graphs, including individual
+time/date variants.
 Imported icons use their file name without its extension in layers and the
 inspector; duplicate names receive numbers. Expansion preferences stay
 in this browser and do not affect saved designs or undo history. Browse uses the
@@ -376,3 +377,17 @@ Body Battery, stress and recovery time can be added with their own icons. Rain
 chance and wind speed/direction are under Weather & sun. Wind uses km/h or mph
 according to the watch's distance units. Missing readings display `--`.
 The canvas uses sample values; Garmin exports use available live watch data.
+
+### More live readings
+
+The shared data catalogue adds calories, intensity minutes, weekly cycling,
+running/cycling VO₂ max, training status, four race predictions, blood oxygen,
+respiration, altitude, sea-level pressure, notification count, next calendar-event
+time, humidity, feels-like temperature, UV index and cloud cover. Training and
+Outdoors have their own collapsible sidebar groups. Every reading has an
+independent value and icon, and is included in Browse search.
+
+Values depend on available watch/firmware data. Missing readings show `--`.
+Exports respect metric/imperial distance and elevation settings and Celsius or
+Fahrenheit; pressure is explicitly labelled hPa. Calendar and training-status
+text is bounded to fit supported native glyphs. No new app permissions are added.

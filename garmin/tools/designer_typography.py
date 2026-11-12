@@ -10,6 +10,8 @@ import subprocess
 import tempfile
 import struct
 
+from designer_metrics import METRICS_BY_SOURCE
+
 INCLUDED_FONTS = {
     "time": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMono-Regular.ttf",
     "widget": Path(__file__).resolve().parent.parent / "fonts/JetBrainsMonoNL-Thin.ttf",
@@ -24,6 +26,7 @@ DATE_SOURCES = {"date", "numericDate", "weekday", "day", "month", "year"}
 CLOCK_SOURCES = {"time", "timeSeconds", "hours", "minutes", "divider", "seconds", "secondsRing"}
 DATA_SOURCES = {"heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature",
                 "highLow", "temperatureHigh", "temperatureLow", "sunriseSunset", "battery", "alarms", "label", "bodyBattery", "stress", "recoveryTime", "rainChance", "wind"}
+DATA_SOURCES.update(METRICS_BY_SOURCE)
 TEXT_SOURCES = CLOCK_SOURCES | DATE_SOURCES | DATA_SOURCES
 DATA_CODES = "0123456789-./:%?°ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 LABEL_CODES = "".join(chr(code) for code in range(33, 127)) + "°"

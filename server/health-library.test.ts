@@ -8,9 +8,9 @@ import { elementName } from "../src/watch/element-name.ts";
 import { linkedElementIds } from "../src/watch/snapping.ts";
 
 test("library categories group each choice once and health searches include recovery and energy", () => {
-    assert.deepEqual(libraryCategories.map((group) => group.id), ["clock", "health", "activity", "weather", "device"]);
+    assert.deepEqual(libraryCategories.map((group) => group.id), ["clock", "health", "activity", "training", "outdoors", "weather", "device"]);
     assert.deepEqual(libraryItems.filter((entry) => entry.category === "health").map((entry) => entry.source),
-        ["bodyBattery", "stress", "recoveryTime", "heartRate"]);
+        ["bodyBattery", "stress", "recoveryTime", "heartRate", "pulseOx", "respirationRate"]);
     for (const [query, source] of [["energy", "bodyBattery"], ["stress", "stress"], ["rest", "recoveryTime"]])
         assert.deepEqual(matchingEntries("health", query).map((entry) => entry.source), [source]);
     assert.deepEqual(matchingEntries("weather", "wind direction").map((entry) => entry.source), ["wind"]);

@@ -3,6 +3,8 @@ import copy
 import datetime
 import re
 
+from designer_metrics import METRICS
+
 
 def scenario_values(scenario, catalogue):
     if not isinstance(scenario, dict) or set(scenario) != {'time', 'date', 'readings', 'weather'}:
@@ -48,6 +50,13 @@ def scenario_values(scenario, catalogue):
         for source in ('temperature', 'highLow', 'temperatureHigh', 'temperatureLow', 'rainChance', 'wind'):
             values[source] = '--'
         values['temperatureZones'] = None
+    for entry in METRICS:
+        if scenario['readings'] == 'missing' or (
+            scenario['weather'] == 'missing' and 'weatherField' in entry
+        ):
+            values[entry['source']] = '--'
+        elif scenario['readings'] == 'large':
+            values[entry['source']] = entry['largeSample']
     return values
 
 

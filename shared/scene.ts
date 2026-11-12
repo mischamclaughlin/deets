@@ -1,3 +1,5 @@
+import { isAdditionalDataSource, type AdditionalDataSource } from "./data-metrics.ts";
+
 export const devices = {
     epix2pro42mm: 390,
     epix2pro47mm: 416,
@@ -20,12 +22,13 @@ export const isEditableTextSource = (source: string): boolean =>
     isClockSource(source) || isDateSource(source) || source === "divider" || isDataTextSource(source);
 export const isDataTextSource = (source: string): boolean =>
     ["heartRate", "steps", "weeklyWalk", "floors", "weeklyRun", "temperature", "highLow",
-        "temperatureHigh", "temperatureLow", "sunriseSunset", "bodyBattery", "stress", "recoveryTime", "rainChance", "wind", "battery", "alarms", "label"].includes(source);
+        "temperatureHigh", "temperatureLow", "sunriseSunset", "bodyBattery", "stress", "recoveryTime", "rainChance", "wind", "battery", "alarms", "label"].includes(source) || isAdditionalDataSource(source);
 export type ActivitySource = "heartRate" | "heartIcon" | "heartZones" | "floors" | "floorsIcon" | "floorsWeek" | "steps" | "weeklyWalk" | "weeklyRun" | "stepsIcon" | "walkIcon" | "runIcon" | "stepsWeek" | "walkWeek" | "runWeek"
     | "temperature" | "temperatureIcon" | "highLow" | "temperatureHigh" | "temperatureLow" | "highLowIcon"
     | "sunriseSunset" | "sunriseSunsetIcon" | "temperatureZones" | "solarTimeline"
     | "bodyBattery" | "bodyBatteryIcon" | "stress" | "stressIcon" | "recoveryTime" | "recoveryTimeIcon"
-    | "rainChance" | "rainChanceIcon" | "wind" | "windIcon";
+    | "rainChance" | "rainChanceIcon" | "wind" | "windIcon"
+    | AdditionalDataSource | `${AdditionalDataSource}Icon`;
 export interface ActivityAddOptions { value?: boolean; icon?: boolean; graph?: boolean; }
 export type DividerSymbol = ":" | "." | "-" | "/" | "|";
 export interface Typography {

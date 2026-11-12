@@ -15,6 +15,11 @@ from designer_charts import chart_ops, ring_font, ring_signature, device_colour
 from designer_fonts import write_fonts, graphics_cost, FONT_GRAPHICS_BUDGET
 from designer_export_icons import icon_font, icon_signature
 from designer_colours import zone_colours
+import designer_metrics
+from designer_metrics import (
+    FORMATTER_SOURCE, METRIC_CODES, METRICS_BY_SOURCE, TYPE_METRICS,
+    provider_cases, provider_extension, text_cases,
+)
 
 
 TYPE_SOURCES = {
@@ -26,6 +31,7 @@ TYPE_SOURCES = {
     "heartZones": 18, "temperatureZones": 38, "solarTimeline": 13,
     "temperatureIcon": 38, "sunriseSunsetIcon": 13,
 }
+TYPE_SOURCES.update(TYPE_METRICS)
 
 
 def _renderer_fingerprint(scene):
@@ -34,8 +40,15 @@ def _renderer_fingerprint(scene):
     used_fonts = sorted({element["font"] for element in scene["elements"]
                          if _catalogue()[element["source"]]["kind"] == "text"})
     digest = hashlib.sha256()
-    for filename in ("designer_export.py", "designer_export_icons.py", "designer_model.py", "designer_charts.py", "designer_typography.py", "designer_seconds.py", "designer_actions.py", "designer_colours.py", "designer_fonts.py", "designer_activity.py", "designer_weather.py", "designer_health_weather.py"):
+    for filename in (
+        "designer_export.py", "designer_export_icons.py", "designer_model.py",
+        "designer_charts.py", "designer_typography.py", "designer_seconds.py",
+        "designer_actions.py", "designer_colours.py", "designer_fonts.py",
+        "designer_activity.py", "designer_weather.py", "designer_health_weather.py",
+        "designer_metrics.py",
+    ):
         digest.update((Path(__file__).parent / filename).read_bytes())
+    digest.update(designer_metrics.METRICS_PATH.read_bytes())
     from designer_activity import icon_asset_paths
     for path in icon_asset_paths():
         digest.update(path.name.encode())
@@ -100,6 +113,8 @@ def _element_codes(element, catalogue, proof):
         text = element.get("text", "")
     elif proof:
         text = str(catalogue[source].get("sample", "--"))
+    elif source in METRICS_BY_SOURCE:
+        text = METRIC_CODES
     elif source in {"hours", "minutes", "seconds", "day", "year"}:
         text = "0123456789"
     elif source in {"time", "timeSeconds"}:
@@ -213,6 +228,9 @@ def _provider_patch(project, types, widget_types):
 
 """
     from designer_health_weather import PROVIDER_EXTENSION, HEALTH_FORMAT_CASES
+    HEALTH_FORMAT_CASES += provider_cases()
+    PROVIDER_EXTENSION += provider_extension()
+    (project / "source/DesignerMetricFormatting.mc").write_text(FORMATTER_SOURCE)
     format_marker = "        switch (type) {\n            case Complications.COMPLICATION_TYPE_CURRENT_TEMPERATURE:"
     if HEALTH_FORMAT_CASES not in code:
         if format_marker not in code:
@@ -315,7 +333,10 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
     _provider_patch(project, required_types, widget_types)
     # Unreferenced legacy classes still consume Connect IQ VM memory. Keep only
     # the runtime modules required by this generated scene, in the temporary copy.
-    retained = {"EpixCanvasApp.mc", "EpixCanvasData.mc", "EpixCanvasComplications.mc", "DesignerView.mc"}
+    retained = {
+        "EpixCanvasApp.mc", "EpixCanvasData.mc", "EpixCanvasComplications.mc",
+        "DesignerView.mc", "DesignerMetricFormatting.mc",
+    }
     for source_file in (project / "source").glob("*.mc"):
         if source_file.name not in retained:
             source_file.unlink()
@@ -361,6 +382,7 @@ def prepare_scene_project(project, scene, proof=False, preview_night=None):
         "@BACKGROUND@": str(scene["background"]), "@PROOF@": _mc(proof),
         "@FORCED_NIGHT@": _mc(preview_night), "@SAMPLES@": "{" + proof_dictionary + "}",
         "@RING_TABLE@": ring_table,
+        "@METRIC_TEXT_CASES@": text_cases(),
         "@WEATHER_ICON_SWITCH@": weather_icon_switch(ICON_VARIANTS["temperatureIcon"])
             if any(element["source"] == "temperatureIcon" for element in scene["elements"]) else "            default: break;",
         "@FONT_RESOURCES@": "[" + ", ".join(font_resources) + "]",
@@ -640,7 +662,7 @@ class DesignerView extends WatchUi.WatchFace {
                 return _snapshot.temperatureHigh == null ? "--" : _snapshot.temperatureHigh.format("%.0f");
             case "temperatureLow":
                 return _snapshot.temperatureLow == null ? "--" : _snapshot.temperatureLow.format("%.0f");
-            case "bodyBattery": return _provider.designerValue(23);
+@METRIC_TEXT_CASES@            case "bodyBattery": return _provider.designerValue(23);
             case "stress": return _provider.designerValue(22);
             case "recoveryTime": return _provider.designerValue(21);
             case "rainChance":
